@@ -1,0 +1,30 @@
+* text=auto
+*.py text eol=lf
+*.js text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.jsx text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.json text eol=lf
+*.json5 text eol=lf
+*.jsonl text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.sha256 text eol=lf
+*.log text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.docx binary
+*.pdf binary
+*.png binary
+*.jpg binary
+
+# Frozen experiment evidence is byte-addressed by artifact_manifest.json.
+# Preserve exact bytes so checkout conversion cannot invalidate SHA-256.
+demo_web/artifacts/** -text -eol -whitespace
+fixtures/** -text -eol
+demo_web/tools/dynamic/docker/** -text -eol

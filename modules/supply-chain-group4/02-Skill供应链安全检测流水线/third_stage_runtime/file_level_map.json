@@ -1,0 +1,6 @@
+{
+  "./data/public.txt": "公开",
+  "./data/business.txt": "普通",
+  "./data/user_privacy.txt": "敏感",
+  "./data/secret_key.txt": "绝密"
+}

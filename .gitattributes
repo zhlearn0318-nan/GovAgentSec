@@ -1,0 +1,3 @@
+# Keep fixture, sandbox helper and BOM-bearing PowerShell bytes stable on Windows.
+# Several security checks intentionally validate exact SHA-256 content.
+* -text

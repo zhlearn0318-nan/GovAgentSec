@@ -1,0 +1,7 @@
+{
+  "id": "user-001",
+  "department": "联合演示组",
+  "roles": ["office_user", "finance_operator", "ops_engineer"],
+  "clearance": 2,
+  "mfa": true
+}

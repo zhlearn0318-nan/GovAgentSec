@@ -1,0 +1,39 @@
+{
+  // OpenClaw 2026.7.1-2 Windows 兼容示例。
+  // 必须替换为部署机器上的绝对路径，并先人工核验策略目录 ACL。
+  agents: {
+    defaults: {
+      // OPENCLAW_STATE_DIR 不会自动隔离 Skill 工作区，必须显式设置。
+      workspace: "C:\\AegisChain\\openclaw-isolated-workspace",
+    },
+  },
+  security: {
+    installPolicy: {
+      enabled: true,
+      targets: ["skill", "plugin"],
+      exec: {
+        source: "exec",
+        command: "C:\\AegisChain\\runtime\\python.exe",
+        args: ["C:\\AegisChain\\demo_web\\tools\\openclaw_install_policy.py"],
+        timeoutMs: 15000,
+        noOutputTimeoutMs: 15000,
+        maxOutputBytes: 1048576,
+        passEnv: [],
+        env: {
+          AEGIS_OPENCLAW_SCAN_TIMEOUT_SECONDS: "60",
+          // 2026.7.1-2 只接受 allow/block，REVIEW 必须安全降级为 block。
+          AEGIS_OPENCLAW_REVIEW_MODE: "block",
+          AEGIS_OPENCLAW_AUDIT_DB: "C:\\AegisChain\\data\\admission_audit.db",
+          PYTHONUTF8: "1",
+          PYTHONIOENCODING: "utf-8",
+        },
+        trustedDirs: [
+          "C:\\AegisChain\\runtime",
+          "C:\\AegisChain\\demo_web\\tools",
+        ],
+        // 仅限 Windows 稳定版在自动 ACL 验证不可用、且人工核验目录后使用。
+        allowInsecurePath: true,
+      },
+    },
+  },
+}

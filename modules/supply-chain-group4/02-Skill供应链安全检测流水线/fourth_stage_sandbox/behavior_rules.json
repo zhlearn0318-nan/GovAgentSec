@@ -1,0 +1,35 @@
+{
+  "high_risk": {
+    "system_cmd": [
+      "os.system",
+      "subprocess.call",
+      "subprocess.run",
+      "os.popen",
+      "commands.getoutput"
+    ],
+    "file_delete": [
+      "os.remove",
+      "os.unlink",
+      "shutil.rmtree",
+      "os.rmdir"
+    ],
+    "malicious_network": [
+      "requests.post",
+      "requests.put",
+      "urllib.request.urlopen",
+      "socket.connect"
+    ]
+  },
+  "medium_risk": {
+    "sensitive_write": [
+      "open(\"C:/Windows",
+      "open(\"/etc",
+      "open(\"C:/System32"
+    ]
+  },
+  "network_whitelist": [
+    "github.com",
+    "python.org",
+    "pypi.org"
+  ]
+}

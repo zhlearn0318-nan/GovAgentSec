@@ -1,0 +1,50 @@
+{
+  "id": "agentguard-runtime-security",
+  "name": "AgentGuard 运行时安全中心",
+  "description": "工具调用三态决策、动作试算、审批控制、一次性票据和隔离执行回执。",
+  "version": "0.3.0",
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "agentGuardBaseUrl": {
+        "type": "string"
+      },
+      "auditPath": {
+        "type": "string"
+      },
+      "statusPath": {
+        "type": "string"
+      },
+      "approvalPath": {
+        "type": "string"
+      },
+      "wechatWebhookUrl": {
+        "type": "string"
+      }
+    }
+  },
+  "uiHints": {
+    "agentGuardBaseUrl": {
+      "label": "AgentGuard 服务地址",
+      "placeholder": "http://127.0.0.1:8080"
+    },
+    "auditPath": {
+      "label": "执行审计文件"
+    },
+    "statusPath": {
+      "label": "OpenClaw 控制状态文件"
+    },
+    "approvalPath": {
+      "label": "人工审批队列文件"
+    },
+    "wechatWebhookUrl": {
+      "label": "企业微信机器人 Webhook（可选）",
+      "placeholder": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=...",
+      "sensitive": true
+    }
+  }
+}

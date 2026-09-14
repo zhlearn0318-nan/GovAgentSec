@@ -1,0 +1,70 @@
+# Aegis Admission UI for OpenClaw
+
+该插件使用 OpenClaw 官方 Control UI 插件页机制，通过“政安智枢 GovAgentSec”内的“Aegis 供应链安全中心”入口访问。进入后默认展示真实安全总览，并通过同层标签切换准入扫描、报告与审计、规则管理和 MCP 准入；“报告与审计”在同一证据台账中关联扫描报告、安装审计、规则变更审计和 PDF 导出。准入支持真实 `.zip` 和浏览器本地文件夹上传，执行静态审计与 Docker 隔离试运行；只有 `ALLOW` 才能安装，同名 Skill 必须在页面内确认后事务更新。
+
+## 4.1 界面设计
+
+- 面向 2K 现场演示屏幕，以浅色政企控制台呈现，统一总览、准入、报告、审计、规则和 MCP 页面的视觉层级；
+- 安全总览在首屏展示真实准入总数、允许/阻断数量、审计链完整性、决策分布、最近活动、规则版本与安装前闭环；
+- 原始执行日志保留深色终端样式，明确区分“管理信息”和“底层真实执行过程”；
+- 所有指标均来自本机审计接口，未使用静态演示数字；页面改版不改变扫描、决策、安装、规则即时生效及 PDF 导出逻辑。
+
+## 安装
+
+在项目根目录执行：
+
+```powershell
+openclaw plugins install --link .\demo_web\openclaw_plugin\aegis-admission-ui
+openclaw gateway restart
+```
+
+推荐在新 Windows 环境直接双击仓库根目录 `Install_Aegis_OpenClaw_Final.cmd`，由安装器完成固定版本、运行时、Docker、策略、插件、Gateway 和预检。
+
+刷新 OpenClaw Web 控制台，在“政安智枢 GovAgentSec”中选择“Aegis 供应链安全中心”。也可以直接访问：
+
+```text
+http://127.0.0.1:18789/plugin?plugin=aegis-admission-ui&id=admission
+```
+
+## 开发与重新加载
+
+该目录就是 OpenClaw 当前加载的正式插件源码，不是仅用于截图的演示页面。核心文件分工如下：
+
+- `index.js`：注册单一侧边栏入口、HTTP 路由，调用 Python 安全引擎并执行受控安装；
+- `security_center_page.js`：安全总览；
+- `admission_page.js`：ZIP/文件夹上传、扫描、原始日志与安装交互；
+- `admin_pages.js`：报告与审计、规则管理和 MCP 准入；
+- `security_center_nav.js`：安全中心内部导航。
+
+链接安装后，修改源码通常只需要运行：
+
+```powershell
+& "$env:APPDATA\npm\openclaw.cmd" gateway restart
+```
+
+提交前在本目录执行：
+
+```powershell
+npm test
+```
+
+如首次克隆或链接丢失，再执行本页“安装”命令。插件会根据自身目录向上定位项目根目录，因此仓库可以克隆到任意 Windows 路径，但不要单独复制插件目录脱离后端代码使用。
+
+## 运行要求
+
+- OpenClaw `security.installPolicy` 已启用且目标包含 `skill` 与 `plugin`；
+- `AEGIS_OPENCLAW_DYNAMIC_SKILL_POLICY=required`；
+- Docker Desktop Linux Engine 可用；
+- 项目保留固定版 SkillTrustBench 样本和审计运行时。
+
+MCP 配置准入通过安全中心的“MCP 准入”标签执行；放行时使用 OpenClaw 官方 `mcp set` 写入并用 `mcp show` 复核，阻断时不修改配置。
+
+## 正式准入流程
+
+1. 选择 `.zip` 或本地 Skill 文件夹；
+2. 上传后执行静态审计，静态允许才进入 Docker 隔离试运行；
+3. 最终 `ALLOW` 且审计链有效时启用安装按钮；
+4. 安装前复核内容哈希，并由 OpenClaw 原生策略再次扫描；
+5. 同名 Skill 显示页面内确认，确认后事务更新，失败恢复原版本。
+
+默认限制为 ZIP 50 MB、解压或文件夹总量 200 MB、5,000 个文件、单文件 50 MB。上传安全合同见 [`../../docs/M11_OPENCLAW_FORMAL_SKILL_UPLOAD_ADMISSION.md`](../../docs/M11_OPENCLAW_FORMAL_SKILL_UPLOAD_ADMISSION.md)，最终单入口发布证据见 [`../../docs/M12_OPENCLAW_UNIFIED_SECURITY_CENTER_RELEASE.md`](../../docs/M12_OPENCLAW_UNIFIED_SECURITY_CENTER_RELEASE.md)。

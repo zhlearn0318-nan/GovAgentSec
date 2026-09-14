@@ -1,0 +1,514 @@
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+from backend.normalizers import normalize_skill
+from backend.openclaw_install_policy import (
+    MAX_FINDINGS,
+    SourceTreeLimits,
+    SourceTreeRejected,
+    evaluate_install_request,
+    hash_source_tree,
+    normalize_findings_for_openclaw,
+)
+
+
+def make_skill(tmp_path: Path) -> Path:
+    skill = tmp_path / "skill"
+    skill.mkdir()
+    (skill / "SKILL.md").write_text(
+        "---\nname: install-policy-test\ndescription: local test\n---\n",
+        encoding="utf-8",
+    )
+    return skill
+
+
+def request_for(skill: Path, **overrides) -> dict:
+    payload = {
+        "protocolVersion": 1,
+        "openclawVersion": "2026.8.1",
+        "targetType": "skill",
+        "targetName": "install-policy-test",
+        "sourcePath": str(skill.resolve()),
+        "sourcePathKind": "directory",
+        "source": {"kind": "local-path", "mutable": True},
+        "origin": {"type": "local"},
+        "request": {"kind": "skill-install", "mode": "install"},
+    }
+    payload.update(overrides)
+    return payload
+
+
+def scan_with(*findings: dict):
+    return lambda _path: {"findings": list(findings), "analyzers": ["test"]}
+
+
+def normalized_cisco_high() -> dict:
+    findings, _ = normalize_skill(
+        {
+            "skill_name": "candidate",
+            "findings": [
+                {
+                    "rule_id": "YARA_jailbreak_generic",
+                    "severity": "HIGH",
+                    "analyzer": "yara_analyzer",
+                    "file_path": "SKILL.md",
+                    "line_number": 5,
+                    "description": "raw vendor text is hashed",
+                }
+            ],
+        }
+    )
+    return findings[0]
+
+
+@pytest.mark.parametrize(
+    ("severity", "expected"),
+    [
+        (None, "allow"),
+        ("INFO", "allow"),
+        ("LOW", "warn"),
+        ("MEDIUM", "warn"),
+        ("HIGH", "block"),
+        ("CRITICAL", "block"),
+        ("UNKNOWN", "block"),
+    ],
+)
+def test_maps_existing_policy_without_changing_decision_semantics(
+    tmp_path: Path, severity: str | None, expected: str
+) -> None:
+    skill = make_skill(tmp_path)
+    findings = [] if severity is None else [{"id": "rule-1", "severity": severity}]
+
+    response = evaluate_install_request(request_for(skill), skill_scan=scan_with(*findings))
+
+    assert response["protocolVersion"] == 1
+    assert response["decision"] == expected
+    assert response["reason"]
+
+
+def test_formal_openclaw_admission_warns_for_uncorroborated_cisco_high(
+    tmp_path: Path, monkeypatch
+) -> None:
+    skill = make_skill(tmp_path)
+    monkeypatch.setenv("AEGIS_OPENCLAW_REVIEW_MODE", "warn")
+
+    response = evaluate_install_request(
+        request_for(skill), skill_scan=scan_with(normalized_cisco_high())
+    )
+
+    assert response["decision"] == "warn"
+    assert "缺少独立高置信证据佐证" in response["reason"]
+    assert response["findings"][0]["ruleId"] == "YARA_jailbreak_generic"
+
+
+def test_formal_openclaw_admission_blocks_when_aegis_high_corroborates(
+    tmp_path: Path, monkeypatch
+) -> None:
+    skill = make_skill(tmp_path)
+    monkeypatch.setenv("AEGIS_OPENCLAW_REVIEW_MODE", "warn")
+    aegis = {
+        "id": "aegis-remote-chain",
+        "rule_id": "AEGIS_REMOTE_FETCH_PIPE_SHELL",
+        "title": "检测到远程下载后执行链",
+        "category": "remote_execution",
+        "severity": "HIGH",
+        "analyzer": "aegis-static-v1",
+        "evidence_source": "AEGIS_STATIC",
+        "evidence_confidence": "CORROBORATED",
+    }
+
+    response = evaluate_install_request(
+        request_for(skill),
+        skill_scan=scan_with(normalized_cisco_high(), aegis),
+    )
+
+    assert response["decision"] == "block"
+    assert any(
+        item["ruleId"] == "AEGIS_REMOTE_FETCH_PIPE_SHELL"
+        for item in response["findings"]
+    )
+
+
+@pytest.mark.parametrize(
+    ("payload", "rule_id"),
+    [
+        ([], "AEGIS_POLICY_INVALID_REQUEST"),
+        ({}, "AEGIS_POLICY_PROTOCOL_MISMATCH"),
+        ({"protocolVersion": 2}, "AEGIS_POLICY_PROTOCOL_MISMATCH"),
+    ],
+)
+def test_invalid_requests_fail_closed(payload, rule_id: str) -> None:
+    response = evaluate_install_request(payload)
+
+    assert response["decision"] == "block"
+    assert response["findings"][0]["ruleId"] == rule_id
+
+
+def test_plugin_target_uses_dedicated_plugin_scan(tmp_path: Path) -> None:
+    skill = make_skill(tmp_path)
+
+    response = evaluate_install_request(
+        request_for(skill, targetType="plugin"),
+        skill_scan=lambda _path: (_ for _ in ()).throw(
+            AssertionError("plugin must not use the Cisco Skill pipeline")
+        ),
+        plugin_scan=scan_with(),
+    )
+
+    assert response["decision"] == "allow"
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"sourcePath": "relative/path"},
+        {"sourcePath": "Z:\\definitely-missing-aegis-source"},
+        {"sourcePathKind": "archive"},
+        {"targetType": "unknown"},
+    ],
+)
+def test_invalid_source_or_request_shape_fails_closed(
+    tmp_path: Path, overrides: dict
+) -> None:
+    skill = make_skill(tmp_path)
+
+    response = evaluate_install_request(
+        request_for(skill, **overrides), skill_scan=scan_with()
+    )
+
+    assert response["decision"] == "block"
+
+
+def test_scan_timeout_and_failure_fail_closed(tmp_path: Path) -> None:
+    skill = make_skill(tmp_path)
+
+    def timeout(_path: Path):
+        raise subprocess.TimeoutExpired(["skill-scanner"], 1)
+
+    def failure(_path: Path):
+        raise RuntimeError("private scanner detail must not be exposed")
+
+    timeout_response = evaluate_install_request(request_for(skill), skill_scan=timeout)
+    failure_response = evaluate_install_request(request_for(skill), skill_scan=failure)
+
+    assert timeout_response["decision"] == "block"
+    assert timeout_response["findings"][0]["ruleId"] == "AEGIS_POLICY_SCAN_TIMEOUT"
+    assert failure_response["decision"] == "block"
+    assert failure_response["findings"][0]["ruleId"] == "AEGIS_POLICY_SCAN_FAILED"
+    assert "private scanner detail" not in json.dumps(failure_response, ensure_ascii=False)
+
+
+def test_source_change_during_scan_fails_closed(tmp_path: Path) -> None:
+    skill = make_skill(tmp_path)
+    hashes = iter(["before", "after"])
+
+    response = evaluate_install_request(
+        request_for(skill),
+        skill_scan=scan_with(),
+        tree_hasher=lambda _path: next(hashes),
+    )
+
+    assert response["decision"] == "block"
+    assert response["findings"][0]["ruleId"] == "AEGIS_POLICY_SOURCE_CHANGED"
+
+
+def test_tree_hash_is_repeatable_and_changes_with_content(tmp_path: Path) -> None:
+    skill = make_skill(tmp_path)
+    script = skill / "run.py"
+    script.write_text("print('safe')\n", encoding="utf-8")
+
+    first = hash_source_tree(skill)
+    second = hash_source_tree(skill)
+    script.write_text("print('changed')\n", encoding="utf-8")
+    changed = hash_source_tree(skill)
+
+    assert first == second
+    assert changed != first
+
+
+def test_tree_hash_enforces_file_and_size_limits(tmp_path: Path) -> None:
+    skill = make_skill(tmp_path)
+    (skill / "second.txt").write_text("x", encoding="utf-8")
+
+    with pytest.raises(SourceTreeRejected, match="文件数超过上限"):
+        hash_source_tree(skill, SourceTreeLimits(max_files=1))
+    with pytest.raises(SourceTreeRejected, match="超大文件"):
+        hash_source_tree(
+            skill,
+            SourceTreeLimits(max_files=10, max_total_bytes=100, max_file_bytes=1),
+        )
+
+
+def test_findings_are_bounded_and_do_not_leak_host_absolute_paths(tmp_path: Path) -> None:
+    skill = make_skill(tmp_path)
+    outside = tmp_path.parent / "secret.txt"
+    findings = [
+        {
+            "id": f"finding-{index}",
+            "title": "x" * 2_000,
+            "severity": "MEDIUM",
+            "location": {"file": str(outside), "line": 3.9},
+            "evidence": "e" * 2_000,
+        }
+        for index in range(MAX_FINDINGS + 5)
+    ]
+
+    normalized = normalize_findings_for_openclaw(findings, skill.resolve())
+
+    assert len(normalized) == MAX_FINDINGS
+    assert all(len(item["message"]) <= 160 for item in normalized)
+    assert all(len(item["evidence"]) <= 200 for item in normalized)
+    assert all("file" not in item for item in normalized)
+    assert all(item["line"] == 3 for item in normalized)
+
+
+def test_high_risk_findings_are_prioritized_before_display_limit(tmp_path: Path) -> None:
+    skill = make_skill(tmp_path)
+    findings = [
+        {"id": f"info-{index}", "title": "context", "severity": "INFO"}
+        for index in range(MAX_FINDINGS + 2)
+    ]
+    findings.append({"id": "critical-last", "title": "risk", "severity": "CRITICAL"})
+
+    normalized = normalize_findings_for_openclaw(findings, skill.resolve())
+
+    assert normalized[0]["ruleId"] == "critical-last"
+    assert normalized[0]["severity"] == "critical"
+
+
+def test_legacy_review_mode_fails_closed_instead_of_emitting_warn(
+    tmp_path: Path, monkeypatch
+) -> None:
+    skill = make_skill(tmp_path)
+    monkeypatch.setenv("AEGIS_OPENCLAW_REVIEW_MODE", "block")
+
+    response = evaluate_install_request(
+        request_for(skill),
+        skill_scan=scan_with({"id": "review-1", "severity": "MEDIUM"}),
+    )
+
+    assert response["decision"] == "block"
+    assert "兼容模式" in response["reason"]
+
+
+def test_invalid_review_mode_fails_closed(tmp_path: Path, monkeypatch) -> None:
+    skill = make_skill(tmp_path)
+    monkeypatch.setenv("AEGIS_OPENCLAW_REVIEW_MODE", "unexpected")
+
+    response = evaluate_install_request(
+        request_for(skill),
+        skill_scan=scan_with({"id": "review-1", "severity": "MEDIUM"}),
+    )
+
+    assert response["decision"] == "block"
+    assert "配置无效" in response["reason"]
+
+
+def test_required_dynamic_high_risk_upgrades_static_allow_to_block(
+    tmp_path: Path, monkeypatch
+) -> None:
+    skill = make_skill(tmp_path)
+    monkeypatch.setenv("AEGIS_OPENCLAW_DYNAMIC_SKILL_POLICY", "required")
+
+    response = evaluate_install_request(
+        request_for(skill),
+        skill_scan=scan_with(),
+        dynamic_skill_scan=lambda _path: {
+            "decision": "BLOCK",
+            "reason": "隔离试运行观察到外部联网行为。",
+            "findings": [
+                {
+                    "id": "dynamic-network",
+                    "rule_id": "AEGIS_DYNAMIC_EXTERNAL_NETWORK_ATTEMPT",
+                    "title": "Skill 尝试访问外部网络",
+                    "severity": "HIGH",
+                    "analyzer": "aegis-skill-sandbox-v1",
+                    "location": {"object": "event:1"},
+                    "evidence": "host=203.0.113.10",
+                }
+            ],
+        },
+    )
+
+    assert response["decision"] == "block"
+    assert response["findings"][0]["ruleId"] == "AEGIS_DYNAMIC_EXTERNAL_NETWORK_ATTEMPT"
+
+
+def test_required_dynamic_clean_result_is_visible_and_attested(
+    tmp_path: Path, monkeypatch
+) -> None:
+    skill = make_skill(tmp_path)
+    monkeypatch.setenv("AEGIS_OPENCLAW_DYNAMIC_SKILL_POLICY", "required")
+
+    response = evaluate_install_request(
+        request_for(skill),
+        skill_scan=scan_with(),
+        dynamic_skill_scan=lambda _path: {
+            "backend_id": "aegis-python-skill-sandbox-v1",
+            "decision": "ALLOW",
+            "status": "clean",
+            "reason": "隔离试运行完成，未观察到影响准入的动态风险。",
+            "findings": [],
+            "entrypoint_plan": {"entrypoints": ["run.py"]},
+            "runs": [
+                {
+                    "success": True,
+                    "runner": {
+                        "execution_status": "completed",
+                        "telemetry_complete": True,
+                        "events": [],
+                    },
+                    "cleanup": {"removed": True, "residual": False},
+                    "inspect_gates": {"network_none": True},
+                    "image_gates": {"image_id_exact": True},
+                }
+            ],
+        },
+    )
+
+    assert response["decision"] == "allow"
+    assert "隔离试运行完成" in response["reason"]
+    assert response["findings"][0]["ruleId"] == "AEGIS_DYNAMIC_EXECUTION_CLEAN"
+    assert "cleanup=verified" in response["findings"][0]["evidence"]
+
+
+def test_required_dynamic_allow_without_attestation_fails_closed_to_review(
+    tmp_path: Path, monkeypatch
+) -> None:
+    skill = make_skill(tmp_path)
+    monkeypatch.setenv("AEGIS_OPENCLAW_DYNAMIC_SKILL_POLICY", "required")
+    monkeypatch.setenv("AEGIS_OPENCLAW_REVIEW_MODE", "block")
+
+    response = evaluate_install_request(
+        request_for(skill),
+        skill_scan=scan_with(),
+        dynamic_skill_scan=lambda _path: {
+            "decision": "ALLOW",
+            "status": "clean",
+            "reason": "untrusted clean",
+            "findings": [],
+        },
+    )
+
+    assert response["decision"] == "block"
+    assert response["findings"][0]["ruleId"] == "AEGIS_DYNAMIC_EXECUTION_INCONCLUSIVE"
+
+
+def test_static_block_skips_required_dynamic_execution(tmp_path: Path, monkeypatch) -> None:
+    skill = make_skill(tmp_path)
+    monkeypatch.setenv("AEGIS_OPENCLAW_DYNAMIC_SKILL_POLICY", "required")
+
+    response = evaluate_install_request(
+        request_for(skill),
+        skill_scan=scan_with({"id": "static-critical", "severity": "CRITICAL"}),
+        dynamic_skill_scan=lambda _path: (_ for _ in ()).throw(
+            AssertionError("static BLOCK must not execute the Skill")
+        ),
+    )
+
+    assert response["decision"] == "block"
+    assert response["findings"][0]["ruleId"] == "static-critical"
+
+
+def test_required_dynamic_infrastructure_failure_never_allows(
+    tmp_path: Path, monkeypatch
+) -> None:
+    skill = make_skill(tmp_path)
+    monkeypatch.setenv("AEGIS_OPENCLAW_DYNAMIC_SKILL_POLICY", "required")
+    monkeypatch.setenv("AEGIS_OPENCLAW_REVIEW_MODE", "warn")
+
+    response = evaluate_install_request(
+        request_for(skill),
+        skill_scan=scan_with(),
+        dynamic_skill_scan=lambda _path: (_ for _ in ()).throw(
+            RuntimeError("private infrastructure detail")
+        ),
+    )
+
+    assert response["decision"] == "warn"
+    assert response["findings"][0]["ruleId"] == "AEGIS_DYNAMIC_EXECUTION_INCONCLUSIVE"
+    assert "private infrastructure detail" not in json.dumps(response, ensure_ascii=False)
+
+
+def test_invalid_dynamic_mode_fails_closed(tmp_path: Path, monkeypatch) -> None:
+    skill = make_skill(tmp_path)
+    monkeypatch.setenv("AEGIS_OPENCLAW_DYNAMIC_SKILL_POLICY", "unexpected")
+
+    response = evaluate_install_request(request_for(skill), skill_scan=scan_with())
+
+    assert response["decision"] == "block"
+    assert response["findings"][0]["ruleId"] == "AEGIS_DYNAMIC_POLICY_CONFIG_INVALID"
+
+
+def test_cli_emits_exactly_one_fail_closed_json_object_for_invalid_json(
+    tmp_path: Path,
+) -> None:
+    script = Path(__file__).resolve().parents[2] / "tools" / "openclaw_install_policy.py"
+
+    completed = subprocess.run(
+        [sys.executable, str(script)],
+        input="not-json",
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+        env={
+            **os.environ,
+            "AEGIS_OPENCLAW_AUDIT_DB": str(tmp_path / "invalid-json-audit.db"),
+        },
+        timeout=10,
+    )
+    response = json.loads(completed.stdout)
+
+    assert completed.returncode == 0
+    assert completed.stderr == ""
+    assert response["protocolVersion"] == 1
+    assert response["decision"] == "block"
+    assert "无法解析" in response["reason"]
+    assert response["findings"][0]["ruleId"] == "AEGIS_POLICY_INVALID_REQUEST"
+
+
+def test_node_proxy_fails_closed_when_required_paths_are_missing() -> None:
+    proxy = Path(__file__).resolve().parents[2] / "tools" / "openclaw_install_policy_proxy.mjs"
+    child_env = {
+        "SYSTEMROOT": os.environ.get("SYSTEMROOT", "C:\\Windows"),
+        "WINDIR": os.environ.get("WINDIR", "C:\\Windows"),
+    }
+
+    completed = subprocess.run(
+        ["node", str(proxy)],
+        input="{}",
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=child_env,
+        check=False,
+        timeout=10,
+    )
+    response = json.loads(completed.stdout)
+
+    assert completed.returncode == 0
+    assert response["decision"] == "block"
+    assert response["findings"][0]["ruleId"] == "AEGIS_POLICY_PROXY_CONFIGURATION_ERROR"
+
+
+def test_dynamic_stable_example_passes_only_explicit_docker_context() -> None:
+    example = (
+        Path(__file__).resolve().parents[2]
+        / "config"
+        / "openclaw.install-policy.skill-dynamic.windows-stable.example.json5"
+    ).read_text(encoding="utf-8")
+
+    assert 'passEnv: []' in example
+    assert 'AEGIS_OPENCLAW_DYNAMIC_SKILL_POLICY: "required"' in example
+    assert 'DOCKER_CONFIG: "C:\\\\Users\\\\operator\\\\.docker"' in example
+    assert "docker.sock" not in example.casefold()

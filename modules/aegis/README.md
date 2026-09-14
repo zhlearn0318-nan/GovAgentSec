@@ -1,0 +1,216 @@
+# Aegis Chain：面向智能体生态的供应链安全原型
+
+[![CI](https://github.com/zhlearn0318-nan/aegis-chain-supply-security/actions/workflows/ci.yml/badge.svg)](https://github.com/zhlearn0318-nan/aegis-chain-supply-security/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
+> 当前状态、发布判断和下一工程节点以 [`CURRENT_STATUS.md`](CURRENT_STATUS.md) 为唯一真值；阶段报告中的旧测试数和“下一步”仅代表当时快照。
+
+> **正式版 v0.2（2026-09-09）**：当前比赛交付基线与发布范围见 [`RELEASE_V0.2.md`](RELEASE_V0.2.md)。`v0.1` 保留为历史基线。
+
+> **团队协作快照（2026-09-09）**：`main` 已集成论文驱动的 P0/P1、真实第三方 Skill 动态配对实验、M15 E01—E06 六组实验和最新版 OpenClaw“Aegis 安全中心”。
+
+Aegis Chain 是 XA-202620 赛题“供应链安全”方向的本地工程原型，面向通用政企智能体平台，对 Agent Skill、MCP 对象和 Python 依赖提供统一静态审查、证据归一化、准入策略和安装前隔离试运行。
+
+当前系统已接入 Cisco AI Skill Scanner、Cisco AI MCP Scanner 和 `pip-audit`，并实现自研 Aegis Static、Network/Filesystem/Command Context，以及 Python/Node.js/Shell Skill 的 Docker 动态审计。除自建 fixture 外，现已完成 6 个官方真实脚本及 30 个受控风险孪生的第三方动态配对主实验；已知恶意第三方 Skill 仍只做静态扫描，不直接执行。
+
+## 队友克隆后从这里开始
+
+仓库采用 Apache-2.0 许可证公开发布。Windows PowerShell 中执行：
+
+```powershell
+git clone https://github.com/zhlearn0318-nan/aegis-chain-supply-security.git
+Set-Location .\aegis-chain-supply-security
+git switch main
+git pull --ff-only origin main
+```
+
+完整安装推荐直接双击：
+
+```text
+Install_Aegis_OpenClaw_Final.cmd
+```
+
+安装器会检查或安装必要软件、重建哈希锁定的扫描运行时、准备 Docker 镜像、配置 OpenClaw 安装策略、以链接方式安装插件、重启 Gateway 并执行完整预检。安装完成后打开：
+
+```text
+http://127.0.0.1:18789/plugin?plugin=aegis-admission-ui&id=admission
+```
+
+只想阅读或修改代码时，不需要先下载数据集，也不要复制其他成员的 `.runtime_*`、`.venv*`、`node_modules`、SQLite、日志或本机 OpenClaw 配置。详细协作流程见 [`CONTRIBUTING.md`](CONTRIBUTING.md)，完整换机说明见 [`QUICKSTART.md`](QUICKSTART.md)。
+
+## 系统如何组成
+
+```text
+OpenClaw Web 控制台
+        │
+        ▼
+Aegis Admission UI 插件
+        │ 上传 / 扫描 / 安装 / 报告 / 规则 / MCP
+        ▼
+OpenClaw 安装准入策略 ──► Aegis Python 安全引擎
+                              ├─ Cisco Skill Scanner
+                              ├─ Cisco MCP Scanner
+                              ├─ Aegis 静态与语义规则
+                              ├─ pip-audit / SBOM
+                              └─ Docker 多运行时动态审计
+                                         │
+                                         ▼
+                               ALLOW / REVIEW / BLOCK / UNKNOWN
+```
+
+OpenClaw 插件源码位于 [`demo_web/openclaw_plugin/aegis-admission-ui`](demo_web/openclaw_plugin/aegis-admission-ui)，不是编译后复制品。插件通过 OpenClaw 官方插件入口加载，并调用同仓库的 Python 引擎，所以队友修改插件或后端后都可以在本地立即重新验证。
+
+## OpenClaw 最终版一键安装（Windows）
+
+将完整项目目录放到目标 Windows 电脑后，双击根目录：
+
+```text
+Install_Aegis_OpenClaw_Final.cmd
+```
+
+脚本会固定 OpenClaw `2026.7.1-2`，重建锁定扫描运行时，准备 Docker 隔离后端，备份并写入安装策略，安装 Aegis 插件，重启 Gateway，并验证统一“Aegis 安全中心”的总览与五个功能视图以及完整动态预检。失败时窗口不会闪退，且会恢复原 OpenClaw 配置。
+
+正式版范围见 [v0.2 发布说明](RELEASE_V0.2.md)；最终集成与部署见 [M10 OpenClaw 最终集成与 Windows 一键部署说明](demo_web/docs/M10_OPENCLAW_FINAL_INTEGRATION_AND_WINDOWS_DEPLOYMENT.md)；正式 Skill 上传准入见 [M11 OpenClaw 正式 Skill 上传准入](demo_web/docs/M11_OPENCLAW_FORMAL_SKILL_UPLOAD_ADMISSION.md)；最终单入口界面见 [M12 OpenClaw 统一安全中心正式发布说明](demo_web/docs/M12_OPENCLAW_UNIFIED_SECURITY_CENTER_RELEASE.md)。
+
+### 修改 OpenClaw 插件后重新加载
+
+一键安装器使用链接安装，因此通常不需要复制插件文件。修改插件源码后执行：
+
+```powershell
+& "$env:APPDATA\npm\openclaw.cmd" gateway restart
+```
+
+刷新浏览器即可看到变化。插件测试在插件目录执行 `npm test`；入口、路由和开发约定见其 [`README.md`](demo_web/openclaw_plugin/aegis-admission-ui/README.md)。
+
+## 当前能力
+
+- Skill ZIP：Cisco 静态/字节码/管道分析 + Aegis 静态关联规则；
+- MCP JSON：Tool、Prompt、Resource 离线扫描；
+- Python 依赖：CVE、GHSA、PYSEC 漏洞检查；
+- 统一结果：Finding IR、SHA-256、任务历史、JSON/Markdown 导出；
+- 准入策略：`ALLOW / REVIEW / BLOCK / UNKNOWN` 四态门禁，失败闭锁；
+- 上下文证据：网络、文件系统和命令行为 INFO 解释；
+- 管理员动态验证：固定 3 份自建 fixture，验证 7 类预期机制，不接受用户代码、路径或命令；
+- Skill 安装前动态审计：对静态预筛后支持的 Python、Node.js、Shell 入口进行三轮断网、只读、非 root 容器试运行；
+- 受控 MCP 动态闭环：MCP 2025-06-18 stdio 真实调用、政企 Marker 源到汇证据、Linux inotify/procfs 独立遥测和 Docker 失败闭锁。
+- 动态任务控制：SQLite 持久 FIFO、全局单执行、活动/冷却去重、有界等待队列、429 和重启恢复。
+- OpenClaw 最终集成：左侧只有一个“Aegis 安全中心”，默认真实总览并内含准入、报告、审计、规则、MCP 五个标签；准入支持 ZIP/本地文件夹真实上传、扫描后安装和同名确认更新。
+
+最近冻结结果：
+
+- SkillTrustBench v1.0：已完成 5,520 条全量 Cisco 静态基线，另建 120 条开发集和 600 条封存回归集；
+- MaliciousSkillBench：完成官方 Source-Disjoint test 全量 1,384 条 Cisco/P0/P1 三版本真实批量评测；结果如实暴露语义漏报与误报权衡；
+- 真实第三方动态配对：6 个官方原始包 + 30 个受控风险孪生，完成 108 次容器脚本调用；动态风险规则召回 30/30，原始脚本动态 ALLOW 6/6；
+- 管理员动态接口：3/3 fixture、7/7 机制，负面安全指标全部为 0；
+- MCP Docker 受控遥测实验：82/82 接受门，独立文件读取确认 1、容器残留 0；
+- 后端完整测试：557 passed，1 skipped；
+- OpenClaw 插件测试：19 passed；
+- 前端 API 测试：10 passed；
+- 前端生产构建：通过。
+- M15 E01—E06：静态消融、误报治理、动态轮次、绕过鲁棒性、OpenClaw E2E 和错误分析全部完成；
+- GitHub Actions 在 PR 和 main 推送时自动复验后端、插件与前端。
+
+## 仓库结构
+
+```text
+.
+├─ demo_web/              FastAPI + React 主系统
+│  ├─ backend/            API、适配器、规则、策略与测试
+│  ├─ frontend/           Vite/React 页面
+│  ├─ config/             准入策略与固定动态 fixture 配置
+│  ├─ tools/              数据准备、评测和验证工具
+│  ├─ baseline/           冻结基线与开发/回归清单
+│  ├─ docs/               对接文档、阶段报告和工作日志
+│  └─ artifacts/          精选的可复核动态验证证据
+├─ fixtures/              防御性 Skill、MCP 与依赖样例
+├─ scripts/               Cisco 扫描调用与结果校验脚本
+├─ docs/                  早期复现和工具调研材料
+└─ results/               仅保留锁定依赖与精选复现摘要
+```
+
+`datasets/`、`third_party/`、Python 运行环境、Node 依赖、SQLite、缓存、日志和大规模扫描输出不会上传 GitHub。
+
+## 本机运行
+
+### 1. 准备运行环境
+
+本项目当前在 Windows 11 上验证。Cisco 扫描器使用隔离运行时：
+
+- `.runtime_skill`：Python 3.11 + Cisco AI Skill Scanner；
+- `.runtime_mcp313`：Python 3.13 + Cisco AI MCP Scanner + `pip-audit`。
+
+运行时和 Cisco 第三方源码不纳入仓库。首次使用可在任意仓库路径执行下列命令，脚本会从 Cisco 官方固定提交重建环境，并按哈希锁定依赖：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\bootstrap_runtimes.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\demo_web\preflight.ps1" -SkipDynamic
+```
+
+完整说明见 [QUICKSTART.md](QUICKSTART.md)；Cisco、Web 与共享运行时安全覆盖锁分别位于 `results/*_locked_requirements.txt`、`demo_web/backend/requirements.lock` 和 `demo_web/backend/runtime-security.lock`。
+
+项目自身供应链门可生成并核验根目录 `PROJECT_SBOM.cdx.json` 与 `THIRD_PARTY_NOTICES.md`：
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\demo_web\audit_project_supply_chain.ps1" -WriteRepositoryArtifacts
+```
+
+### 2. 启动演示平台
+
+```powershell
+Set-Location .\demo_web
+$env:AEGIS_ADMIN_TOKEN = "请替换为至少16位且仅本次会话使用的随机令牌"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\start_demo.ps1"
+```
+
+启动会先执行可移植预检并使用冻结的前端锁文件，不再依赖开发者个人目录。若只使用静态审计，可以不配置 Docker；若要求动态能力必须就绪，使用 `-RequireDynamic`。
+
+访问：
+
+- 页面：`http://127.0.0.1:8000`
+- OpenAPI：`http://127.0.0.1:8000/docs`
+
+管理员令牌只从服务端环境变量读取，前端只保存在当前 React 内存中。不要把真实令牌写入源码、文档、提交或截图。
+
+### 3. 运行测试
+
+```powershell
+Set-Location .\demo_web
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\run_tests.ps1"
+```
+
+也可以分别执行后端与前端检查，具体命令见 [demo_web/README.md](demo_web/README.md)。
+
+## 关键文档
+
+- [当前状态（唯一真值）](CURRENT_STATUS.md)
+- [版本变化记录](CHANGELOG.md)
+- [正式版 v0.1 发布说明](RELEASE_V0.1.md)
+- [正式版 v0.2 发布说明](RELEASE_V0.2.md)
+- [团队协作与开发约定](CONTRIBUTING.md)
+- [系统开发与使用说明](demo_web/README.md)
+- [供应链模块对接与开发说明](demo_web/docs/Aegis_Chain_供应链安全模块对接与开发说明.md)
+- [API v1 对接契约](demo_web/docs/API_V1_CONTRACT.md)
+- [通用政企平台规则补强必要性](demo_web/docs/M3_通用政企智能体平台规则补强必要性说明.md)
+- [最小安全动态 Fixture 报告](demo_web/docs/M3_SAFE_DYNAMIC_FIXTURE_V1_REPORT.md)
+- [管理员动态验证 API/UI 报告](demo_web/docs/M3_ADMIN_DYNAMIC_FIXTURE_API_UI_REPORT.md)
+- [M4 动态审计调研与实施计划](demo_web/docs/M4_DYNAMIC_AUDIT_RESEARCH_AND_IMPLEMENTATION_PLAN.md)
+- [M4 MCP 协议调用与 Marker 证据闭环报告](demo_web/docs/M4_MCP_PROTOCOL_MARKER_V1_REPORT.md)
+- [M4 MCP 内核辅助遥测报告](demo_web/docs/M4_MCP_KERNEL_TELEMETRY_V1_REPORT.md)
+- [M13 真实第三方 Skill 动态实验合同](demo_web/docs/M13_REAL_THIRD_PARTY_SKILL_DYNAMIC_EXPERIMENT_CONTRACT.md)
+- [M14 真实第三方 Skill 动态结果与综合准入差距](demo_web/docs/M14_REAL_THIRD_PARTY_SKILL_DYNAMIC_RESULT_AND_GAP.md)
+- [持续开发日志](demo_web/docs/WORK_LOG.md)
+
+## 安全边界
+
+- 仓库内攻击样例仅用于防御性静态检测，保留域名使用 `example.invalid`；
+- 不要执行标记为 `must never be executed` 的 fixture；
+- 管理员 fixture 模块只运行仓库内自建、SHA-256 锁定的良性 fixture；安装前动态模块只运行静态预筛后、运行时和入口均受支持的 Skill；
+- 当前动态模块不是可安全执行任意恶意代码的完整沙箱；已知恶意第三方 Skill 不直接执行，受控风险由可审计孪生样本验证；
+- 没有 Docker 或动态安全门未通过时，不执行第三方 Skill 脚本；
+- 静态扫描未发现风险不等于绝对安全，`UNKNOWN` 必须默认不放行。
+
+更多安全说明见 [SECURITY.md](SECURITY.md)。
+
+## 项目状态
+
+该仓库当前冻结为挑战杯“example-workspace”赛道 **正式比赛版本 v0.2**，现场演示和材料提交状态为 READY。它仍是研究与竞赛原型，不等价于可直接接入真实政企生产网的商业安全产品；洁净 Windows VM、企业身份权限、外部审计、高可用和更强隔离仍未完成，生产发布保持 NO-GO。完整边界见 [`CURRENT_STATUS.md`](CURRENT_STATUS.md)。

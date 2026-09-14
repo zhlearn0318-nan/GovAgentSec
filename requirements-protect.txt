@@ -1,0 +1,9 @@
+transformers==4.51.3
+sentencepiece==0.2.0
+protobuf==5.29.4
+numpy==1.26.4
+scikit-learn==1.6.1
+nltk==3.9.1
+rouge-score==0.1.2
+einops==0.8.1
+requests==2.32.4

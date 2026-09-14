@@ -1,0 +1,88 @@
+{
+  "id": "protect-agent",
+  "name": "Protect Agent Security Guard",
+  "description": "Protect Agent input, tool, retrieval, multi-turn, and outbound policy enforcement.",
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "pythonPath",
+      "projectRoot",
+      "tokenFile"
+    ],
+    "properties": {
+      "mode": {
+        "type": "string",
+        "enum": ["real", "baseline"],
+        "default": "real"
+      },
+      "baseUrl": {
+        "type": "string",
+        "default": "http://127.0.0.1:19171"
+      },
+      "pythonPath": {
+        "type": "string"
+      },
+      "projectRoot": {
+        "type": "string"
+      },
+      "modelRoot": {
+        "type": "string"
+      },
+      "trustRagModule": {
+        "type": "string"
+      },
+      "tokenFile": {
+        "type": "string"
+      },
+      "requestTimeoutMs": {
+        "type": "integer",
+        "minimum": 1000,
+        "maximum": 60000,
+        "default": 12000
+      },
+      "startupTimeoutMs": {
+        "type": "integer",
+        "minimum": 5000,
+        "maximum": 600000,
+        "default": 120000
+      },
+      "highImpactTools": {
+        "type": "array",
+        "maxItems": 64,
+        "items": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_.:-]{1,128}$"
+        },
+        "default": [
+          "exec",
+          "apply_patch",
+          "write",
+          "edit",
+          "message"
+        ]
+      }
+    }
+  },
+  "uiHints": {
+    "mode": {
+      "label": "Protection engine mode",
+      "advanced": true
+    },
+    "baseUrl": {
+      "label": "Protect Agent sidecar URL",
+      "help": "Loopback HTTP URL only."
+    },
+    "tokenFile": {
+      "label": "Bearer token file",
+      "sensitive": true
+    },
+    "highImpactTools": {
+      "label": "Always-confirm tools",
+      "advanced": true
+    }
+  }
+}

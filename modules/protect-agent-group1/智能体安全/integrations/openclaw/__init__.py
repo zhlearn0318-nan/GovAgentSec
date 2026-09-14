@@ -1,0 +1,1 @@
+"""OpenClaw sidecar integration."""

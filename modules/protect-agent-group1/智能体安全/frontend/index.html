@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f5f1" />
+    <title>OpenClaw · 对话防护</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23d94a36' d='M7 7h18v18H7z'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="主导航">
+        <header class="brand-row">
+          <a class="brand" href="#" aria-label="OpenClaw 首页">
+            <span class="claw-mark" aria-hidden="true"><span></span></span>
+            <strong>OpenClaw</strong>
+          </a>
+          <div class="brand-actions">
+            <button class="icon-button" type="button" aria-label="搜索">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+            </button>
+            <button class="icon-button" type="button" aria-label="收起侧边栏">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M9 4v16m5-5-3-3 3-3"/></svg>
+            </button>
+          </div>
+        </header>
+
+        <nav class="primary-nav" aria-label="工作区">
+          <a class="nav-link" href="#"><span class="nav-glyph">⌁</span>概览</a>
+          <div class="nav-section-label"><span>更多</span><span>›</span></div>
+          <a class="nav-link nav-link--accent" href="#composer"><span class="nav-glyph">＋</span>新会话</a>
+        </nav>
+
+        <section class="conversation-list" aria-labelledby="conversation-heading">
+          <div class="section-heading">
+            <h2 id="conversation-heading">会话</h2>
+            <button class="icon-button icon-button--small" type="button" aria-label="筛选会话">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 7h14M8 12h8m-5 5h2"/></svg>
+            </button>
+          </div>
+          <a class="conversation conversation--active" href="#"><span>安全助手体验</span><time>刚刚</time></a>
+          <a class="conversation" href="#"><span>产品说明摘要</span><time>24d</time></a>
+          <a class="conversation" href="#"><span>文档问答</span><time>24d</time></a>
+        </section>
+
+        <section class="guard-dock" aria-label="防护过程">
+          <button class="guard-summary" id="guard-toggle" type="button" aria-expanded="true" aria-controls="guard-panel">
+            <span class="shield-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.7-2.8 8.1-7 10-4.2-1.9-7-5.3-7-10V6l7-3Z"/><path d="m9 12 2 2 4-5"/></svg>
+            </span>
+            <span class="guard-summary-copy">
+              <span class="eyebrow">本轮防护</span>
+              <strong id="guard-summary-text">等待新消息</strong>
+            </span>
+            <span class="guard-health"><i></i>在线</span>
+            <svg class="chevron" aria-hidden="true" viewBox="0 0 20 20"><path d="m6 8 4 4 4-4"/></svg>
+          </button>
+          <div class="guard-panel" id="guard-panel">
+            <div class="guard-track" aria-hidden="true"><span id="scan-beam"></span></div>
+            <ol class="guard-steps" id="guard-steps" aria-live="polite"></ol>
+            <div class="guard-meta" id="guard-meta">
+              <span>Protect Agent</span><span>全链路就绪</span>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <nav aria-label="面包屑"><span>OpenClaw</span><i>›</i><strong>main</strong><i>›</i><strong class="current">聊天</strong></nav>
+          <div class="topbar-status"><span></span>防护已启用</div>
+        </header>
+
+        <section class="chat" aria-label="聊天内容">
+          <div class="intro-note"><span>SHIELDED SESSION</span><p>此会话的输入、工具调用和模型输出都会经过安全检查。</p></div>
+          <div class="message-list" id="message-list" aria-live="polite">
+            <article class="message message--user">
+              <div class="bubble">请简要说明当前对话经过了哪些安全防护？</div>
+              <footer><strong>You</strong><time>19:04</time><span class="user-avatar">你</span></footer>
+            </article>
+            <article class="message message--assistant">
+              <div class="assistant-avatar" aria-hidden="true"><span class="claw-mark"><span></span></span></div>
+              <div>
+                <div class="bubble">当前会话已经完成输入边界校验、提示词注入检测、风险策略决策和输出内容复检。所有检查均已通过，可以安全响应。</div>
+                <footer><strong>Assistant</strong><time>19:04</time><span class="verified">✓ 已检查</span></footer>
+              </div>
+            </article>
+          </div>
+
+          <form class="composer" id="composer">
+            <div class="composer-main">
+              <button class="add-button" type="button" aria-label="添加附件">＋</button>
+              <label class="sr-only" for="prompt">给 Assistant 发消息</label>
+              <textarea id="prompt" rows="1" maxlength="16000" placeholder="给 Assistant 发消息"></textarea>
+              <button class="send-button" type="submit" aria-label="发送消息">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 12 14-7-4.5 14-3-5.5L5 12Z"/><path d="m11.5 13.5 3-3"/></svg>
+              </button>
+            </div>
+            <div class="composer-footer"><span><i></i>Protect Agent 正在守护此会话</span><kbd>Enter</kbd><span>发送</span></div>
+          </form>
+        </section>
+      </main>
+
+      <aside class="utility-rail" aria-label="快捷工具">
+        <button class="utility-button utility-button--active" type="button" aria-label="防护过程"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3 19 6v5c0 4.7-2.8 8.1-7 10-4.2-1.9-7-5.3-7-10V6l7-3Z"/></svg></button>
+        <button class="utility-button" type="button" aria-label="会话详情"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5M10 12h5m-5 4h5"/></svg></button>
+      </aside>
+    </div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

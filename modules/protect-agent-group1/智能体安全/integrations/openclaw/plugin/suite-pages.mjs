@@ -27,10 +27,10 @@ label{display:grid;gap:6px;color:#415970;font-size:12px;font-weight:750}input{wi
 .gov-shell{--gov-navy:#102942;--gov-deep:#081d31;--gov-jade:#118477;--gov-jade-soft:#e7f6f2;--gov-seal:#a53d49;--gov-gold:#b5802d;width:min(1320px,100%)}
 .gov-hero{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:34px;overflow:hidden;min-height:282px;margin-bottom:15px;border:1px solid #cbd9e5;border-radius:22px;background:linear-gradient(120deg,#fff 0 58%,#eaf1f7 58%);box-shadow:0 20px 48px rgba(21,50,75,.1)}
 .gov-copy{display:grid;align-content:center;padding:34px 0 34px 34px}.gov-brand{display:flex;align-items:center;gap:12px;margin-bottom:17px}.gov-mark{position:relative;display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:var(--gov-navy);color:#fff;font:900 18px/1 "Microsoft YaHei UI",sans-serif;box-shadow:inset 0 0 0 1px rgba(255,255,255,.18)}.gov-mark:before,.gov-mark:after{position:absolute;background:rgba(255,255,255,.24);content:""}.gov-mark:before{width:1px;height:28px}.gov-mark:after{width:28px;height:1px}.gov-brand strong{display:block;font-size:16px}.gov-brand small{display:block;color:var(--muted);font:10px/1.4 "Cascadia Mono",Consolas,monospace;letter-spacing:.12em}.gov-copy h1{max-width:680px;margin:0;font-size:40px;line-height:1.14;letter-spacing:-.055em}.gov-copy .lead{margin-top:12px;font-size:14px}.gov-summary{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}.gov-summary span{padding:6px 9px;border:1px solid #cedbe7;border-radius:8px;background:rgba(255,255,255,.7);color:#526a7f;font-size:10px}
-.hub-field{position:relative;min-height:282px;background-image:linear-gradient(90deg,transparent calc(50% - .5px),rgba(17,132,119,.22) 50%,transparent calc(50% + .5px)),linear-gradient(transparent calc(50% - .5px),rgba(17,132,119,.22) 50%,transparent calc(50% + .5px));background-size:100% 100%}.hub-field:after{position:absolute;inset:28px;border:1px solid rgba(72,105,131,.18);border-radius:50%;content:""}.hub-core{position:absolute;z-index:2;left:50%;top:50%;display:grid;place-items:center;width:112px;height:112px;border:1px solid #7891a5;border-radius:50%;background:var(--gov-deep);color:#fff;transform:translate(-50%,-50%);box-shadow:0 0 0 9px rgba(255,255,255,.72),0 12px 28px rgba(15,40,63,.22);text-align:center}.hub-core strong{display:block;font-size:18px;letter-spacing:.03em}.hub-core small{color:#9fc7c2;font:9px/1.3 "Cascadia Mono",Consolas,monospace}.hub-node{position:absolute;z-index:3;min-width:94px;padding:8px 10px;border:1px solid #c4d3df;border-radius:9px;background:#fff;color:var(--gov-navy);box-shadow:0 6px 16px rgba(23,53,78,.08);font-size:10px;text-align:center}.hub-node[data-node="aegis"]{left:50%;top:20px;transform:translateX(-50%)}.hub-node[data-node="agentguard"]{right:16px;top:50%;transform:translateY(-50%)}.hub-node[data-node="protect"]{left:50%;bottom:20px;transform:translateX(-50%)}.hub-node[data-node="assessment"]{left:16px;top:50%;transform:translateY(-50%)}.hub-node span{display:block;margin-top:2px;color:var(--gov-jade);font-size:9px}
+.hub-field{position:relative;min-height:282px;background-image:linear-gradient(90deg,transparent calc(50% - .5px),rgba(17,132,119,.22) 50%,transparent calc(50% + .5px)),linear-gradient(transparent calc(50% - .5px),rgba(17,132,119,.22) 50%,transparent calc(50% + .5px));background-size:100% 100%}.hub-field:after{position:absolute;inset:28px;border:1px solid rgba(72,105,131,.18);border-radius:50%;content:""}.hub-core{position:absolute;z-index:2;left:50%;top:50%;display:grid;place-items:center;width:112px;height:112px;border:1px solid #7891a5;border-radius:50%;background:var(--gov-deep);color:#fff;transform:translate(-50%,-50%);box-shadow:0 0 0 9px rgba(255,255,255,.72),0 12px 28px rgba(15,40,63,.22);text-align:center}.hub-core strong{display:block;font-size:18px;letter-spacing:.03em}.hub-core small{color:#9fc7c2;font:9px/1.3 "Cascadia Mono",Consolas,monospace}.hub-node{position:absolute;z-index:3;min-width:94px;padding:8px 10px;border:1px solid #c4d3df;border-radius:9px;background:#fff;color:var(--gov-navy);box-shadow:0 6px 16px rgba(23,53,78,.08);font-size:10px;text-align:center}.hub-node[data-node="protect"]{left:16px;top:50%;transform:translateY(-50%)}.hub-node[data-node="agentguard"]{left:50%;top:20px;transform:translateX(-50%)}.hub-node[data-node="aegis"]{right:16px;top:50%;transform:translateY(-50%)}.hub-node span{display:block;margin-top:2px;color:var(--gov-jade);font-size:9px}
 .gov-tabs{display:flex;gap:5px;margin-bottom:15px;padding:5px;border:1px solid #d0dce7;border-radius:13px;background:#e7edf3}.gov-tabs button{min-height:40px;flex:1;border:1px solid transparent;background:transparent;color:#526a7e;white-space:nowrap}.gov-tabs button:hover{background:rgba(255,255,255,.7)}.gov-tabs button[aria-selected="true"]{border-color:#cbd9e4;background:#fff;color:var(--gov-navy);box-shadow:0 3px 10px rgba(23,50,74,.07)}
 .gov-view[hidden]{display:none}.gov-section{border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:var(--shadow);padding:22px}.gov-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.gov-section-head h2{margin:0;font-size:20px}.gov-section-head p{margin:5px 0 0;color:var(--muted);font-size:12px}.sync-state{display:flex;align-items:center;gap:7px;color:#557085;font-size:10px}.sync-state:before{width:7px;height:7px;border-radius:50%;background:var(--gov-jade);box-shadow:0 0 0 4px var(--gov-jade-soft);content:""}
-.gov-modules{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}.gov-module{position:relative;display:grid;align-content:start;min-height:196px;padding:17px;border:1px solid #d5e0e9;border-radius:14px;background:#fbfcfe;overflow:hidden}.gov-module:after{position:absolute;right:-25px;bottom:-25px;width:70px;height:70px;border:1px solid rgba(17,132,119,.16);border-radius:50%;content:""}.gov-module .module-code{color:var(--gov-jade);font:800 9px/1 "Cascadia Mono",Consolas,monospace;letter-spacing:.1em}.gov-module h3{margin:10px 0 5px;font-size:15px}.gov-module p{min-height:52px;margin:0;color:var(--muted);font-size:11px}.gov-module footer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:15px}.module-health{display:flex;align-items:center;gap:5px;color:#758697;font-size:9px}.module-health:before{width:6px;height:6px;border-radius:50%;background:#a8b5c2;content:""}.module-health.online{color:var(--green)}.module-health.online:before{background:var(--green)}.module-health.offline{color:var(--red)}.module-health.offline:before{background:var(--red)}.gov-module button{position:relative;z-index:1;min-height:32px;padding:6px 10px;background:var(--gov-navy);font-size:10px}.gov-module button:hover{background:#1d4262}
+.gov-modules{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}.gov-module{position:relative;display:grid;align-content:start;min-height:196px;padding:17px;border:1px solid #d5e0e9;border-radius:14px;background:#fbfcfe;overflow:hidden}.gov-module:after{position:absolute;right:-25px;bottom:-25px;width:70px;height:70px;border:1px solid rgba(17,132,119,.16);border-radius:50%;content:""}.gov-module .module-code{color:var(--gov-jade);font:800 9px/1 "Cascadia Mono",Consolas,monospace;letter-spacing:.1em}.gov-module h3{margin:10px 0 5px;font-size:15px}.gov-module p{min-height:52px;margin:0;color:var(--muted);font-size:11px}.gov-module footer{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:15px}.module-health{display:flex;align-items:center;gap:5px;color:#758697;font-size:9px}.module-health:before{width:6px;height:6px;border-radius:50%;background:#a8b5c2;content:""}.module-health.online{color:var(--green)}.module-health.online:before{background:var(--green)}.module-health.offline{color:var(--red)}.module-health.offline:before{background:var(--red)}.gov-module button{position:relative;z-index:1;min-height:32px;padding:6px 10px;background:var(--gov-navy);font-size:10px}.gov-module button:hover{background:#1d4262}
 .gov-flow{display:grid;grid-template-columns:repeat(4,1fr);margin-top:15px;border:1px solid #d4dfe9;border-radius:13px;background:#f5f8fa}.flow-cell{position:relative;padding:13px}.flow-cell+.flow-cell{border-left:1px solid #d4dfe9}.flow-cell+.flow-cell:before{position:absolute;left:-5px;top:21px;width:8px;height:8px;border-top:1px solid var(--gov-jade);border-right:1px solid var(--gov-jade);background:#f5f8fa;transform:rotate(45deg);content:""}.flow-cell span{display:block;color:var(--muted);font-size:9px}.flow-cell strong{display:block;margin-top:3px;font-size:11px}
 .module-frame-shell{overflow:hidden;border:1px solid #c9d7e3;border-radius:18px;background:#fff;box-shadow:var(--shadow)}.module-frame-head{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:13px 16px;border-bottom:1px solid #d9e2ea;background:#f7f9fb}.frame-identity{display:flex;align-items:center;gap:10px}.frame-identity span{display:grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--gov-navy);color:#fff;font:800 10px/1 "Cascadia Mono",Consolas,monospace}.frame-identity strong{display:block;font-size:13px}.frame-identity small{display:block;color:var(--muted);font-size:9px}.frame-actions{display:flex;align-items:center;gap:9px}.frame-actions a{padding:6px 9px;border:1px solid #c6d5e1;border-radius:8px;color:#38546b;text-decoration:none;font-size:10px}.frame-actions a:focus-visible{outline:3px solid rgba(36,87,214,.2);outline-offset:2px}.module-frame{display:block;width:100%;height:max(690px,calc(100vh - 185px));border:0;background:#f3f6fa}
 @media(max-width:1050px){.gov-hero{grid-template-columns:1fr 360px}.gov-modules{grid-template-columns:1fr 1fr}}
@@ -50,39 +50,36 @@ export function renderGovAgentSecPanel() {
   <header class="gov-hero">
     <div class="gov-copy">
       <div class="gov-brand"><div class="gov-mark" aria-hidden="true">安</div><div><strong>政安智枢 GovAgentSec</strong><small>GOVERNMENT AGENT SECURITY HUB</small></div></div>
-      <h1>四域联防，一个安全中枢</h1>
-      <p class="lead">统一承载供应链准入、运行时决策、对话防护与安全测评。四套模块保持独立执行，在同一入口完成观察与操作。</p>
-      <div class="gov-summary"><span>本机闭环</span><span>四模块联动</span><span>真实后端保持不变</span><span>审计证据留存</span></div>
+      <h1>三域联防，一个安全中枢</h1>
+      <p class="lead">从输入防护、运行时安全到供应链安全，在同一入口查看防护状态、处理风险，并通过安全总览掌握全局。</p>
+      <div class="gov-summary"><span>本机闭环</span><span>三域协同</span><span>统一安全总览</span><span>审计证据留存</span></div>
     </div>
-    <div class="hub-field" aria-label="四模块联防拓扑">
+    <div class="hub-field" aria-label="输入防护、运行时安全与供应链安全联防拓扑">
       <div class="hub-core"><div><strong>智枢</strong><small>CONTROL HUB</small></div></div>
-      <div class="hub-node" data-node="aegis">Aegis 供应链安全中心<span>供应链准入</span></div>
-      <div class="hub-node" data-node="agentguard">AgentGuard<span>运行时决策</span></div>
-      <div class="hub-node" data-node="protect">输入防护链<span>对话防护</span></div>
-      <div class="hub-node" data-node="assessment">安全测评<span>审计追溯</span></div>
+      <div class="hub-node" data-node="protect">输入防护链<span>输入与输出检查</span></div>
+      <div class="hub-node" data-node="agentguard">运行时安全<span>AgentGuard</span></div>
+      <div class="hub-node" data-node="aegis">供应链安全<span>Aegis</span></div>
     </div>
   </header>
   <nav class="gov-tabs" aria-label="政安智枢模块">
-    <button type="button" aria-selected="true" data-gov-view="overview">安全总览</button>
-    <button type="button" aria-selected="false" data-gov-view="aegis">Aegis 供应链安全中心</button>
-    <button type="button" aria-selected="false" data-gov-view="agentguard">AgentGuard 运行时</button>
-    <button type="button" aria-selected="false" data-gov-view="protect">输入防护链</button>
-    <button type="button" aria-selected="false" data-gov-view="assessment">测评与审计</button>
+    <a href="/plugins/govagentsec/panel?view=overview" aria-current="page" data-gov-view="overview">安全总览</a>
+    <a href="/plugins/govagentsec/panel?view=protect#protect" data-gov-view="protect">输入防护链</a>
+    <a href="/plugins/govagentsec/panel?view=agentguard#agentguard" data-gov-view="agentguard">运行时安全</a>
+    <a href="/plugins/govagentsec/panel?view=aegis#aegis" data-gov-view="aegis">供应链安全</a>
   </nav>
   <section id="gov-overview" class="gov-view">
     <article class="gov-section">
-      <div class="gov-section-head"><div><h2>安全能力总览</h2><p>状态来自四个本机模块页面或受保护状态接口。</p></div><div id="sync-state" class="sync-state" role="status" aria-live="polite">正在核对模块状态</div></div>
+      <div class="gov-section-head"><div><h2>安全能力总览</h2><p>集中查看输入防护、运行时安全与供应链安全的入口状态。</p></div><div id="sync-state" class="sync-state" role="status" aria-live="polite">正在核对模块状态</div></div>
       <div class="gov-modules">
-        <article class="gov-module"><span class="module-code">SUPPLY CHAIN</span><h3>Aegis 供应链安全中心</h3><p>安装前准入、供应链报告、审计记录与安全规则管理。</p><footer><span id="health-aegis" class="module-health">检查中</span><button type="button" data-open-module="aegis">进入模块</button></footer></article>
-        <article class="gov-module"><span class="module-code">RUNTIME CONTROL</span><h3>AgentGuard 安全中心</h3><p>工具调用三态决策、人工审批、执行票据与隔离回执。</p><footer><span id="health-agentguard" class="module-health">检查中</span><button type="button" data-open-module="agentguard">进入模块</button></footer></article>
         <article class="gov-module"><span class="module-code">CONVERSATION GUARD</span><h3>输入防护链</h3><p>输入、策略、工具与模型输出的完整对话防护链。</p><footer><span id="health-protect" class="module-health">检查中</span><button type="button" data-open-module="protect">进入模块</button></footer></article>
-        <article class="gov-module"><span class="module-code">ASSESSMENT & AUDIT</span><h3>智能体安全测评与审计</h3><p>三阶段 Skill 测评、防护能力矩阵与审计追踪证据。</p><footer><span id="health-assessment" class="module-health">检查中</span><button type="button" data-open-module="assessment">进入模块</button></footer></article>
+        <article class="gov-module"><span class="module-code">RUNTIME CONTROL</span><h3>AgentGuard 安全中心</h3><p>工具调用三态决策、人工审批、执行票据与隔离回执。</p><footer><span id="health-agentguard" class="module-health">检查中</span><button type="button" data-open-module="agentguard">进入模块</button></footer></article>
+        <article class="gov-module"><span class="module-code">SUPPLY CHAIN</span><h3>Aegis 供应链安全中心</h3><p>安装前准入、供应链报告、审计记录与安全规则管理。</p><footer><span id="health-aegis" class="module-health">检查中</span><button type="button" data-open-module="aegis">进入模块</button></footer></article>
       </div>
-      <div class="gov-flow" aria-label="统一安全链路">
-        <div class="flow-cell"><span>准入前</span><strong>Aegis 核验来源与风险</strong></div>
-        <div class="flow-cell"><span>执行中</span><strong>AgentGuard 管控工具行为</strong></div>
-        <div class="flow-cell"><span>对话链</span><strong>输入防护链审查输入输出</strong></div>
-        <div class="flow-cell"><span>证据层</span><strong>测评系统生成审计报告</strong></div>
+      <div class="gov-flow" aria-label="安全功能导航顺序">
+        <div class="flow-cell"><span>输入防护链</span><strong>审查输入与输出风险</strong></div>
+        <div class="flow-cell"><span>运行时安全</span><strong>AgentGuard 管控工具行为</strong></div>
+        <div class="flow-cell"><span>供应链安全</span><strong>Aegis 核验来源与风险</strong></div>
+        <div class="flow-cell"><span>安全总览</span><strong>集中查看三域防护状态</strong></div>
       </div>
     </article>
   </section>
@@ -100,21 +97,19 @@ export function renderGovAgentSecPanel() {
   const modules={
     aegis:{title:'Aegis 供应链安全中心',detail:'供应链准入与规则治理',code:'AG',path:'/plugins/aegis-security-center/panel',statusPath:'/plugins/aegis-security-center/panel'},
     agentguard:{title:'AgentGuard 安全中心',detail:'运行时策略、审批与回执',code:'RG',path:'/plugins/agentguard-runtime-security/panel',statusPath:'/plugins/agentguard-runtime-security/panel'},
-    protect:{title:'输入防护链',detail:'输入、工具、检索与输出防护',code:'PA',path:'/plugins/protect-agent/panel',statusPath:'/protect-agent/ui/state'},
-    assessment:{title:'智能体安全测评与审计',detail:'三阶段测评与审计追溯',code:'EA',path:'/plugins/supply-chain-security/panel',statusPath:'/plugins/supply-chain-security/panel'}
+    protect:{title:'输入防护链',detail:'输入、工具、检索与输出防护',code:'PA',path:'/plugins/protect-agent/panel',statusPath:'/protect-agent/ui/state'}
   };
   const tabs=[...document.querySelectorAll('[data-gov-view]')],overview=document.getElementById('gov-overview'),moduleView=document.getElementById('gov-module-view'),frame=document.getElementById('module-frame');
-  function selectTab(name){for(const tab of tabs)tab.setAttribute('aria-selected',String(tab.dataset.govView===name))}
+  function selectTab(name){for(const tab of tabs){if(tab.dataset.govView===name)tab.setAttribute('aria-current','page');else tab.removeAttribute('aria-current')}}
   function openView(name){
     if(name==='overview'){selectTab(name);overview.hidden=false;moduleView.hidden=true;history.replaceState(null,'',location.pathname);return}
     const item=modules[name];if(!item)return;selectTab(name);overview.hidden=true;moduleView.hidden=false;document.getElementById('frame-code').textContent=item.code;document.getElementById('frame-title').textContent=item.title;document.getElementById('frame-detail').textContent=item.detail;document.getElementById('frame-open').href=item.path;document.getElementById('frame-state').textContent='正在加载';document.getElementById('frame-state').className='module-health';frame.title=item.title;frame.src=item.path;history.replaceState(null,'','#'+name)
   }
-  for(const tab of tabs)tab.addEventListener('click',()=>openView(tab.dataset.govView));
   for(const button of document.querySelectorAll('[data-open-module]'))button.addEventListener('click',()=>openView(button.dataset.openModule));
   frame.addEventListener('load',()=>{document.getElementById('frame-state').textContent='模块已加载';document.getElementById('frame-state').className='module-health online'});
   async function checkModule(key,item){const badge=document.getElementById('health-'+key);try{const response=await fetch(item.statusPath,{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw new Error();badge.textContent='在线';badge.className='module-health online';return true}catch{badge.textContent='需要检查';badge.className='module-health offline';return false}}
-  async function checkAll(){const results=await Promise.all(Object.entries(modules).map(([key,item])=>checkModule(key,item)));const online=results.filter(Boolean).length;document.getElementById('sync-state').textContent=online===4?'四个模块全部在线':online+' / 4 个模块在线'}
-  const initial=location.hash.slice(1);openView(modules[initial]?initial:'overview');checkAll();`;
+  async function checkAll(){const results=await Promise.all(Object.entries(modules).map(([key,item])=>checkModule(key,item)));const online=results.filter(Boolean).length;document.getElementById('sync-state').textContent=online===results.length?'三个模块入口均可访问':online+' / '+results.length+' 个模块入口可访问'}
+  const initial=location.hash.slice(1)||new URLSearchParams(location.search).get('view');openView(modules[initial]?initial:'overview');checkAll();`;
   return page("政安智枢 GovAgentSec", body, script);
 }
 

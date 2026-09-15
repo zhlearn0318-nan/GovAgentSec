@@ -6,6 +6,8 @@
 
 Windows 集成发行版。已在原生 Windows、OpenClaw `2026.7.1-2` 上完成整套安装、真实模型推理、联合准入与五个控制台页面验收，详见 [验收记录](docs/VALIDATION.md)。
 
+最新界面采用共享帆盾标识、青色主题和本地滚动动效，首页提供 **输入防护链、运行时安全、供应链安全** 三个入口。下文介绍的第四模块 Group4 仍保留代码、MCP 测评能力及联合安装策略；其独立页面继续可用，但不再显示在首页导航中。
+
 | 模块 | 功能 | 源码 |
 | --- | --- | --- |
 | Aegis | Skill / 插件安装前审计、Docker 隔离扫描、报告、规则和 MCP 准入 | `modules/aegis` |
@@ -87,7 +89,7 @@ flowchart TD
 - **控制敏感操作**：对受管命令和工具请求设置策略、审批与审计。
 - **本机演示与集成验证**：在 Windows OpenClaw 中展示完整流程，并使用固定样例检查各模块是否正常工作。
 
-安装完成后，OpenClaw 控制台提供统一入口及四个模块页面：
+安装完成后，OpenClaw 控制台提供统一入口及以下页面；第四模块通过独立路由访问：
 
 | 页面 | 可以查看或操作的内容 |
 | --- | --- |
@@ -95,7 +97,7 @@ flowchart TD
 | Aegis 供应链安全中心 | 安装准入、报告、审计、规则与 MCP 管理 |
 | AgentGuard 运行时安全 | 服务状态、受管请求、审批与执行记录 |
 | 输入防护 | 防护链状态、检测与风险事件 |
-| 安全测评与审计 | 发起 Skill 目录扫描并查看报告 |
+| 安全测评与审计（独立页面） | 发起 Skill 目录扫描并查看报告；访问 `/plugins/supply-chain-security/panel` |
 
 ## 安装目标
 
@@ -159,7 +161,8 @@ GovAgentSec/
 │  ├─ aegis/                    # 扩展审计与安装准入
 │  ├─ agentguard-group2/        # 运行时策略、审批与审计
 │  ├─ protect-agent-group1/     # 输入、工具结果与输出防护
-│  └─ supply-chain-group4/      # Skill 专项检查
+│  ├─ supply-chain-group4/      # Skill 专项检查
+│  └─ govagentsec-ui/           # 首页及三个安全入口共享的界面资源
 ├─ scripts/                     # 下载、配置生成及验证工具
 ├─ hooks/                       # 网关启动集成标记
 ├─ third_party/TrustRAG/         # 保留许可证的官方过滤代码

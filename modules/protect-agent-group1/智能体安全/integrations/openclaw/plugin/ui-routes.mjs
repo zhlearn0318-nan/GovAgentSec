@@ -1,3 +1,4 @@
+import { brandPage } from "../../../../../govagentsec-ui/design.mjs";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -37,7 +38,7 @@ function writeHtml(request, response, body) {
   }
   response.setHeader?.(
     "Content-Security-Policy",
-    "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
+    "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; frame-src 'self'; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
   );
   return writeResponse(request, response, "text/html; charset=utf-8", body);
 }
@@ -156,7 +157,7 @@ export function registerProtectionUiRoutes(api, eventStore) {
     auth: "plugin",
     match: "exact",
     handler(request, response) {
-      return writeHtml(request, response, renderGovAgentSecPanel());
+      return writeHtml(request, response, brandPage(renderGovAgentSecPanel(), "hub"));
     },
   });
   api.registerHttpRoute({
@@ -189,7 +190,7 @@ export function registerProtectionUiRoutes(api, eventStore) {
     auth: "plugin",
     match: "exact",
     handler(request, response) {
-      return writeHtml(request, response, renderProtectAgentPanel());
+      return writeHtml(request, response, brandPage(renderProtectAgentPanel(), "protect"));
     },
   });
   api.registerHttpRoute({

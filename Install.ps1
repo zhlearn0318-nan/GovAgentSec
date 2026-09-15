@@ -60,6 +60,7 @@ if (-not $SkipDependencies) {
     Invoke-Checked $protectPython @('-m','pip','install',(Join-Path $root '.runtime\wheels\torch-2.6.0+cu124-cp312-cp312-win_amd64.whl'))
     Invoke-Checked $protectPython @('-m','pip','install','-r',(Join-Path $root 'requirements-protect-lock.txt'))
     Invoke-Checked $protectPython @((Join-Path $root 'scripts\download_models.py'))
+    Invoke-Checked $protectPython @((Join-Path $root 'scripts\download_ui_assets.py'))
     $py2 = Join-Path $group2 '.venv\Scripts\python.exe'
     if (-not (Test-Path -LiteralPath $py2)) { Invoke-Checked $python @('-m','venv',(Join-Path $group2 '.venv')) }
     Invoke-Checked $py2 @('-m','pip','install','--require-hashes','-r',(Join-Path $group2 'requirements-lock.txt'))

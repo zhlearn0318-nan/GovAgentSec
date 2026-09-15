@@ -14,5 +14,7 @@ GovAgentSec integration code and the contributors' Aegis, Protect Agent and Grou
 | Cisco Skill Scanner / MCP Scanner | https://github.com/cisco-ai-defense | Built from commits pinned by the Aegis runtime bootstrap; see each upstream repository license |
 | PyTorch | https://pytorch.org | Official binary downloaded separately; upstream binary distribution licenses apply |
 | OpenClaw | https://github.com/openclaw/openclaw | Installed separately; its upstream license applies |
+| GSAP / ScrollTrigger 3.13.0 | https://github.com/greensock/GSAP/tree/3.13.0 | Bundled in `modules/govagentsec-ui/vendor`; original headers retained. [GSAP Standard License](https://gsap.com/community/standard-license/) applies, not Apache-2.0 |
+| Cabinet Grotesk Bold | https://www.fontshare.com/fonts/cabinet-grotesk | [ITF Free Font License](https://www.fontshare.com/licenses/itf-ffl); binary excluded from Git. Installer downloads from official Fontshare CDN and verifies SHA-256; system font fallback is available |
 
 Model weights, CUDA libraries, Docker images, OpenClaw, and local runtime environments are not committed. Downloading them does not change their upstream licensing terms. Existing module notices remain applicable to code derived from those modules.

@@ -1,3 +1,4 @@
+import { brandPage } from "../../../govagentsec-ui/design.mjs";
 import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -465,9 +466,9 @@ async function handler(req, res, config) {
     return true;
   }
   if (method === "GET" && (requestUrl.pathname === `${ROUTE_ROOT}/panel` || requestUrl.pathname === `${ROUTE_ROOT}/`)) {
-    const html = (await readFile(PANEL_PATH, "utf8")).replaceAll("__AGENTGUARD_PAGE_TOKEN__", issuePageToken());
+    const html = brandPage(await readFile(PANEL_PATH, "utf8"), "runtime").replaceAll("__AGENTGUARD_PAGE_TOKEN__", issuePageToken());
     writeResponse(res, 200, "text/html; charset=utf-8", html, {
-      "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
+      "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; font-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
     });
     return true;
   }

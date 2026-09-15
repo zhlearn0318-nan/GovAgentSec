@@ -23,6 +23,7 @@ local-validation/
 **/results/wheels/
 **/.protect-agent-ui-state.json
 /WORK_STATUS.md
+/modules/govagentsec-ui/vendor/*.woff2
 /scripts/stage_sources.py
 **/openclaw-config.local.json
 **/tasks/

@@ -63,17 +63,17 @@ Windows 集成发行版。已在原生 Windows、OpenClaw `2026.7.1-2` 上完成
 
 ```mermaid
 flowchart TD
-    A[安装 Skill 或插件] --> B[Aegis 安装前审计]
+    A[安装 Skill 或插件] --> B[模块一：Aegis 供应链安全中心<br/>安装前审计与隔离扫描]
     B --> C{是否为 Skill}
-    C -->|是| D[Group4 专项检查与联合决策]
+    C -->|是| D[模块四：安全测评与审计 Group4<br/>Skill 专项检查与联合准入]
     C -->|否| E[插件准入决策]
     D --> F[允许安装或阻断]
     E --> F
-    G[用户输入与外部内容] --> H[输入防护链]
+    G[用户输入与外部内容] --> H[模块三：输入防护链 Protect Agent<br/>提示注入、内容安全与检索材料检查]
     H --> I[OpenClaw 智能体运行]
-    I --> J[受管工具的策略与审批]
-    J --> K[工具结果与最终输出检查]
-    F --> L[GovAgentSec 统一控制台]
+    I --> J[模块二：AgentGuard 运行时安全<br/>受管工具的策略、审批与执行票据]
+    J --> K[模块三：输入防护链 Protect Agent<br/>工具结果与最终输出检查]
+    F --> L[/GovAgentSec 统一控制台<br/>输出准入结果、风险报告与审计记录/]
     J --> L
     K --> L
 ```

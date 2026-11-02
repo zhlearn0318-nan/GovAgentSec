@@ -102,14 +102,25 @@ export function renderGovAgentSecPanel() {
   const tabs=[...document.querySelectorAll('[data-gov-view]')],overview=document.getElementById('gov-overview'),moduleView=document.getElementById('gov-module-view'),frame=document.getElementById('module-frame');
   function selectTab(name){for(const tab of tabs){if(tab.dataset.govView===name)tab.setAttribute('aria-current','page');else tab.removeAttribute('aria-current')}}
   function openView(name){
+    // OpenClaw's opaque sandbox cannot host another frame with frame-ancestors
+    // 'self'. Navigate this frame to the module while keeping the outer sandbox.
+    if(modules[name]&&window.origin==='null'){location.replace(modules[name].path);return}
     if(name==='overview'){selectTab(name);overview.hidden=false;moduleView.hidden=true;history.replaceState(null,'',location.pathname);return}
     const item=modules[name];if(!item)return;selectTab(name);overview.hidden=true;moduleView.hidden=false;document.getElementById('frame-code').textContent=item.code;document.getElementById('frame-title').textContent=item.title;document.getElementById('frame-detail').textContent=item.detail;document.getElementById('frame-open').href=item.path;document.getElementById('frame-state').textContent='正在加载';document.getElementById('frame-state').className='module-health';frame.title=item.title;frame.src=item.path;history.replaceState(null,'','#'+name)
   }
   for(const button of document.querySelectorAll('[data-open-module]'))button.addEventListener('click',()=>openView(button.dataset.openModule));
+  // Switch the existing workbench directly rather than relying on iframe link
+  // navigation and a full page reload. Keep modified clicks as normal links.
+  for(const tab of tabs)tab.addEventListener('click',event=>{
+    if(event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
+    event.preventDefault();openView(tab.dataset.govView);
+    window.scrollTo({top:0,behavior:'instant'});
+    requestAnimationFrame(()=>window.ScrollTrigger?.refresh());
+  });
   frame.addEventListener('load',()=>{document.getElementById('frame-state').textContent='模块已加载';document.getElementById('frame-state').className='module-health online'});
   async function checkModule(key,item){const badge=document.getElementById('health-'+key);try{const response=await fetch(item.statusPath,{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw new Error();badge.textContent='在线';badge.className='module-health online';return true}catch{badge.textContent='需要检查';badge.className='module-health offline';return false}}
   async function checkAll(){const results=await Promise.all(Object.entries(modules).map(([key,item])=>checkModule(key,item)));const online=results.filter(Boolean).length;document.getElementById('sync-state').textContent=online===results.length?'三个模块入口均可访问':online+' / '+results.length+' 个模块入口可访问'}
-  const initial=location.hash.slice(1)||new URLSearchParams(location.search).get('view');openView(modules[initial]?initial:'overview');checkAll();`;
+  const initial=location.hash.slice(1)||new URLSearchParams(location.search).get('view');openView(modules[initial]?initial:'overview');if(window.origin!=='null')checkAll();else document.getElementById('sync-state').textContent='请选择模块进入工作台';`;
   return page("政安智枢 GovAgentSec", body, script);
 }
 

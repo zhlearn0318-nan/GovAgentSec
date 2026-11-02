@@ -1,6 +1,12 @@
 [CmdletBinding()]
 param()
 $ErrorActionPreference = 'Stop'
+$readyScript = Join-Path $PSScriptRoot 'Ensure-DockerReady.ps1'
+try {
+    & $readyScript -CheckOnly
+    Write-Host 'Engine is already healthy; no socket repair needed.'
+    return
+} catch { Write-Verbose $_.Exception.Message }
 $localRoot = [IO.Path]::GetFullPath($env:LOCALAPPDATA)
 $errorFile = Join-Path $localRoot 'Docker\backend.error.json'
 if (-not (Test-Path -LiteralPath $errorFile)) { throw 'No Docker startup error record found.' }
@@ -23,6 +29,11 @@ $targets = @('Docker\run', 'docker-secrets-engine') | ForEach-Object {
         $source
     }
 }
+try {
+    & $readyScript -CheckOnly
+    Write-Host 'Engine recovered during inspection; no socket repair needed.'
+    return
+} catch { Write-Verbose $_.Exception.Message }
 Get-Process -Name 'Docker Desktop','com.docker.backend','docker-desktop' -ErrorAction SilentlyContinue | Where-Object {
     $_.Path -like "$desktopRoot\*" -or $_.Path -eq (Join-Path $env:USERPROFILE '.docker\cli-plugins\docker-desktop.exe')
 } | Stop-Process -Force
@@ -35,4 +46,5 @@ foreach ($source in $targets) {
     Write-Host "Backed up temporary socket directory: $destination"
 }
 Start-Process -FilePath $desktopExe -WindowStyle Hidden
-Write-Host 'Docker Desktop restarted. Images, containers, volumes and settings retained.'
+& $readyScript
+Write-Host 'Docker Desktop is ready. Images, containers, volumes and settings retained.'

@@ -167,3 +167,39 @@ def test_snapshot_transport_failure_prevents_write(monkeypatch, tmp_path: Path) 
     assert result["decision"] == "BLOCK"
     assert "AEGIS_MCP_CONFIG_SNAPSHOT_FAILED" in result["finding_rule_ids"]
     assert [call[3] for call in calls] == ["show"]
+
+
+def test_write_timeout_restores_previous_configuration(monkeypatch, tmp_path: Path) -> None:
+    configure_paths(monkeypatch, tmp_path)
+    configure_fake_openclaw(monkeypatch, tmp_path)
+    previous = {"url": "https://old.example.com/mcp"}
+    calls = []
+
+    def runner(command):
+        calls.append(command)
+        if len(calls) == 1:
+            return completed(command, 0, json.dumps(previous))
+        if len(calls) == 2:
+            raise subprocess.TimeoutExpired(command, 90)
+        return completed(command, 0)
+
+    result = admit_mcp_server(safe_commit_request(), run_command=runner)
+    assert result["saved"] is False
+    assert result["decision"] == "BLOCK"
+    assert "保存 OpenClaw 配置超时" in result["reason"]
+    assert "已恢复原配置" in result["reason"]
+    assert json.loads(calls[-1][5]) == previous
+
+
+def test_snapshot_timeout_never_writes(monkeypatch, tmp_path: Path) -> None:
+    configure_paths(monkeypatch, tmp_path)
+    configure_fake_openclaw(monkeypatch, tmp_path)
+    calls = []
+
+    def runner(command):
+        calls.append(command)
+        raise subprocess.TimeoutExpired(command, 90)
+
+    result = admit_mcp_server(safe_commit_request(), run_command=runner)
+    assert "读取 OpenClaw 原配置超时" in result["reason"]
+    assert [call[3] for call in calls] == ["show"]

@@ -131,7 +131,8 @@ def _openclaw_command() -> tuple[str, str]:
 
 
 def _default_runner(command: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(command, text=True, encoding="utf-8", errors="replace", capture_output=True, timeout=30, check=False)
+    # Windows cold starts include OpenClaw plugin/config initialization.
+    return subprocess.run(command, text=True, encoding="utf-8", errors="replace", capture_output=True, timeout=90, check=False)
 
 
 def _completed_json_object(completed: subprocess.CompletedProcess[str]) -> dict[str, Any] | None:
@@ -186,6 +187,9 @@ def admit_mcp_server(
     source_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
     findings, analyzers = analyze_mcp_server_definition(name, server)
     saved = False
+    stage = "配置安全检查"
+    write_started = False
+    previous = None
     try:
         with tempfile.TemporaryDirectory(prefix="aegis-mcp-admission-") as temporary:
             root = Path(temporary)
@@ -198,6 +202,7 @@ def admit_mcp_server(
             if discovery is not None:
                 if not isinstance(discovery, dict):
                     raise ValueError("discovery must be an object")
+                stage = "离线工具描述扫描"
                 discovered, discovery_analyzers = _offline_discovery_findings(discovery, root)
                 findings.extend(discovered)
                 analyzers.extend(discovery_analyzers)
@@ -209,6 +214,7 @@ def admit_mcp_server(
             reason = f"当前 OpenClaw 稳定版按安全兼容模式阻断复核项；{reason}"
         if decision == Decision.ALLOW and commit:
             node, module = _openclaw_command()
+            stage = "读取 OpenClaw 原配置"
             snapshot = run_command([node, module, "mcp", "show", name, "--json"])
             snapshot_text = f"{snapshot.stdout}\n{snapshot.stderr}"
             previous = _completed_json_object(snapshot)
@@ -222,6 +228,8 @@ def admit_mcp_server(
                 reason = "MCP 原配置无法可靠读取，未执行更新并失败关闭。"
                 findings.insert(0, _finding("AEGIS_MCP_CONFIG_SNAPSHOT_FAILED", "CRITICAL", "Existing OpenClaw MCP configuration snapshot failed", f"exit_code={snapshot.returncode}"))
             else:
+                stage = "保存 OpenClaw 配置"
+                write_started = True
                 completed = run_command([node, module, "mcp", "set", name, canonical])
                 if completed.returncode != 0:
                     rollback_ok = _restore_mcp_server(node, module, name, previous, run_command)
@@ -229,6 +237,7 @@ def admit_mcp_server(
                     reason = "MCP 配置未能原子提交到 OpenClaw，已恢复原配置并失败关闭。" if rollback_ok else "MCP 配置提交失败且原配置恢复失败，必须人工处置。"
                     findings.insert(0, _finding("AEGIS_MCP_CONFIG_COMMIT_FAILED", "CRITICAL", "OpenClaw MCP configuration commit failed", f"exit_code={completed.returncode}; rollback={'ok' if rollback_ok else 'failed'}"))
                 else:
+                    stage = "复核 OpenClaw 保存结果"
                     verified = run_command([node, module, "mcp", "show", name, "--json"])
                     verified_payload = _completed_json_object(verified)
                     if verified_payload != server:
@@ -253,6 +262,20 @@ def admit_mcp_server(
                 for item in prioritized
             ],
         }
+    except subprocess.TimeoutExpired as exc:
+        rollback = ""
+        if write_started:
+            try:
+                restored = _restore_mcp_server(node, module, name, previous, run_command)
+            except Exception:
+                restored = False
+            rollback = "；已恢复原配置" if restored else "；原配置恢复未确认，请检查 MCP 配置"
+        response = {
+            "protocolVersion": 1, "decision": "block",
+            "reason": f"{stage}超时（{exc.timeout} 秒）{rollback}。请稍后重试。",
+            "findings": [{"ruleId": "AEGIS_MCP_ADMISSION_TIMEOUT", "message": f"{stage}超时", "severity": "critical"}],
+        }
+        saved = False
     except Exception as exc:
         response = {
             "protocolVersion": 1,

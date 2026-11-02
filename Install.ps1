@@ -41,17 +41,7 @@ Invoke-Checked $python @('-c','import sys; assert sys.version_info[:2] == (3, 12
 $conda = Resolve-Tool 'conda.exe' @((Join-Path $env:LOCALAPPDATA 'miniconda3\Scripts\conda.exe'))
 $git = Resolve-Tool 'git.exe'
 $ollama = Resolve-Tool 'ollama.exe' @((Join-Path $env:LOCALAPPDATA 'Programs\Ollama\ollama.exe'))
-$engine = & $docker --context desktop-linux info --format '{{.ServerVersion}}' 2>$null
-if ($LASTEXITCODE -ne 0) {
-    $desktop = Join-Path (Split-Path (Split-Path (Split-Path $docker))) 'Docker Desktop.exe'
-    if (Test-Path -LiteralPath $desktop) { Start-Process -FilePath $desktop -WindowStyle Hidden | Out-Null }
-    for ($attempt = 0; $attempt -lt 30; $attempt++) {
-        Start-Sleep -Seconds 2
-        $engine = & $docker --context desktop-linux info --format '{{.ServerVersion}}' 2>$null
-        if ($LASTEXITCODE -eq 0) { break }
-    }
-    if ($LASTEXITCODE -ne 0) { throw 'Docker Linux engine is unavailable. Complete Docker first-run setup; for stale socket errors see scripts/Repair-DockerSockets.ps1.' }
-}
+& (Join-Path $root 'scripts\Ensure-DockerReady.ps1')
 
 if (-not $SkipDependencies) {
     Write-Host 'Preparing real protection models and isolated Python environments...'

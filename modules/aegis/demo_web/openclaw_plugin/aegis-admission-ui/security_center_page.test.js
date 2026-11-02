@@ -92,7 +92,7 @@ test("legacy feature routes remain available through embedded paths", () => {
   assert.match(source, /isEmbeddedRequest/);
   assert.match(source, /sendRedirect/);
   assert.match(source, /\[AUDIT_PATH, "reports", renderReportsPage\]/);
-  assert.match(source, /parsed\.host\.toLowerCase\(\) === requestHost/);
+  assert.match(source, /import \{ isAllowedBrowserOrigin \} from "\.\/browser_origin\.js"/);
 });
 
 test("rule form does not shadow the native reset method", () => {

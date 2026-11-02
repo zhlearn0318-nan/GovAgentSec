@@ -16,6 +16,7 @@ import {
 import { renderAdmissionPage } from "./admission_page.js";
 import { renderSecurityCenterPage } from "./security_center_page.js";
 import { SESSION_TTL_MS, UploadError, UploadSessionStore } from "./upload_sessions.js";
+import { isAllowedBrowserOrigin } from "./browser_origin.js";
 
 const CENTER_PATH = "/plugins/aegis-security-center/panel";
 const PANEL_PATH = "/plugins/aegis-admission/panel";
@@ -46,19 +47,6 @@ function setSandboxCorsHeaders(res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Aegis-Action, X-Aegis-Token, X-Aegis-Demo-Token, X-Aegis-Session, X-Aegis-Relative-Path");
   res.setHeader("Access-Control-Max-Age", "300");
   res.setHeader("Vary", "Origin");
-}
-
-function isAllowedBrowserOrigin(req) {
-  const origin = String(req.headers.origin ?? "");
-  if (!origin || origin === "null") return true;
-  try {
-    const parsed = new URL(origin);
-    const requestHost = String(req.headers.host ?? "").toLowerCase();
-    return ["http:", "https:"].includes(parsed.protocol)
-      && parsed.host.toLowerCase() === requestHost;
-  } catch {
-    return false;
-  }
 }
 
 function redactLogLine(value, projectRoot = "") {
@@ -196,7 +184,8 @@ async function runAdminOperation(projectRoot, request) {
     // MCP admission invokes OpenClaw's official `mcp set` and `mcp show`
     // commands in sequence. Cold Windows/Node starts take longer than the
     // ordinary administration operations.
-    const operationTimeoutMs = request?.operation === "admit_mcp" ? 90_000 : 30_000;
+    // Budget for offline scans, three 90s CLI operations, and a possible rollback.
+    const operationTimeoutMs = request?.operation === "admit_mcp" ? 480_000 : 30_000;
     const timeout = setTimeout(() => {
       child.kill();
       reject(new Error(`Aegis administrator operation timed out after ${operationTimeoutMs / 1000}s.`));
@@ -539,8 +528,7 @@ export default definePluginEntry({
     }});
     api.registerHttpRoute({ path: API_PATH, auth: "plugin", match: "exact", handler: async (req, res) => {
       const method = (req.method ?? "GET").toUpperCase();
-      const origin = String(req.headers.origin ?? "");
-      if (origin && origin !== "null") { sendJson(res, 403, { error: "不允许的浏览器来源。" }); return true; }
+      if (!isAllowedBrowserOrigin(req)) { sendJson(res, 403, { ok: false, error: { code: "ORIGIN_REJECTED", message: "不允许的浏览器来源。" } }); return true; }
       setSandboxCorsHeaders(res);
       if (method === "OPTIONS") { res.statusCode = 204; res.end(); return true; }
       if (method !== "POST") { res.statusCode = 405; res.end("Method Not Allowed"); return true; }

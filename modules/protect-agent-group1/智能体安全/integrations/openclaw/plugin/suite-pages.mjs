@@ -66,6 +66,7 @@ export function renderGovAgentSecPanel() {
     <a href="/plugins/govagentsec/panel?view=protect#protect" data-gov-view="protect">输入防护链</a>
     <a href="/plugins/govagentsec/panel?view=agentguard#agentguard" data-gov-view="agentguard">运行时安全</a>
     <a href="/plugins/govagentsec/panel?view=aegis#aegis" data-gov-view="aegis">供应链安全</a>
+    <a href="/plugins/govagentsec/panel?view=trajectory#trajectory" data-gov-view="trajectory">轨迹与技能审计</a>
   </nav>
   <section id="gov-overview" class="gov-view">
     <article class="gov-section">
@@ -97,7 +98,8 @@ export function renderGovAgentSecPanel() {
   const modules={
     aegis:{title:'Aegis 供应链安全中心',detail:'供应链准入与规则治理',code:'AG',path:'/plugins/aegis-security-center/panel',statusPath:'/plugins/aegis-security-center/panel'},
     agentguard:{title:'AgentGuard 安全中心',detail:'运行时策略、审批与回执',code:'RG',path:'/plugins/agentguard-runtime-security/panel',statusPath:'/plugins/agentguard-runtime-security/panel'},
-    protect:{title:'输入防护链',detail:'输入、工具、检索与输出防护',code:'PA',path:'/plugins/protect-agent/panel',statusPath:'/protect-agent/ui/state'}
+    protect:{title:'输入防护链',detail:'输入、工具、检索与输出防护',code:'PA',path:'/plugins/protect-agent/panel',statusPath:'/protect-agent/ui/state'},
+    trajectory:{title:'轨迹与技能审计',detail:'事件证据、任务验证与候选版本',code:'TR',path:'/plugins/govagentsec/trajectory-panel'}
   };
   const tabs=[...document.querySelectorAll('[data-gov-view]')],overview=document.getElementById('gov-overview'),moduleView=document.getElementById('gov-module-view'),frame=document.getElementById('module-frame');
   function selectTab(name){for(const tab of tabs){if(tab.dataset.govView===name)tab.setAttribute('aria-current','page');else tab.removeAttribute('aria-current')}}
@@ -119,7 +121,7 @@ export function renderGovAgentSecPanel() {
   });
   frame.addEventListener('load',()=>{document.getElementById('frame-state').textContent='模块已加载';document.getElementById('frame-state').className='module-health online'});
   async function checkModule(key,item){const badge=document.getElementById('health-'+key);try{const response=await fetch(item.statusPath,{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw new Error();badge.textContent='在线';badge.className='module-health online';return true}catch{badge.textContent='需要检查';badge.className='module-health offline';return false}}
-  async function checkAll(){const results=await Promise.all(Object.entries(modules).map(([key,item])=>checkModule(key,item)));const online=results.filter(Boolean).length;document.getElementById('sync-state').textContent=online===results.length?'三个模块入口均可访问':online+' / '+results.length+' 个模块入口可访问'}
+  async function checkAll(){const results=await Promise.all(Object.entries(modules).filter(([,item])=>item.statusPath).map(([key,item])=>checkModule(key,item)));const online=results.filter(Boolean).length;document.getElementById('sync-state').textContent=online===results.length?'三个模块入口均可访问':online+' / '+results.length+' 个模块入口可访问'}
   const initial=location.hash.slice(1)||new URLSearchParams(location.search).get('view');openView(modules[initial]?initial:'overview');if(window.origin!=='null')checkAll();else document.getElementById('sync-state').textContent='请选择模块进入工作台';`;
   return page("政安智枢 GovAgentSec", body, script);
 }

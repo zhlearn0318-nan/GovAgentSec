@@ -12,6 +12,14 @@ scanner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(scanner)
 
 class ReleaseTests(unittest.TestCase):
+    def test_trajectory_capture_is_opt_in(self):
+        args = ({}, Path('C:/OpenClaw'), Path('C:/Docker/docker.exe'))
+        default = {row['path']: row['value'] for row in build(*args)}
+        enabled = {row['path']: row['value'] for row in build(*args, trajectory=True)}
+        self.assertNotIn('plugins.entries.govagentsec-trajectory', default)
+        self.assertTrue(enabled['plugins.entries.govagentsec-trajectory']['hooks']['allowConversationAccess'])
+        self.assertEqual(default['plugins.entries.protect-agent'], enabled['plugins.entries.protect-agent'])
+
     def test_unrelated_plugins_and_allowlist_preserved(self):
         current = {'plugins': {'load': {'paths': ['C:/other/plugin']}, 'allow': ['other']}}
         values = {row['path']: row['value'] for row in build(current, Path('C:/OpenClaw'), Path('C:/Docker/docker.exe'))}

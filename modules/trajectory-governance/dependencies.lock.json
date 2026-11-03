@@ -1,0 +1,12 @@
+{
+  "openclaw": "2026.7.1-2",
+  "skillclaw_commit": "334ddf82856826b7a259470c6670fb0ef5ce2dc4",
+  "local_model": {
+    "name": "qwen3:4b",
+    "manifest_digest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+    "weight_digest": "3e4cb14174460404e7a233e531675303b2fbf7749c02f91864fe311ab6344e4f",
+    "quantization": "Q4_K_M",
+    "endpoint": "http://127.0.0.1:11435",
+    "role": "capability candidate, not a calibrated production judge"
+  }
+}

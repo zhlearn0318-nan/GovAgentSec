@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def build(current: dict, state: Path, docker: Path) -> list[dict]:
+def build(current: dict, state: Path, docker: Path, *, trajectory: bool = False) -> list[dict]:
     modules = ROOT / 'modules'
     aegis = modules / 'aegis'
     group1 = modules / 'protect-agent-group1' / '智能体安全'
@@ -89,6 +89,15 @@ def build(current: dict, state: Path, docker: Path) -> list[dict]:
         }, 'requestTimeoutMs': 30000, 'connectionTimeoutMs': 8000, 'supportsParallelToolCalls': False,
             'toolFilter': {'include': ['security_scan']}},
     }
+    if trajectory:
+        values['plugins.load.paths'].append(str(modules / 'trajectory-governance'))
+        values['plugins.load.paths'] = list(dict.fromkeys(values['plugins.load.paths']))
+        values['plugins.entries.govagentsec-trajectory'] = {
+            'enabled': True,
+            'hooks': {'allowConversationAccess': True},
+            'config': {'dataDir': str(ROOT / 'local-validation' / 'trajectory')},
+        }
+        ids = (*ids, 'govagentsec-trajectory')
     if 'allow' in plugins:
         values['plugins.allow'] = list(dict.fromkeys(plugins['allow'] + list(ids)))
     return [{'path': path, 'value': value} for path, value in values.items()]
@@ -99,9 +108,10 @@ if __name__ == '__main__':
     parser.add_argument('--state', type=Path, required=True)
     parser.add_argument('--docker', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--trajectory', action='store_true', help='Include opt-in local conversation trajectory capture')
     args = parser.parse_args()
     current = json.loads((args.state / 'openclaw.json').read_text(encoding='utf-8-sig'))
-    batch = build(current, args.state.resolve(), args.docker.resolve())
+    batch = build(current, args.state.resolve(), args.docker.resolve(), trajectory=args.trajectory)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(batch, ensure_ascii=False, indent=2), encoding='utf-8')
     print('Generated configuration batch; no current configuration was changed.')

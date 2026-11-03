@@ -1,0 +1,93 @@
+import path from 'node:path';
+import { TraceStore, digest } from './trace-store.mjs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { renderTrajectoryPanel } from './panel.mjs';
+
+export function registerTrajectory(api) {
+  const config = api.pluginConfig ?? {};
+  if (!config.dataDir) throw new Error('trajectory dataDir is required');
+  const store = new TraceStore(path.join(config.dataDir, 'traces'));
+  api.session?.controls?.registerControlUiDescriptor({
+    surface: 'tab', id: 'history', label: '历史调用轨迹',
+    description: '历史任务、模型与工具调用关系图', icon: 'activity',
+    group: 'control', order: 21, requiredScopes: ['operator.read'],
+    path: '/plugins/govagentsec/trajectory-panel',
+  });
+  for (const [url, file] of [['trajectory-ui.mjs', 'ui.mjs'], ['graph.mjs', 'graph.mjs'], ['trajectory-native.mjs', 'native-view.mjs']]) {
+    api.registerHttpRoute({ path: '/plugins/govagentsec/' + url, auth: 'plugin', match: 'exact', handler: async (req, res) => {
+      if (req.method !== 'GET') { res.writeHead(405); res.end(); return true; }
+      res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(readFileSync(new URL(file, import.meta.url))); return true;
+    }});
+  }
+  const failures = new Set();
+  const record = (type, payload) => (event, ctx = {}) => {
+    const runId = event.runId ?? ctx.runId;
+    try {
+      const saved = store.append({ event_type: type, run_id: runId, seal: false,
+        capture_status: failures.has(runId) ? 'partial' : 'complete',
+        tool_call_id: event.toolCallId ?? ctx.toolCallId,
+        model_call_id: event.callId, payload: payload(event),
+      });
+      if (type === 'run.ended' || type === 'model.output') {
+        const { events, manifest } = store.read(saved.trace_id);
+        if (!manifest && events.some(e => e.event_type === 'run.ended') && events.some(e => e.event_type === 'model.output')) store.seal(saved.trace_id);
+      }
+      if (type === 'run.ended') failures.delete(runId);
+    } catch (error) {
+      if (runId) failures.add(runId);
+      // Observation must not alter a runtime guard's verdict. The capture failure
+      // is logged; incomplete/invalid runs are ineligible for experience selection.
+      api.logger.warn(`GovAgentSec trace capture failed: ${error.message}`);
+    }
+  };
+  api.on('before_agent_run', record('run.started', e => ({ prompt: e.prompt ?? null })), { priority: 110 });
+  api.on('model_call_started', record('model.started', e => ({ model: e.model, provider: e.provider })));
+  api.on('model_call_ended', record('model.ended', e => ({ outcome: e.outcome, duration_ms: e.durationMs, error: e.errorCategory ?? null })));
+  api.on('before_tool_call', record('tool.started', e => ({ tool: e.toolName, params: e.params })), { priority: 110 });
+  api.on('after_tool_call', record('tool.ended', e => ({ tool: e.toolName, result: e.result ?? null, error: e.error ?? null, duration_ms: e.durationMs ?? null })));
+  api.on('llm_output', record('model.output', e => ({ texts: e.assistantTexts, usage: e.usage ?? null })));
+  api.on('agent_end', record('run.ended', e => ({ success: e.success, error: e.error ?? null, duration_ms: e.durationMs ?? null })));
+  api.registerHttpRoute({ path: '/plugins/govagentsec/trajectories', auth: 'gateway', match: 'exact', handler: async (req, res) => {
+    if (req.method !== 'GET') { res.writeHead(405, { Allow: 'GET' }); res.end(); return true; }
+    try {
+      const id = new URL(req.url, 'http://localhost').searchParams.get('trace_id');
+      const data = id ? store.read(id) : { traces: store.list() };
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(data));
+    } catch {
+      res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'invalid or unreadable trace' }));
+    }
+    return true;
+  }});
+  const listCandidates = () => {
+    const root = path.join(config.dataDir, 'candidates');
+    const candidates = existsSync(root) ? readdirSync(root).filter(id => /^[a-f0-9-]{36}$/.test(id)).map(id => {
+      try {
+        const candidate = JSON.parse(readFileSync(path.join(root, id, 'candidate.json'), 'utf8'));
+        const content = readFileSync(path.join(root, id, 'bundle', 'SKILL.md'), 'utf8');
+        if (candidate.id !== id || digest(content) !== candidate.artifact_hash || readdirSync(path.join(root, id, 'bundle')).join(',') !== 'SKILL.md') return { id, name: candidate.name, status: 'unverified', reason: 'candidate_artifact_changed' };
+        return candidate;
+      }
+      catch { return { id, status: 'unverified', reason: 'candidate_record_unreadable' }; }
+    }) : [];
+    return { candidates };
+  };
+  for (const [name, read] of Object.entries({ list: () => ({ traces: store.list() }), detail: params => store.read(params.trace_id), candidates: listCandidates })) {
+    api.registerGatewayMethod?.('govagentsec.trajectory.' + name, ({ params, respond }) => {
+      try { respond(true, read(params ?? {})); }
+      catch { respond(false, undefined, { code: 'INVALID_REQUEST', message: '记录不存在或无法读取' }); }
+    }, { scope: 'operator.read' });
+  }
+  api.registerHttpRoute({ path: '/plugins/govagentsec/candidates', auth: 'gateway', match: 'exact', handler: async (req, res) => {
+    if (req.method !== 'GET') { res.writeHead(405, { Allow: 'GET' }); res.end(); return true; }
+    res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(listCandidates())); return true;
+  }});
+  // Static shell is public; all audit data remains behind gateway authentication.
+  api.registerHttpRoute({ path: '/plugins/govagentsec/trajectory-panel', auth: 'plugin', match: 'exact', handler: async (req, res) => {
+    if (req.method !== 'GET') { res.writeHead(405, { Allow: 'GET' }); res.end(); return true; }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'" });
+    res.end(renderTrajectoryPanel()); return true;
+  }});
+  return store;
+}

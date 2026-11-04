@@ -83,7 +83,7 @@ admit 需在本地配置提供 `admission.command/script/env/openclawVersion`，
 
 在 OpenClaw 侧栏展开“更多”，选择“历史调用轨迹”；也可访问 `/plugin?plugin=govagentsec-trajectory&id=history`。原生页面复用当前登录连接，通过 `govagentsec.trajectory.list/detail/candidates` 三个只读 RPC 读取记录，所需 scope 为 `operator.read`，无需重复输入令牌。
 
-聊天区右下方固定显示“任务与轨迹”按钮，在当前页面打开非模态侧栏；关闭按钮或 Esc 返回对话，不清除输入草稿。默认按宿主 session_key 筛选当前会话，也可切到全部历史。侧栏分为过程、风险与审批、证据；待审批动作经原 AgentGuard 审批链处理。安装：`node scripts/install_trajectory_chat.mjs`；恢复：`node scripts/install_trajectory_chat.mjs --restore`。升级 OpenClaw 后需重新适配。
+新版通过 `scripts/install_openclaw_workspace.mjs` 在宿主顶栏常驻“任务与轨迹”按钮（旧聊天入口保留作回退），在当前页面打开非模态侧栏；关闭按钮或 Esc 返回对话，不清除输入草稿。默认按宿主 session_key 筛选当前会话，也可切到全部历史。侧栏分为过程、风险与审批、证据；待审批动作经原 AgentGuard 审批链处理。安装：`node scripts/install_trajectory_chat.mjs`；恢复：`node scripts/install_trajectory_chat.mjs --restore`。升级 OpenClaw 后需重新适配。
 
 只读 task/status RPC 使用 operator.read，resolve RPC 使用 operator.approvals。MCP 请求文件从已有 statusPath 的 `.requests` 目录读取，与调用 ID 和适配器生成的请求编号匹配；不解析任意工具文本来发起审批。详细流程、验证命令和证据边界见 [任务工作台](../../docs/task-workbench.md)。
 

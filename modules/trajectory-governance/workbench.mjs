@@ -15,11 +15,11 @@ const el = (tag, text) => {
   if (text !== undefined) e.textContent = text;
   return e;
 };
-export function mountWorkbench(root, client, sessionKey) {
+export function mountWorkbench(root, client, sessionKey, options = {}) {
   root.replaceChildren();
   let disposed = false,
     revision = 0,
-    selection = null,
+    selection = options.traceId ?? null,
     renderedData = null,
     cleanupGraph = null;
   const style = el(
@@ -40,6 +40,7 @@ export function mountWorkbench(root, client, sessionKey) {
     o.value = v;
     scope.append(o);
   }
+  scope.value = options.scope ?? (sessionKey ? "session" : "all");
   const refreshButton = el("button", "刷新");
   const manage = el("a", "安全管理");
   manage.href = "/plugin?plugin=protect-agent&id=govagentsec";
@@ -61,9 +62,9 @@ export function mountWorkbench(root, client, sessionKey) {
   ]) {
     const b = el("button", label);
     b.setAttribute("role", "tab");
-    b.setAttribute("aria-selected", String(key === "process"));
+    b.setAttribute("aria-selected", String(key === (options.tab ?? "process")));
     const v = el("section");
-    v.hidden = key !== "process";
+    v.hidden = key !== (options.tab ?? "process");
     views[key] = v;
     b.onclick = () => {
       for (const button of tabs.children)
@@ -174,6 +175,7 @@ export function mountWorkbench(root, client, sessionKey) {
                 note: note.value,
               });
               await select(value.trace.summary.trace_id);
+              window.dispatchEvent(new CustomEvent("gov-approval-updated"));
             } catch (e) {
               instructions.textContent = e.message;
               for (const x of form.querySelectorAll("button"))
@@ -237,7 +239,8 @@ export function mountWorkbench(root, client, sessionKey) {
         message.textContent =
           (scope.value === "session" ? "当前会话" : "全部历史") +
           " · " +
-          value.trace.events.length + " 个事件" +
+          value.trace.events.length +
+          " 个事件" +
           (value.controls.some((c) => c.can_resolve) ? " · 有待审批动作" : "");
       }
     } catch (e) {
@@ -268,6 +271,8 @@ export function mountWorkbench(root, client, sessionKey) {
         o.value = r.trace_id;
         runs.append(o);
       }
+      runs.hidden = !data.traces.length;
+      tabs.hidden = !data.traces.length;
       if (!data.traces.length) {
         selection = null;
         renderedData = null;
@@ -291,6 +296,11 @@ export function mountWorkbench(root, client, sessionKey) {
   };
   runs.onchange = () => select(runs.value);
   refreshButton.onclick = refresh;
+  const extraStyle = el(
+    "style",
+    ':host{--ink:var(--text,#233e3b)}.wb{font:13px/1.55 "Segoe UI","Microsoft YaHei UI",sans-serif;padding:16px;color:var(--ink)}.row{gap:6px}button,select,input,textarea{border-radius:6px}button[aria-selected=true]{background:#e3eeeb;color:#155b50;border-color:#c8dcd5}.card{border-radius:7px;box-shadow:none}.card p{margin:6px 0}.runs{font-size:12px}.muted{font-size:12px}',
+  );
+  root.append(extraStyle);
   refresh();
   const timer = setInterval(() => {
     if (

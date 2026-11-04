@@ -484,7 +484,8 @@ async function handler(req, res, config) {
     return true;
   }
   if (method === "GET" && (requestUrl.pathname === `${ROUTE_ROOT}/panel` || requestUrl.pathname === `${ROUTE_ROOT}/`)) {
-    const html = brandPage(await readFile(PANEL_PATH, "utf8"), "runtime").replaceAll("__AGENTGUARD_PAGE_TOKEN__", issuePageToken());
+    let html = brandPage(await readFile(PANEL_PATH, "utf8"), "runtime", {compact:requestUrl.searchParams.has("workspace")}).replaceAll("__AGENTGUARD_PAGE_TOKEN__", issuePageToken());
+    if(requestUrl.searchParams.get("section")==="approvals") html=html.replace("</body>",'<script>switchPage("approvals");</script></body>');
     writeResponse(res, 200, "text/html; charset=utf-8", html, {
       "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; font-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
     });

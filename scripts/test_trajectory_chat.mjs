@@ -6,7 +6,7 @@ const browser=await chromium.launch({channel:'msedge',headless:true});
 try{
  const page=await browser.newPage({viewport:{width:1600,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:18789/#token='+encodeURIComponent(c.gateway.auth.token));
- const entry=page.locator('govagentsec-chat-traces');const button=entry.getByRole('button',{name:'任务与轨迹',exact:true});await button.waitFor({timeout:45000});
+ const entry=page.locator('govagentsec-shell');const button=entry.getByRole('button',{name:'任务与轨迹',exact:true});await button.waitFor({timeout:45000});
  assert.ok(await button.evaluate(el=>{const r=el.getBoundingClientRect();return r.right<=innerWidth&&r.bottom<=innerHeight&&r.top>=0}));
  const draft=page.locator('textarea').first();await draft.fill('轨迹入口验证草稿（不发送）');const url=page.url();
  await button.click();const dialog=entry.getByRole('region',{name:'任务详情'});await dialog.waitFor();await dialog.getByRole('combobox',{name:'轨迹范围'}).selectOption('all');await dialog.locator('.graph-node').first().waitFor({timeout:15000});

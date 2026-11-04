@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { redact, digest } from "./trace-store.mjs";
 import {
   buildSnapshot,
+  readApprovals,
   resolveApproval,
 } from "../agentguard-group2/integrations/openclaw_runtime_security_plugin/index.js";
 const actions = {
@@ -207,6 +208,47 @@ export class TaskLinks {
       coverage: this.status(),
       business_result: trace.summary.task_passed,
       capability_evidence: await this.admissions(trace),
+    });
+  }
+  async workspace() {
+    const traces = this.store.list();
+    const references = new Map();
+    for (const summary of traces.slice(0, 100)) {
+      if (summary.trace_status === "invalid") continue;
+      for (const ref of controlReferences(this.store.read(summary.trace_id))) {
+        if (await this.request(ref))
+          references.set(ref.control_request_id, summary);
+      }
+    }
+    let pending = [],
+      approvalError = null;
+    try {
+      pending = (await readApprovals(this.guard))
+        .filter((r) => r.status === "pending")
+        .map((r) => {
+          const trace = references.get(r.control_request_id);
+          return {
+            id: r.control_request_id,
+            tool: r.request?.action?.tool,
+            parameters: r.request?.action?.parameters,
+            reason: r.reason_code,
+            created_at: r.created_at,
+            trace_id: trace?.trace_id,
+            session_key: trace?.session_key,
+          };
+        });
+    } catch {
+      approvalError = "审批记录读取失败，请进入运行防护检查";
+    }
+    return redact({
+      traces: traces.slice(0, 100),
+      total: traces.length,
+      pending,
+      approval_error: approvalError,
+      coverage: this.status(),
+      servers: Object.entries(this.config.mcp?.servers ?? {}).map(
+        ([name, c]) => ({ name, enabled: c.enabled !== false }),
+      ),
     });
   }
   async resolve(params) {

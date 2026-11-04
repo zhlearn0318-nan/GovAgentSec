@@ -157,7 +157,9 @@ export function registerProtectionUiRoutes(api, eventStore) {
     auth: "plugin",
     match: "exact",
     handler(request, response) {
-      return writeHtml(request, response, brandPage(renderGovAgentSecPanel(), "hub"));
+      if (request.method !== 'GET' && request.method !== 'HEAD') { response.writeHead(405); response.end(); return true; }
+      response.writeHead(302, {...ROUTE_HEADERS, Location:'/plugin?plugin=protect-agent&id=govagentsec'});
+      response.end(); return true;
     },
   });
   api.registerHttpRoute({
@@ -190,7 +192,7 @@ export function registerProtectionUiRoutes(api, eventStore) {
     auth: "plugin",
     match: "exact",
     handler(request, response) {
-      return writeHtml(request, response, brandPage(renderProtectAgentPanel(), "protect"));
+      return writeHtml(request, response, brandPage(renderProtectAgentPanel(), "protect", {compact:new URL(request.url,"http://localhost").searchParams.has("workspace")}));
     },
   });
   api.registerHttpRoute({

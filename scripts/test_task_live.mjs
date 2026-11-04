@@ -30,7 +30,7 @@ try {
       "#token=" +
       encodeURIComponent(c.gateway.auth.token),
   );
-  const entry = page.locator("govagentsec-chat-traces"),
+  const entry = page.locator("govagentsec-shell"),
     button = entry.getByRole("button", { name: "任务与轨迹", exact: true });
   await button.waitFor({ timeout: 45000 });
   const prompt =
@@ -49,7 +49,7 @@ try {
     );
     const data = await r.json();
     trace = data.traces.find(
-      (t) => t.session_key === session && t.trace_status === "complete",
+      (t) => t.session_key === session && t.trace_status === "complete" && t.title?.startsWith("这是合成集成测试"),
     );
     if (trace) break;
     await new Promise((r) => setTimeout(r, 2000));
@@ -65,6 +65,7 @@ try {
     await panel.getByRole("combobox", { name: "轨迹范围" }).inputValue(),
     "session",
   );
+  await panel.getByRole("combobox", {name:"选择任务运行"}).selectOption(trace.trace_id);
   await panel.getByRole("tab", { name: "证据", exact: true }).click();
   await panel
     .getByText("调用 ID 与适配器请求已核对", { exact: true })

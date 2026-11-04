@@ -32,6 +32,7 @@ function ensureView() {
 export function createView(html) {
   ensureView();
   return {
+    stop() {}, // Host lifecycle contract; disconnectedCallback owns cleanup.
     render: ({ client }) =>
       html`<govagentsec-trajectory-view
         .client=${client}

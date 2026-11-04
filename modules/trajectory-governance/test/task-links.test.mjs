@@ -250,3 +250,14 @@ test("MCP pending requests merge with approvals; duplicate submissions execute o
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+
+test('workspace only returns MCP names and verified trace links; unrelated requests stay unlinked',async()=>{
+ const {root,store,trace}=fixture();const statusPath=path.join(root,'status.json');mkdirSync(statusPath+'.requests');
+ const pending={control_request_id:requestId,status:'pending',request:{request_id:requestId,action:{tool:'payment.transfer',parameters:{amount:1}}}};
+ writeFileSync(path.join(statusPath+'.requests',requestId+'.json'),JSON.stringify(pending));
+ const otherId='mcp-req-'+'b'.repeat(32);writeFileSync(path.join(statusPath+'.requests',otherId+'.json'),JSON.stringify({...pending,control_request_id:otherId,request:{...pending.request,request_id:otherId}}));
+ const links=new TaskLinks(store,{plugins:{entries:{'agentguard-runtime-security':{config:{statusPath}}}},mcp:{servers:{demo:{command:'private-command',env:{TOKEN:'private-test-value'}}}}});
+ const result=await links.workspace();assert.equal(result.pending.find(p=>p.id===requestId).trace_id,trace.summary.trace_id);assert.equal(result.pending.find(p=>p.id===otherId).trace_id,undefined);
+ assert.deepEqual(result.servers,[{name:'demo',enabled:true}]);assert.ok(!JSON.stringify(result).includes('private-test-value'));assert.ok(!JSON.stringify(result).includes('private-command'));
+});

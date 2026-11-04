@@ -1,11 +1,11 @@
 # 对话任务工作台
 
-更新日期：2026-11-04。日常任务在 OpenClaw 聊天中完成，安全管理页负责能力准入与系统维护。
+更新日期：2026-11-05。新版入口和布局见 [原生工作区](openclaw-workspace.md)；下文保留任务关联与验证协议。日常任务在 OpenClaw 聊天中完成，安全管理页负责能力准入与系统维护。
 
 ## 用户怎么用
 
 1. **使用前**：进入“政安智枢 GovAgentSec → 使用前·准入中心”，检查并接入 Skill、插件或 MCP。沿用 Aegis、Group4 的检查与安装机制。
-2. **使用中**：正常发送任务，点击聊天右下角 **任务与轨迹**。桌面端打开右侧面板，对话仍可操作；窄屏采用全宽面板。
+2. **使用中**：正常发送任务，点击OpenClaw 顶栏 **任务与轨迹**。桌面端打开右侧面板，对话仍可操作；窄屏采用全宽面板。
 3. **查看过程**：默认只列当前会话的任务运行。选择一次运行，查看调用图、节点详情和事件时间线。需要旧记录时切换“全部历史”。
 4. **处理审批**：切到“风险与审批”，核对动作、对象和参数，再填写审批人员及意见。批准、拒绝或中断都交回原 AgentGuard 服务处理；批准后仍需策略复验与受控执行。
 5. **使用后**：切到“证据”，查看请求、决策、审批与实际回执，并区分业务验收结果。跨任务对照可使用 OpenClaw 侧栏的“历史调用轨迹”。
@@ -41,6 +41,9 @@
 ```powershell
 node scripts/install_trajectory_view.mjs
 node scripts/install_trajectory_chat.mjs
+node scripts/install_openclaw_workspace.mjs
+# 如需恢复新版宿主外壳
+node scripts/install_openclaw_workspace.mjs --restore
 # 如需恢复 OpenClaw 原聊天资源
 node scripts/install_trajectory_chat.mjs --restore
 ```

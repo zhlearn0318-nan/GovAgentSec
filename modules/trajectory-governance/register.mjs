@@ -14,7 +14,7 @@ export function registerTrajectory(api) {
     group: 'control', order: 21, requiredScopes: ['operator.read'],
     path: '/plugins/govagentsec/trajectory-panel',
   });
-  for (const [url, file] of [['trajectory-ui.mjs', 'ui.mjs'], ['graph.mjs', 'graph.mjs'], ['trajectory-native.mjs', 'native-view.mjs'], ['workbench.mjs', 'workbench.mjs']]) {
+  for (const [url, file] of [['trajectory-ui.mjs', 'ui.mjs'], ['graph.mjs', 'graph.mjs'], ['trajectory-native.mjs', 'native-view.mjs'], ['workbench.mjs', 'workbench.mjs'], ['workspace.mjs', '../govagentsec-ui/workspace.mjs'], ['shell.mjs', '../govagentsec-ui/shell.mjs'], ['workspace-style.mjs', '../govagentsec-ui/workspace-style.mjs']]) {
     api.registerHttpRoute({ path: '/plugins/govagentsec/' + url, auth: 'plugin', match: 'exact', handler: async (req, res) => {
       if (req.method !== 'GET') { res.writeHead(405); res.end(); return true; }
       res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -76,7 +76,7 @@ export function registerTrajectory(api) {
     }) : [];
     return { candidates };
   };
-  for (const [name, read] of Object.entries({ list: params => ({ traces: store.list().filter(t => !params.session_key || t.session_key === params.session_key) }), detail: params => store.read(params.trace_id), candidates: listCandidates, task: params => tasks.detail(params), status: () => tasks.status() })) {
+  for (const [name, read] of Object.entries({ list: params => ({ traces: store.list().filter(t => !params.session_key || t.session_key === params.session_key) }), detail: params => store.read(params.trace_id), candidates: listCandidates, task: params => tasks.detail(params), status: () => tasks.status(), workspace: () => tasks.workspace() })) {
     api.registerGatewayMethod?.('govagentsec.trajectory.' + name, async ({ params, respond }) => {
       try { respond(true, await read(params ?? {})); }
       catch { respond(false, undefined, { code: 'INVALID_REQUEST', message: '记录不存在或无法读取' }); }

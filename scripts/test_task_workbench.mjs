@@ -135,6 +135,7 @@ try {
     errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto(`http://127.0.0.1:${server.address().port}/test`);
+  await page.evaluate(()=>{window.approvalChanges=0;window.addEventListener("gov-approval-updated",()=>window.approvalChanges++);});
   const entry = page.locator("govagentsec-chat-traces");
   await page.getByRole("textbox", { name: "聊天草稿" }).fill("保留我的草稿");
   await entry.getByRole("button", { name: "任务与轨迹", exact: true }).click();
@@ -216,9 +217,10 @@ try {
   );
   const approval = JSON.parse(
     readFileSync(path.join(data, "approvals.json"), "utf8"),
-  )[0];
+  ).find(record => record.control_request_id === requests.request_test_payment.control_request_id);
   assert.equal(approval.status, "approved_executed");
   assert.ok(approval.receipt);
+  assert.equal(await page.evaluate(()=>window.approvalChanges),1);
   assert.deepEqual(errors, []);
   const report = {
     passed: true,

@@ -6,8 +6,8 @@ const browser=await chromium.launch({channel:'msedge',headless:true});
 try{
  const page=await browser.newPage({viewport:{width:1600,height:1050}});const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('http://127.0.0.1:18789/#token='+encodeURIComponent(c.gateway.auth.token));
- await page.getByRole('button',{name:'更多',exact:true}).click();
- const tab=page.getByRole('link',{name:'历史调用轨迹',exact:true});await tab.waitFor({timeout:45000});const href=await tab.getAttribute('href');await tab.click();
+ await page.locator('.gov-nav [data-route=audit]').waitFor({timeout:45000});await page.locator('.gov-nav [data-route=audit]').click();
+ const href='/plugin?plugin=govagentsec-trajectory&id=history';await page.getByRole('button',{name:'运行对照与候选记录',exact:true}).click();
  await page.waitForFunction(()=>document.querySelector('govagentsec-trajectory-view')?.shadowRoot?.querySelectorAll('.graph-node').length>0,{},{timeout:30000});
  const view=page.locator('govagentsec-trajectory-view');assert.ok((await view.locator('#status').innerText()).includes('当前登录连接'));
  assert.equal(await view.locator('#token').isVisible(),false);

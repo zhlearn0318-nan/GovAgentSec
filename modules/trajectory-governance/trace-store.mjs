@@ -69,6 +69,7 @@ export function summarize(events, manifest) {
   const interrupted = !ended || ended.payload?.success === false || lastModel?.payload?.outcome === 'error';
   return {
     trace_id: events[0].trace_id, run_id: events[0].run_id,
+    session_key: events[0].session_key ?? null, session_id: events[0].session_id ?? null,
     source: events[0].source, task_passed: ended?.payload?.task_passed ?? null,
     trace_status: interrupted ? 'interrupted' : issues.length ? 'partial' : 'complete',
     issues: [...new Set(issues)], event_count: events.length,
@@ -105,6 +106,7 @@ export class TraceStore {
     const oversized = Buffer.byteLength(encoded) > 128 * 1024;
     const body = {
       schema_version: 1, event_id: randomUUID(), trace_id: traceId, run_id: runId,
+      session_key: input.session_key ?? null, session_id: input.session_id ?? null,
       event_type: input.event_type, source: input.source ?? 'openclaw',
       sequence: events.length + 1, observed_at: new Date().toISOString(),
       occurred_at: input.occurred_at ?? null, task_id: input.task_id ?? null,

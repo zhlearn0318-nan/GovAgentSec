@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { TraceStore, digest } from './trace-store.mjs';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { TaskLinks } from './task-links.mjs';
 import { renderTrajectoryPanel } from './panel.mjs';
 
 export function registerTrajectory(api) {
@@ -13,21 +14,23 @@ export function registerTrajectory(api) {
     group: 'control', order: 21, requiredScopes: ['operator.read'],
     path: '/plugins/govagentsec/trajectory-panel',
   });
-  for (const [url, file] of [['trajectory-ui.mjs', 'ui.mjs'], ['graph.mjs', 'graph.mjs'], ['trajectory-native.mjs', 'native-view.mjs']]) {
+  for (const [url, file] of [['trajectory-ui.mjs', 'ui.mjs'], ['graph.mjs', 'graph.mjs'], ['trajectory-native.mjs', 'native-view.mjs'], ['workbench.mjs', 'workbench.mjs']]) {
     api.registerHttpRoute({ path: '/plugins/govagentsec/' + url, auth: 'plugin', match: 'exact', handler: async (req, res) => {
       if (req.method !== 'GET') { res.writeHead(405); res.end(); return true; }
       res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(readFileSync(new URL(file, import.meta.url))); return true;
     }});
   }
+  const tasks = new TaskLinks(store, api.config ?? {});
   const failures = new Set();
   const record = (type, payload) => (event, ctx = {}) => {
     const runId = event.runId ?? ctx.runId;
     try {
       const saved = store.append({ event_type: type, run_id: runId, seal: false,
+        session_key: ctx.sessionKey ?? null, session_id: ctx.sessionId ?? null,
         capture_status: failures.has(runId) ? 'partial' : 'complete',
         tool_call_id: event.toolCallId ?? ctx.toolCallId,
-        model_call_id: event.callId, payload: payload(event),
+        model_call_id: event.callId, payload: {...payload(event), ...(type==='tool.started'?{capability:tasks.capability(event.toolName)}:{})},
       });
       if (type === 'run.ended' || type === 'model.output') {
         const { events, manifest } = store.read(saved.trace_id);
@@ -73,12 +76,15 @@ export function registerTrajectory(api) {
     }) : [];
     return { candidates };
   };
-  for (const [name, read] of Object.entries({ list: () => ({ traces: store.list() }), detail: params => store.read(params.trace_id), candidates: listCandidates })) {
-    api.registerGatewayMethod?.('govagentsec.trajectory.' + name, ({ params, respond }) => {
-      try { respond(true, read(params ?? {})); }
+  for (const [name, read] of Object.entries({ list: params => ({ traces: store.list().filter(t => !params.session_key || t.session_key === params.session_key) }), detail: params => store.read(params.trace_id), candidates: listCandidates, task: params => tasks.detail(params), status: () => tasks.status() })) {
+    api.registerGatewayMethod?.('govagentsec.trajectory.' + name, async ({ params, respond }) => {
+      try { respond(true, await read(params ?? {})); }
       catch { respond(false, undefined, { code: 'INVALID_REQUEST', message: '记录不存在或无法读取' }); }
     }, { scope: 'operator.read' });
   }
+  api.registerGatewayMethod?.('govagentsec.trajectory.resolve', async ({params, respond}) => {
+    try { respond(true, await tasks.resolve(params)); } catch (error) { respond(false, undefined, {code:'INVALID_REQUEST',message:error.message}); }
+  }, {scope:'operator.approvals'});
   api.registerHttpRoute({ path: '/plugins/govagentsec/candidates', auth: 'gateway', match: 'exact', handler: async (req, res) => {
     if (req.method !== 'GET') { res.writeHead(405, { Allow: 'GET' }); res.end(); return true; }
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(listCandidates())); return true;

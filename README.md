@@ -6,7 +6,7 @@
 
 Windows 集成发行版。已在原生 Windows、OpenClaw `2026.7.1-2` 上完成整套安装、真实模型推理、联合准入与五个控制台页面验收，详见 [验收记录](docs/VALIDATION.md)。
 
-最新界面采用共享帆盾标识、青色主题和本地滚动动效，首页提供 **输入防护链、运行时安全、供应链安全** 三个入口。下文介绍的第四模块 Group4 仍保留代码、MCP 测评能力及联合安装策略；其独立页面继续可用，但不再显示在首页导航中。
+对话右下角的 **任务与轨迹** 打开当前会话侧栏，集中查看调用过程、风险与审批、执行证据。安全管理按 **使用前·准入中心、使用中·运行防护、使用后·审计中心** 组织；输入防护链保留在总览，Group4 通过联合准入和专项测评参与流程。详见 [任务工作台使用与验证](docs/task-workbench.md)。
 
 | 模块 | 功能 | 源码 |
 | --- | --- | --- |
@@ -14,6 +14,7 @@ Windows 集成发行版。已在原生 Windows、OpenClaw `2026.7.1-2` 上完成
 | AgentGuard | 工具调用策略、审批、一次性执行票据与审计 | `modules/agentguard-group2` |
 | 输入防护链 | PIGuard、Qwen3Guard、TrustRAG 检测与 OpenClaw 生命周期保护 | `modules/protect-agent-group1` |
 | 安全测评与审计 | Skill 文档、权限和代码行为检查 | `modules/supply-chain-group4` |
+| 轨迹治理 | 会话轨迹图、AgentGuard 审批关联、MCP 配置准入证据与受控技能演进 | `modules/trajectory-governance` |
 
 ## 项目功能
 

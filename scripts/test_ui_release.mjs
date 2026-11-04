@@ -11,7 +11,7 @@ import { renderGovAgentSecPanel, renderProtectAgentPanel } from '../modules/prot
 test('branded hub keeps navigable module targets and executable inline scripts', () => {
   const html = brandPage(renderGovAgentSecPanel(), 'hub');
   for (const name of ['protect', 'agentguard', 'aegis']) {
-    assert.ok(html.includes(`data-gov-view="${name}"`));
+    if(name!=='protect')assert.ok(html.includes(`data-gov-view="${name}"`));
     assert.ok(html.includes(`data-open-module="${name}"`));
   }
   assert.ok(!html.includes('data-gov-view="assessment"'));

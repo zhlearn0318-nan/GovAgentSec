@@ -4,7 +4,7 @@
 
 ## 已实现
 
-- OpenClaw 被动插件：运行、模型、工具、最终输出事件；保留 run_id、tool_call_id、model_call_id。未知技能使用、任务分类及审批关联不推测。
+- OpenClaw 被动插件：运行、模型、工具、最终输出事件；保留 run_id、tool_call_id、model_call_id。记录宿主提供的 session_key/session_id；AgentGuard 审批按可信 MCP 调用与请求编号关联，未知技能使用和任务分类不推测。
 - 本地 JSONL 哈希链、封存清单、标识配对、脱敏和输入大小限制。无工具结果、异常、孤立及重复事件不能作为完整经验。
 - 兼容实测的 `agent_end → llm_output` 顺序；模型失败不能被宿主 `agent_end.success=true` 掩盖。
 - LocalJudge 四个接口；仅访问字面量回环地址、禁止重定向、固定模型摘要、严格结构检查、过长输入返回 unknown。默认 CPU 后台推理，请求结束卸载模型。
@@ -55,7 +55,7 @@ node modules/trajectory-governance/cli.mjs rollback CONFIG.json SKILL_NAME VERSI
 node modules/trajectory-governance/cli.mjs recover CONFIG.json SKILL_NAME
 ```
 
-`RECORDS.json` 是受信操作员准备的已评审记录，不是模型随意上传的声明。记录含 trace_id、evidence_hash（完整事件数组的规范化 SHA-256）、original_task_group、task_family、trace_status、safety、quality、task_validation 和 data_reviewed；generate 会重新核验原始轨迹。没有网络写接口；发布命令只供本地受信操作员使用，不能注册成模型工具。
+`RECORDS.json` 是受信操作员准备的已评审记录，不是模型随意上传的声明。记录含 trace_id、evidence_hash（完整事件数组的规范化 SHA-256）、original_task_group、task_family、trace_status、safety、quality、task_validation 和 data_reviewed；generate 会重新核验原始轨迹。技能发布没有网络写接口；发布命令只供本地受信操作员使用，不能注册成模型工具。任务工作台另有受 operator.approvals 权限约束的 AgentGuard 审批 RPC，不提供候选发布能力。
 
 发布需显式配置 `publishRoot` 为选定的 skills 加载目录；`dataDir/releases` 归档目录必须位于加载范围之外。命令成功表示磁盘版本已切换，返回的 `loader_status=reload_required` 不声称正在进行的会话已重新加载。已通过真实 OpenClaw 新进程读取 A/B/A 三个版本的隔离测试；现有会话热加载仍需按宿主机制检查。
 
@@ -77,13 +77,15 @@ admit 需在本地配置提供 `admission.command/script/env/openclawVersion`，
 
 `scripts/build_config.py --trajectory` 可以生成包含本插件的配置批次。默认安装流程保持原状。2026-11-03 已经用户授权在本机网关开启本插件的 `hooks.allowConversationAccess`，数据保存于 `local-validation/trajectory`；未放宽其他防护插件权限，原执行审批文件哈希保持不变。
 
-页面：`/plugins/govagentsec/trajectory-panel`，已接入总览的“轨迹与技能审计”导航。静态页面不包含审计数据；`GET /plugins/govagentsec/trajectories`（可加 `?trace_id=...`）和 `/plugins/govagentsec/candidates` 都使用宿主 gateway 认证。未授权不会返回记录；没有候选发布 HTTP 接口。
+页面：`/plugins/govagentsec/trajectory-panel`，已接入“使用后·审计中心”导航。静态页面不包含审计数据；`GET /plugins/govagentsec/trajectories`（可加 `?trace_id=...`）和 `/plugins/govagentsec/candidates` 都使用宿主 gateway 认证。未授权不会返回记录；没有候选发布 HTTP 接口。
 
 ### OpenClaw 原生历史与调用图
 
 在 OpenClaw 侧栏展开“更多”，选择“历史调用轨迹”；也可访问 `/plugin?plugin=govagentsec-trajectory&id=history`。原生页面复用当前登录连接，通过 `govagentsec.trajectory.list/detail/candidates` 三个只读 RPC 读取记录，所需 scope 为 `operator.read`，无需重复输入令牌。
 
-聊天区右下方固定显示“历史调用轨迹”按钮，在当前页面打开历史面板，关闭按钮或 Esc 返回对话，不清除输入草稿。安装：`node scripts/install_trajectory_chat.mjs`；恢复原聊天前端：`node scripts/install_trajectory_chat.mjs --restore`。该入口展示全部已采集历史，不推测记录与当前会话的对应关系。升级 OpenClaw 后需重新适配。
+聊天区右下方固定显示“任务与轨迹”按钮，在当前页面打开非模态侧栏；关闭按钮或 Esc 返回对话，不清除输入草稿。默认按宿主 session_key 筛选当前会话，也可切到全部历史。侧栏分为过程、风险与审批、证据；待审批动作经原 AgentGuard 审批链处理。安装：`node scripts/install_trajectory_chat.mjs`；恢复：`node scripts/install_trajectory_chat.mjs --restore`。升级 OpenClaw 后需重新适配。
+
+只读 task/status RPC 使用 operator.read，resolve RPC 使用 operator.approvals。MCP 请求文件从已有 statusPath 的 `.requests` 目录读取，与调用 ID 和适配器生成的请求编号匹配；不解析任意工具文本来发起审批。详细流程、验证命令和证据边界见 [任务工作台](../../docs/task-workbench.md)。
 
 左侧支持搜索和来源筛选，默认按记录时间倒序；中间以任务、模型、工具三列显示事件；右侧点击查看节点输入、输出、错误、耗时及原始证据。虚线表示记录顺序，实线只连接唯一且相同调用 ID 的开始和结束，不按邻近事件推断因果。支持缩放、滚动、完整时间线和双运行对照。启用采集之前的旧会话不会自动补造调用记录。
 
@@ -99,7 +101,7 @@ admit 需在本地配置提供 `admission.command/script/env/openclawVersion`，
 
 - 脱敏规则只覆盖常见字段和模式；自动选择还要求 data_reviewed。默认不收集隐藏思考。
 - 完整性描述已观察事件的配对，不证明宿主从未漏报。当前清单与轨迹位于同一权限域，尚无独立可信校验副本。
-- `skill_usage=unknown`；尚未接入真实审批记录、AgentGuard request_id 与技能版本证据。
+- `skill_usage=unknown`。AgentGuard 请求、审批及回执已经关联；MCP 配置摘要只匹配执行前同摘要的准入记录，不证明远端服务代码版本。旧轨迹未采集会话标识时仍显示未知。
 - 轨迹写入针对单宿主进程；重启后的未完成记录保留为不完整。本版本不支持多个进程向同一轨迹目录并发写入。
 - `Workshop.validate` 检查独立案例与产物哈希，由采购验收器提供证据；模型不能自行给出 passed。文件和本地 CLI 仍属于受信操作员权限域，不提供抵抗本机管理员伪造证据的保证。
 - 单条完整 OpenClaw 测试不代表已验证并行、取消、原生工具和 MCP 全路径；这些当前仅有组件测试或仍待实测。

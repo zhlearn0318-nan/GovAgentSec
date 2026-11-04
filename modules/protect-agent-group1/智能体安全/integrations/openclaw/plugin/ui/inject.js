@@ -86,7 +86,7 @@
 
     const toggle = element("button", "protect-guard__summary");
     toggle.type = "button";
-    toggle.setAttribute("aria-expanded", "true");
+    toggle.setAttribute("aria-expanded", "false");
     toggle.setAttribute("aria-controls", "protect-agent-guard-body");
     const icon = element("span", "protect-guard__shield", "◆");
     icon.setAttribute("aria-hidden", "true");
@@ -102,6 +102,7 @@
     toggle.append(icon, summaryCopy, connection, chevron);
 
     const body = element("div", "protect-guard__body");
+    body.hidden = true;
     body.id = "protect-agent-guard-body";
     const track = element("span", "protect-guard__track");
     track.setAttribute("aria-hidden", "true");

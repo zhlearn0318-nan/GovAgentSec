@@ -7,15 +7,16 @@ export function installChat(root,restore=false){
  const file=path.join(dir,files[0]),backup=file+'.govagentsec-chat-backup',text=readFileSync(file,'utf8');
  if(restore){if(!existsSync(backup))throw new Error('No chat backup');writeFileSync(file,readFileSync(backup));return {restored:true,file}}
  if(text.includes('govagentsec-chat-traces')){
-  const revised=text.replace("import('/plugins/govagentsec/trajectory-native.mjs')", "import('/plugins/govagentsec/trajectory-native.mjs?v=chat-entry-2')");
+  let revised=text.replace(/trajectory-native\.mjs(?:\?v=[^']+)?'/g,"trajectory-native.mjs?v=task-workbench-1'");
+  revised=revised.replace('<govagentsec-chat-traces .client=${e.client} .enabled=', '<govagentsec-chat-traces .client=${e.client} .sessionKey=${e.sessionKey} .enabled=');
   if(revised!==text)writeFileSync(file,revised);
   return {installed:true,changed:revised!==text,file};
  }
  const marker='return s`${this.renderPaneHeader(e)}${ZC(o)}`';
  if(text.split(marker).length!==2)throw new Error('Unsupported chat frontend structure; no files changed');
  if(existsSync(backup)&&readFileSync(backup,'utf8')!==text)throw new Error('Existing backup differs from installed chat frontend');
- const replacement='return s`${this.renderPaneHeader(e)}<govagentsec-chat-traces .client=${e.client} .enabled=${!!e.hello?.controlUiTabs?.some(t=>t.pluginId==="govagentsec-trajectory"&&t.id==="history")}></govagentsec-chat-traces>${ZC(o)}`';
- const load="\nimport('/plugins/govagentsec/trajectory-native.mjs?v=chat-entry-2').then(m=>m.defineChatEntry()).catch(()=>{});\n";
+ const replacement='return s`${this.renderPaneHeader(e)}<govagentsec-chat-traces .client=${e.client} .sessionKey=${e.sessionKey} .enabled=${!!e.hello?.controlUiTabs?.some(t=>t.pluginId==="govagentsec-trajectory"&&t.id==="history")}></govagentsec-chat-traces>${ZC(o)}`';
+ const load="\nimport('/plugins/govagentsec/trajectory-native.mjs?v=task-workbench-1').then(m=>m.defineChatEntry()).catch(()=>{});\n";
  if(!existsSync(backup))writeFileSync(backup,text,{flag:'wx'});
  writeFileSync(file,load+text.replace(marker,replacement));return {installed:true,changed:true,file,backup};
 }

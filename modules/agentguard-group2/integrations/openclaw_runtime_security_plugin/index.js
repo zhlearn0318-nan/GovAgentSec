@@ -1,6 +1,6 @@
 import { brandPage } from "../../../govagentsec-ui/design.mjs";
 import { randomBytes, randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -116,7 +116,17 @@ function approvalPathOf(config) {
 
 async function readApprovals(config) {
   const records = await readJson(approvalPathOf(config), []);
-  return Array.isArray(records) ? records : [];
+  const merged = new Map();
+  if (config.statusPath) {
+    const root = `${config.statusPath}.requests`;
+    let names = []; try { names = await readdir(root); } catch (error) { if(error.code !== 'ENOENT') throw error; }
+    for (const name of names.filter(n => /^mcp-req-[a-f0-9]{32}\.json$/.test(n))) {
+      const item = await readJson(join(root, name), null);
+      if(item?.control_request_id === name.slice(0,-5) && item.status === 'pending') merged.set(item.control_request_id, item);
+    }
+  }
+  for(const record of Array.isArray(records) ? records : []) merged.set(record.control_request_id,record);
+  return [...merged.values()];
 }
 
 async function writeApprovals(config, records) {
@@ -400,7 +410,15 @@ async function evaluateAction(config, body) {
   return redact({ request_id: request.request_id, task_id: request.task_id, action: request.action, result: result.payload, notification, duration_ms: Number((performance.now() - startedAt).toFixed(2)) });
 }
 
+const resolvingRequests = new Set();
 async function resolveApproval(config, body) {
+  const id = body?.control_request_id;
+  if(resolvingRequests.has(id)) throw new Error('该请求正在处理，请等待执行回执');
+  resolvingRequests.add(id);
+  try { return await resolveApprovalUnlocked(config, body); }
+  finally { resolvingRequests.delete(id); }
+}
+async function resolveApprovalUnlocked(config, body) {
   const controlRequestId = safeString(body.control_request_id);
   const resolution = safeString(body.resolution).toLowerCase();
   const approverId = safeString(body.approver_id).slice(0, 80);
@@ -526,5 +544,5 @@ const plugin = {
   },
 };
 
-export { buildCandidateAction, buildSnapshot, configuredWeChatWebhook, isAllowedOrigin, isLoopbackAddress, publicApproval, summarizeAudits };
+export { resolveApproval, readApprovals, buildCandidateAction, buildSnapshot, configuredWeChatWebhook, isAllowedOrigin, isLoopbackAddress, publicApproval, summarizeAudits };
 export default plugin;

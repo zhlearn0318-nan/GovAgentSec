@@ -13,49 +13,107 @@ export function activateToolResultGate() {
   runtime().bridgeVersion = RESULT_GATE_VERSION;
 }
 
-export function withheldToolResult() {
+export function withheldToolResult(reason = { kind: "check_unavailable", reasonCode: "CHECK_UNAVAILABLE", message: "安全检查暂不可用，工具返回内容已隔离。" }) {
   return {
     isError: true,
-    content: [{ type: "text", text: "Protect Agent 已隔离此工具返回内容：安全检查未通过或暂不可用。请调整请求后重试。" }],
-    details: { govagentsec: { decision: "BLOCK", withheld: true } },
+    content: [{ type: "text", text: `Protect Agent：${reason.message} 请查看对话中的防护提示。` }],
+    details: { govagentsec: { decision: reason.decision ?? "UNAVAILABLE", kind: reason.kind, reasonCode: reason.reasonCode, withheld: true } },
   };
 }
 
 export function prepareToolResult(result) {
-  const text = JSON.stringify(result);
-  // The sidecar accepts at most 16,000 characters. Never screen a truncated
-  // prefix and then release the unreviewed suffix (or a non-text attachment).
-  if (!text || text.length > 15_000) throw new Error("unsupported_tool_result_size");
-  const snapshot = JSON.parse(text);
+  let snapshot;
+  try { snapshot = JSON.parse(JSON.stringify(result)); }
+  catch { throw new Error("UNSUPPORTED_TOOL_RESULT_FORMAT"); }
   if (!snapshot || !Array.isArray(snapshot.content) || snapshot.content.some(
     (part) => part?.type !== "text" || typeof part.text !== "string",
-  )) throw new Error("unsupported_tool_result_content");
+  )) throw new Error("UNSUPPORTED_TOOL_RESULT_CONTENT");
+
+  // Classifiers must see the actual content, not JSON-escaped protocol text.
+  // Keep every text block and extra field (including unknown field names) in
+  // the material to screen. Repeated exec "aggregated" output is scanned once.
+  const fragments = [], seen = new Set();
+  let size = 0;
+  function add(value) {
+    const text = String(value);
+    if (!text || seen.has(text)) return;
+    seen.add(text);
+    size += text.length + (fragments.length ? 2 : 0);
+    if (size > 15_000) throw new Error("UNSUPPORTED_TOOL_RESULT_SIZE");
+    fragments.push(text);
+  }
+  function fields(value) {
+    if (value === null) return;
+    if (Array.isArray(value)) { for (const item of value) fields(item); return; }
+    if (typeof value === "object") {
+      for (const [key, item] of Object.entries(value)) { add(key); fields(item); }
+      return;
+    }
+    add(value);
+  }
+  for (const part of snapshot.content) {
+    add(part.text);
+    fields(Object.fromEntries(Object.entries(part).filter(([key]) => key !== "text" && key !== "type")));
+  }
+  fields(Object.fromEntries(Object.entries(snapshot).filter(([key]) => key !== "content")));
+  const text = fragments.join("\n\n") || "工具返回为空。";
   return { text, snapshot };
+}
+
+async function isolate(state, ctx, reason) {
+  // The host owns cancellation and its confirmation. Returning an error alone
+  // lets the model retry, so explicitly request cancellation before returning.
+  try { await state.stopRun?.(ctx, { phase: "tool_results", ...reason }); }
+  catch { state.recordFailure?.(ctx, "TASK_STOP_FAILED"); }
+  return withheldToolResult(reason);
 }
 
 export async function executeWithResultGuard(execute, args, ctx, enabled) {
   if (!enabled) return execute(...args);
-  let result;
+  const state = runtime();
+  let result, executionError = false;
+  const executionStarted = performance.now();
   try {
     // onUpdate can publish raw output before the final result is screened.
     // Buffered final text is the supported path while this guard is enabled.
     result = await execute(args[0], args[1], args[2], undefined);
-  } catch {
-    // Tool exceptions can also contain secrets. Do not let raw exception text
-    // escape into the host's diagnostics or the model's error result.
-    runtime().recordFailure?.(ctx, "tool_execution_error");
-    return withheldToolResult();
+  } catch (error) {
+    executionError = true;
+    // Preserve useful ordinary errors only after screening their content.
+    // The original exception must never bypass the return gate.
+    result = { isError: true, content: [{ type: "text", text: String(error?.message ?? error) }] };
   }
-  const state = runtime();
-  if (typeof state.screenToolResult !== "function") return withheldToolResult();
+  ctx = { ...ctx, executionMs: Math.round(performance.now() - executionStarted) };
+  let prepared;
   try {
-    const prepared = prepareToolResult(result);
-    const decision = await state.screenToolResult(prepared, ctx, args[2]);
-    return decision?.decision === "ALLOW" ? prepared.snapshot : withheldToolResult();
-  } catch {
-    state.recordFailure?.(ctx, "tool_result_unavailable");
-    return withheldToolResult();
+    prepared = prepareToolResult(result);
+  } catch (error) {
+    const reasonCode = error.message.startsWith("UNSUPPORTED_TOOL_RESULT_") ? error.message : "UNSUPPORTED_TOOL_RESULT_FORMAT";
+    state.recordFailure?.(ctx, reasonCode);
+    return isolate(state, ctx, { kind: "unsupported", reasonCode,
+      message: reasonCode === "UNSUPPORTED_TOOL_RESULT_SIZE" ? "工具返回超过检查容量，内容已隔离。" : "当前检查器不支持此工具返回格式，内容已隔离。" });
   }
+  let decision;
+  try {
+    if (typeof state.screenToolResult !== "function") throw new Error("CHECK_UNAVAILABLE");
+    decision = await state.screenToolResult(prepared, ctx, args[2]);
+    if (!["ALLOW", "BLOCK", "REVIEW"].includes(decision?.decision)) throw new Error("CHECK_UNAVAILABLE");
+  } catch {
+    state.recordFailure?.(ctx, "CHECK_UNAVAILABLE");
+    return isolate(state, ctx, { kind: "check_unavailable", reasonCode: "CHECK_UNAVAILABLE", message: "安全检查失败或暂不可用，工具返回内容已隔离。" });
+  }
+  if (decision.decision !== "ALLOW") return isolate(state, ctx, {
+    kind: "security_block", decision: decision.decision,
+    reasonCode: decision.reasonCode ?? `SECURITY_${decision.decision}`,
+    message: decision.decision === "REVIEW" ? "工具返回需要安全复核，内容已隔离。" : "工具返回未通过安全检查，内容已隔离。",
+  });
+  if (executionError || prepared.snapshot.isError) {
+    state.recordFailure?.(ctx, "TOOL_EXECUTION_ERROR");
+    prepared.snapshot.details ??= {};
+    if (typeof prepared.snapshot.details === "object" && !Array.isArray(prepared.snapshot.details))
+      prepared.snapshot.details.govagentsec = { kind: "tool_error", reasonCode: "TOOL_EXECUTION_ERROR", withheld: false };
+  }
+  return prepared.snapshot;
 }
 
 async function probeSidecar(config) {
@@ -68,7 +126,7 @@ async function probeSidecar(config) {
   return response.ok && (await response.json())?.ready === true;
 }
 
-export function registerProtectionRuntime({ config, conversationAllowed, screenToolResult, recordFailure, probe = probeSidecar }) {
+export function registerProtectionRuntime({ config, conversationAllowed, screenToolResult, recordFailure, stopRun, probe = probeSidecar }) {
   const state = runtime();
   const hooks = {};
   const lastDecisions = {};
@@ -90,7 +148,8 @@ export function registerProtectionRuntime({ config, conversationAllowed, screenT
     rememberCall(ctx);
     return decision;
   };
-  state.recordFailure = (ctx, reason) => { rememberCall(ctx); recordFailure(ctx, reason); };
+  state.recordFailure = (ctx, reason) => { rememberCall(ctx); recordFailure?.(ctx, reason); };
+  state.stopRun = stopRun;
   state.snapshot = async ({ probe: shouldProbe = true } = {}) => {
     if (shouldProbe && (!serviceCheckedAt || Date.now() - Date.parse(serviceCheckedAt) > 5_000)) {
       pendingProbe ??= Promise.resolve().then(() => probe(config)).then(
@@ -113,7 +172,7 @@ export function registerProtectionRuntime({ config, conversationAllowed, screenT
     const tool_results = {
       mode: state.bridgeVersion === RESULT_GATE_VERSION ? "enforce" : "observe",
       reason: state.bridgeVersion === RESULT_GATE_VERSION
-        ? "文本返回在进入模型和诊断前检查；检查失败、超限和非文本返回将隔离；流式工具更新暂停"
+        ? "工具文本按正文检查；风险、检查故障和不支持的返回分别提示并请求停止任务；流式工具更新暂停"
         : "未安装宿主返回前适配器；after_tool_call 仅事后观察",
     };
     return { service, serviceCheckedAt, input, output, tool_results,
@@ -126,7 +185,9 @@ export function registerProtectionRuntime({ config, conversationAllowed, screenT
     markHook(name) { hooks[name] = new Date().toISOString(); },
     record(phase, decision, enforced, ctx) {
       lastDecisions[phase] = { decision: decision?.decision ?? "BLOCK", enforced,
-        riskLevel: decision?.riskLevel ?? "UNKNOWN", at: new Date().toISOString() };
+        riskLevel: decision?.riskLevel ?? "UNKNOWN", reasonCode: decision?.reasonCode ?? null,
+        categories: decision?.categories ?? [], durationMs: decision?.durationMs ?? null,
+        executionMs: ctx?.executionMs ?? null, at: new Date().toISOString() };
       globalThis[Symbol.for('govagentsec.protection.audit')]?.({phase, ...lastDecisions[phase],
         runId:ctx?.runId,sessionKey:ctx?.sessionKey,sessionId:ctx?.sessionId,toolCallId:ctx?.toolCallId});
     },

@@ -327,3 +327,27 @@
 .protect-guard__step[data-status="pending"],.protect-guard__step[data-status="skipped"]{opacity:0.85}
 .protect-guard__step-state,.protect-guard__step-copy small{font-size:10px}
 @media(prefers-reduced-motion:reduce){#protect-agent-guard *{animation:none!important;transition:none!important}}
+
+.protect-alert {
+  flex: none;
+  margin: 10px 16px;
+  padding: 12px 16px;
+  border: 1px solid #d99b8d;
+  border-left: 4px solid #ad4230;
+  border-radius: 8px;
+  background: #fff5f2;
+  color: #65352c;
+  font: 13px/1.55 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
+  overflow-wrap: anywhere;
+}
+.protect-alert[hidden] { display: none !important; }
+.protect-alert__title { display: block; font-size: 15px; color: #8f3022; }
+.protect-alert p { margin: 4px 0 0; }
+.protect-alert__detail { font-size: 12px; color: #785c54; }
+.protect-alert__action { font-size: 12px; }
+.protect-alert[data-kind="tool_error"], .protect-alert[data-kind="unsupported"],
+.protect-alert[data-kind="check_unavailable"] { border-color: #d2b47a; border-left-color: #9b6b15; background: #fff9ed; color: #6e541f; }
+.protect-alert[data-kind="tool_error"] .protect-alert__title,
+.protect-alert[data-kind="unsupported"] .protect-alert__title,
+.protect-alert[data-kind="check_unavailable"] .protect-alert__title { color: #7d5714; }
+@media(max-width:700px) { .protect-alert { margin:8px; padding:10px 12px; } }

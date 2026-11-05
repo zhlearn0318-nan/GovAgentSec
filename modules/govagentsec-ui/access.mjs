@@ -39,7 +39,19 @@ export function allowPage(req, res) {
   state.tickets.delete(code);
   if (req.method === 'GET' && grant && grant.expires > Date.now() &&
       grant.target === url.pathname + url.search) return true;
-  return deny(res);
+  return denyPage(req, res);
+}
+
+function denyPage(req, res) {
+  const embedded = req.headers?.['sec-fetch-dest'] === 'iframe';
+  res.writeHead(401, {
+    'Content-Type': 'text/html; charset=utf-8',
+    'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer',
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'",
+  });
+  res.end(`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>重新打开管理面板</title><style>body{margin:0;padding:28px;background:#f6f8f7;color:#233e3b;font:14px/1.7 'Segoe UI','Microsoft YaHei UI',sans-serif}main{max-width:560px;margin:40px auto;padding:24px;border:1px solid #d9e4df;border-radius:8px;background:#fff}h1{font-size:20px;margin:0 0 12px}p{margin:8px 0;color:#60736d}a{display:inline-block;margin-top:12px;padding:8px 14px;border-radius:5px;background:#1e695b;color:#fff;text-decoration:none}a:focus-visible{outline:2px solid #1e695b;outline-offset:3px}</style></head><body><main role="alert"><h1>需要重新打开此面板</h1><p>本次页面访问凭据已失效或缺失，尚未读取管理数据。</p><p>${embedded ? '请点击页面上方的“重新加载”，或返回后重新选择此菜单。' : '请返回 OpenClaw 工作区，登录后从菜单重新打开。'}</p>${embedded ? '' : '<a href="/plugin?plugin=protect-agent&amp;id=govagentsec&amp;section=settings">返回防护设置</a>'}</main></body></html>`);
+  return false;
 }
 
 export function deny(res) {

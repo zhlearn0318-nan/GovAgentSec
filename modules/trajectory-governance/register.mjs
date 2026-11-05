@@ -28,7 +28,8 @@ export function registerTrajectory(api) {
     try {
       store.append({event_type:'protection.'+entry.phase,run_id:entry.runId,seal:false,
         session_key:entry.sessionKey??null,session_id:entry.sessionId??null,tool_call_id:entry.toolCallId,
-        payload:{decision:entry.decision,enforced:entry.enforced,riskLevel:entry.riskLevel,at:entry.at},
+        payload:{decision:entry.decision,enforced:entry.enforced,riskLevel:entry.riskLevel,at:entry.at,
+          reasonCode:entry.reasonCode,categories:entry.categories,duration_ms:entry.durationMs,tool_execution_ms:entry.executionMs},
       });
     } catch(error) {failures.add(entry.runId);api.logger.warn('Protection audit capture failed: '+error.message);}
   };

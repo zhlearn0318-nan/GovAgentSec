@@ -209,6 +209,7 @@ export function createScreeningClient(config, dependencies = {}) {
   const token = readToken(config.tokenFile);
   return {
     async screen(request, options = {}) {
+      const started = performance.now();
       const timeoutSignal = AbortSignal.timeout(config.requestTimeoutMs);
       const signal = options.signal
         ? AbortSignal.any([timeoutSignal, options.signal])
@@ -225,7 +226,7 @@ export function createScreeningClient(config, dependencies = {}) {
       if (!response.ok) {
         throw new Error(`Protect Agent screening failed with HTTP ${response.status}`);
       }
-      return validateScreenResponse(await response.json());
+      return { ...validateScreenResponse(await response.json()), durationMs: Math.round(performance.now() - started) };
     },
   };
 }

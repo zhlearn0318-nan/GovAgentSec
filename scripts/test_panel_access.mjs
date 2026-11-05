@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {Script} from 'node:vm';
 import {issuePageAccess,allowPage,issueCapability,allowCapability,injectCapability,registerUiAccess} from '../modules/govagentsec-ui/access.mjs';
 import {createGuardEventStore} from '../modules/protect-agent-group1/智能体安全/integrations/openclaw/plugin/guard-events.mjs';
-function response(){return {writeHead(status){this.status=status},end(){}};}
+function response(){return {writeHead(status,headers){this.status=status;this.headers=headers},end(body){this.body=body}};}
 test('management page grant RPC requires administrator scope',()=>{
   const calls=[];
   registerUiAccess({registerGatewayMethod:(...args)=>calls.push(args)});
@@ -25,6 +25,24 @@ test('panel API capabilities are restricted to the issued routes',()=>{
   assert.equal(allowCapability({url:'/protect-agent/ui/state',headers:{'x-govagentsec-panel':token}},response()),true);
   assert.equal(allowCapability({url:'/plugins/supply-chain-security/api/scan',headers:{'x-govagentsec-panel':token}},response()),false);
   assert.equal(allowCapability({url:'/protect-agent/ui/state'},response()),false);
+});
+
+test('expired page access offers recovery without weakening API authentication',()=>{
+  const page=response();
+  assert.equal(allowPage({url:'/plugins/aegis-admin/rules',method:'GET'},page),false);
+  assert.equal(page.status,401);
+  assert.match(page.headers['Content-Type'],/text\/html/);
+  assert.match(page.body,/返回防护设置/);
+  assert.match(page.headers['Content-Security-Policy'],/default-src 'none'/);
+  const embedded=response();
+  allowPage({url:'/plugins/aegis-admin/rules',method:'GET',headers:{'sec-fetch-dest':'iframe'}},embedded);
+  assert.match(embedded.body,/重新加载/);
+  assert.doesNotMatch(embedded.body,/<a /);
+  const api=response();
+  assert.equal(allowCapability({url:'/protect-agent/ui/state'},api),false);
+  assert.equal(api.status,401);
+  assert.match(api.headers['Content-Type'],/application\/json/);
+  assert.equal(typeof JSON.parse(api.body).error,'string');
 });
 test('injected capability stays on the panel origin',async()=>{
   const html=injectCapability('<head></head>',['/protect-agent/ui/state']);

@@ -19,10 +19,10 @@ try{
   const coverage=await page.locator('openclaw-app-shell').evaluate(e=>e.context.gateway.snapshot.client.request('govagentsec.trajectory.status',{}));
   assert.equal(coverage.agentguard_identity_mode,'disabled');assert.equal(coverage.runtime.input.mode,'enforce');assert.equal(coverage.runtime.output.mode,'observe');assert.equal(coverage.runtime.tool_results.mode,'enforce');
   checks.push({coverage});await page.screenshot({path:'local-validation/delivery/settings.png'});
-  for(const [label,selector] of [['输入防护策略','#steps'],['运行防护与审批记录','#metric-total'],['准入规则','#rules-form']]){
+  for(const [label,selector] of [['输入防护策略','#steps'],['运行防护与审批记录','#metric-total'],['准入规则','#form']]){
     await work.getByRole('button',{name:label,exact:true}).click();const iframe=work.locator('iframe');await iframe.waitFor();
     assert.equal(await iframe.getAttribute('sandbox'),'allow-scripts');const panel=work.frameLocator('iframe');
-    if(label==='准入规则')await panel.locator('body').waitFor();else await panel.locator(selector).waitFor();
+    await panel.locator(selector).waitFor();
     const frame=page.frames().find(f=>f.url().includes('/plugins/')&&f.parentFrame());
     if(label==='输入防护策略')assert.equal(await frame.evaluate(async()=> (await fetch('/protect-agent/ui/state')).status),200);
     if(label==='运行防护与审批记录'){

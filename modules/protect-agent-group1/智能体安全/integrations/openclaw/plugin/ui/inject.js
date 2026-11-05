@@ -4,7 +4,6 @@
   if (window.__protectAgentUiMounted) return;
   window.__protectAgentUiMounted = true;
 
-  const STATE_URL = "/protect-agent/ui/state";
   const STYLE_URL = "/protect-agent/ui/styles.css";
   const VALID_RUN_STATUSES = new Set(["idle", "running", "allowed", "blocked"]);
   const VALID_STEP_STATUSES = new Set([
@@ -24,6 +23,15 @@
     { id: "output", label: "模型输出复检", detail: "敏感信息与越权行为" },
   ];
   const STEP_LABELS = new Map(STEP_DEFINITIONS.map((step) => [step.id, step]));
+  const INCIDENT_KINDS = new Map([
+    ["security_block", "安全检查未通过"],
+    ["check_unavailable", "安全检查暂不可用"],
+    ["unsupported", "当前结果类型无法检查"],
+    ["tool_error", "工具执行遇到错误"],
+    ["approval_pending", "等待操作确认"],
+    ["approval_denied", "操作未获批准"],
+  ]);
+  const PHASE_LABELS = { input: "输入检查", tools: "工具调用", tool_results: "工具返回检查", output: "回复检查" };
 
   function element(tag, className, text) {
     const node = document.createElement(tag);
@@ -60,7 +68,20 @@
       status: value.status,
       riskLevel,
       riskScore,
+      incident: normalizeIncident(value.incident),
       steps: STEP_DEFINITIONS.map((step) => ({ ...step, status: received.get(step.id) })),
+    };
+  }
+
+  function normalizeIncident(value) {
+    if (!value || !INCIDENT_KINDS.has(value.kind)) return null;
+    return {
+      kind: value.kind,
+      phase: PHASE_LABELS[value.phase] ?? "防护检查",
+      reasonCode: typeof value.reasonCode === "string" && /^[a-zA-Z0-9_.:-]{1,80}$/.test(value.reasonCode) ? value.reasonCode : "",
+      // Messages come from the guard's fixed incident descriptions, never raw tool output.
+      message: typeof value.message === "string" ? value.message.slice(0,240) : "",
+      stopConfirmed: value.stopConfirmed === true,
     };
   }
 
@@ -127,12 +148,67 @@
   const connection = panel.querySelector(".protect-guard__connection");
   const list = panel.querySelector(".protect-guard__steps");
   const footerValue = panel.querySelector(".protect-guard__footer strong");
+  const alert = element("section", "protect-alert");
+  alert.id = "protect-agent-alert";
+  alert.hidden = true;
+  alert.setAttribute("role", "alert");
+  alert.setAttribute("aria-atomic", "true");
+  const alertTitle = element("strong", "protect-alert__title");
+  const alertMessage = element("p", "protect-alert__message");
+  const alertDetail = element("p", "protect-alert__detail");
+  const alertAction = element("p", "protect-alert__action");
+  alert.append(alertTitle, alertMessage, alertDetail, alertAction);
+  let activeSession = null;
+  let lastAlertKey = "";
+
+  function syncSession() {
+    const key = document.querySelector("openclaw-app-shell")?.activeSessionKey ?? null;
+    if (key !== activeSession) {
+      activeSession = key;
+      alert.hidden = true;
+      lastAlertKey = "";
+      render({status:"idle",riskLevel:null,riskScore:null,incident:null,
+        steps:STEP_DEFINITIONS.map(step=>({...step,status:"pending"}))});
+    }
+    return key;
+  }
 
   function ensureMounted() {
+    syncSession();
     const sidebarBody = document.querySelector(".sidebar-shell__body");
     const sessions = sidebarBody?.querySelector(".sidebar-sessions");
-    if (!sidebarBody || !sessions || panel.parentElement === sidebarBody) return;
-    sessions.insertAdjacentElement("afterend", panel);
+    if (sidebarBody && sessions && panel.parentElement !== sidebarBody) sessions.insertAdjacentElement("afterend", panel);
+    const panes = [...document.querySelectorAll("openclaw-chat-pane")];
+    const pane = panes.find(item=>item.sessionKey===activeSession) ?? panes.find(item=>item.active===true);
+    const thread = pane?.querySelector(".chat-thread");
+    if (thread && alert.nextElementSibling !== thread) thread.insertAdjacentElement("beforebegin", alert);
+    else if (!thread && alert.isConnected) alert.remove();
+  }
+
+  function renderIncident(snapshot) {
+    const incident = snapshot.incident;
+    const fallback = !incident && (snapshot.status === "blocked" || snapshot.steps.some(step=>step.status==="error"));
+    if (!incident && !fallback) {
+      alert.hidden = true;
+      lastAlertKey = "";
+      return;
+    }
+    const key = JSON.stringify({incident,fallback,status:snapshot.status});
+    // Updating live-region text on each poll repeats screen-reader announcements.
+    if (key === lastAlertKey) return;
+    lastAlertKey = key;
+    const toolError = incident?.kind === "tool_error";
+    const approvalPending = incident?.kind === "approval_pending";
+    alert.dataset.kind = incident?.kind ?? "unconfirmed";
+    alertTitle.textContent = incident?.stopConfirmed ? "当前任务已停止"
+      : approvalPending ? "等待操作确认" : toolError ? "工具执行出错" : "防护异常 · 尚未确认任务停止";
+    alertMessage.textContent = incident?.message || (incident ? INCIDENT_KINDS.get(incident.kind) : "检测到阻断或异常记录，但没有任务停止确认。");
+    alertDetail.textContent = incident ? `${incident.phase} · ${INCIDENT_KINDS.get(incident.kind)}${incident.reasonCode ? ` · 原因代码：${incident.reasonCode}` : ""}` : "请查看当前任务的防护决策和执行记录。";
+    alertAction.textContent = incident?.stopConfirmed
+      ? "本次运行已结束。可在“当前任务”查看原因，处理后重新发送消息。"
+      : approvalPending ? "请处理 OpenClaw 的操作确认卡片；当前等待时间不属于模型推理。" : toolError ? "这是工具执行错误，不代表已发现安全攻击；任务可能继续处理。"
+        : "若仍在生成，请先使用对话的停止按钮。可在“当前任务”查看处理记录。";
+    alert.hidden = false;
   }
 
   function render(snapshot) {
@@ -142,12 +218,17 @@
       ? "等待新消息"
       : snapshot.status === "allowed"
         ? "本轮检查已通过"
+        : snapshot.incident?.stopConfirmed
+          ? "当前任务已停止"
+        : snapshot.incident?.kind === "tool_error"
+          ? "工具执行出错"
         : snapshot.status === "blocked"
-          ? "已拦截高风险请求"
+          ? "检测已阻断 · 停止未确认"
           : activeStep
             ? `正在检查 · ${activeStep.label}`
             : "正在监控工具调用";
     summaryText.textContent = summary;
+    renderIncident(snapshot);
     list.setAttribute("aria-busy", String(snapshot.status === "running"));
 
     const stateLabels = {
@@ -167,7 +248,9 @@
       row.querySelector(".protect-guard__marker").textContent = markers[step.status] ?? "·";
       row.querySelector(".protect-guard__step-state").textContent = step.id === "input" && step.status === "passed" ? "已检查" : stateLabels[step.status];
     }
-    footerValue.textContent = snapshot.riskScore === null
+    footerValue.textContent = snapshot.incident && snapshot.incident.kind !== "security_block"
+      ? INCIDENT_KINDS.get(snapshot.incident.kind)
+      : snapshot.riskScore === null
       ? "等待运行"
       : `风险 ${Math.round(snapshot.riskScore * 100)}%${snapshot.riskLevel ? ` · ${snapshot.riskLevel}` : ""}`;
   }
@@ -178,9 +261,11 @@
     polling = true;
     try {
       const host=document.querySelector('openclaw-app-shell');
+      const sessionKey=syncSession();
       const gateway=host?.context?.gateway.snapshot;
-      if(!gateway?.connected) throw new Error('not authenticated');
-      const snapshot=normalizeSnapshot(await gateway.client.request('govagentsec.protection.state',{sessionKey:host.activeSessionKey}));
+      if(!gateway?.connected || !sessionKey) throw new Error('not authenticated');
+      const snapshot=normalizeSnapshot(await gateway.client.request('govagentsec.protection.state',{sessionKey}));
+      if (syncSession() !== sessionKey) return;
       if (!snapshot) throw new Error("invalid state");
       connection.lastChild.textContent = "在线";
       panel.dataset.connection = "online";

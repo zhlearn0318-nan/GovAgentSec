@@ -137,3 +137,14 @@ test('blocked input retains an explicit decision and seals without invented mode
   assert.deepEqual(trace.events.map(e=>e.event_type),['run.started','protection.input','run.ended']);
   assert.equal(trace.summary.tool_count,0);assert.equal(trace.summary.model_count,0);
 });
+
+test('tool cancellation waits for host final output before sealing',()=>{
+  const hooks={};const store=registerTrajectory({pluginConfig:{dataDir:temp()},logger:{warn(){}},on:(name,handler)=>hooks[name]=handler,registerHttpRoute(){}});
+  const ctx={runId:'tool-stopped',sessionKey:'session-tool'};
+  hooks.before_agent_run({prompt:'test'},ctx);
+  globalThis[Symbol.for('govagentsec.protection.audit')]({...ctx,phase:'stop_requested',decision:'BLOCK',enforced:true,reasonCode:'TEST_BLOCK'});
+  hooks.agent_end({success:false},ctx);
+  assert.equal(store.read(store.traceId(ctx.runId)).manifest,null);
+  hooks.llm_output({assistantTexts:[]},ctx);
+  const trace=store.read(store.traceId(ctx.runId));assert.equal(trace.summary.trace_status,'blocked');assert.ok(trace.manifest);
+});

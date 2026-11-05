@@ -19,7 +19,7 @@ try{
     await new Promise(r=>setTimeout(r,1000));
   }
   assert.equal(state.status,'blocked');assert.equal(state.decision,'BLOCK');assert.equal(state.steps.find(x=>x.id==='tools').status,'skipped');
-  await page.locator('#protect-agent-guard').getByText('已拦截高风险请求',{exact:true}).waitFor({timeout:15000});
+  await page.locator('#protect-agent-alert').getByText('当前任务已停止',{exact:true}).waitFor({timeout:15000});
   const text=await page.locator('#protect-agent-guard').innerText();assert.match(text,/拦截|阻止|阻断/);
   const store=new TraceStore('local-validation/trajectory/traces');let trace;
   for(let i=0;i<20;i++){

@@ -92,11 +92,12 @@ function toolBlock(result) {
 }
 
 
-function toolApproval(toolName, result) {
+function toolApproval(toolName, result, onResolution) {
   return {
     requireApproval: {
-      title: `Protect Agent review: ${toolName}`,
-      description: `This tool call requires confirmation after security screening (${result.riskLevel}).`,
+      title: `操作确认：${toolName}`,
+      description: `此工具操作需本次确认；安全检查等级：${result.riskLevel}。`,
+      onResolution,
       severity: result.riskLevel === "HIGH" || result.riskLevel === "CRITICAL"
         ? "critical"
         : "warning",
@@ -125,10 +126,29 @@ export function registerProtectAgent(api, dependencies = {}) {
   const highImpactTools = new Set(config.highImpactTools ?? []);
   const runContexts = new Map();
   const runSessions = new Map();
+  const runIdentities = new Map();
+  const stoppedRuns = new Map();
+  function stopRun(ctx, reason) {
+    const key = contextKey(ctx);
+    if (!key) return false;
+    const identity = { ...runIdentities.get(key), ...ctx };
+    const incident = typeof reason === 'string'
+      ? { kind: 'check_unavailable', reasonCode: reason, message: '安全检查未完成，已请求停止任务' }
+      : reason;
+    stoppedRuns.set(key, incident);
+    while (stoppedRuns.size > 1024) stoppedRuns.delete(stoppedRuns.keys().next().value);
+    eventStore.incident(key, { ...incident, phase: incident.phase ?? 'tool_results', stopConfirmed: false });
+    let accepted = false;
+    try { accepted = dependencies.stopRun?.(identity) === true; }
+    catch { api.logger.warn('Protect Agent could not request task cancellation.'); }
+    runtime.record('stop_requested', { decision: 'BLOCK', reasonCode: incident.reasonCode }, accepted, identity);
+    return accepted;
+  }
   const runtime = registerProtectionRuntime({
     config,
     conversationAllowed: api.config?.plugins?.entries?.[api.id ?? "protect-agent"]?.hooks?.allowConversationAccess === true,
     probe: dependencies.probe,
+    stopRun,
     async screenToolResult(prepared, ctx, signal) {
       const key = contextKey(ctx) ?? "unscoped";
       eventStore.beginPhase(key, "tools");
@@ -149,9 +169,14 @@ export function registerProtectAgent(api, dependencies = {}) {
       });
       return result;
     },
-    recordFailure(ctx) {
+    recordFailure(ctx, reason) {
       const key = contextKey(ctx) ?? "unscoped";
-      const result = { decision: "BLOCK", riskLevel: "CRITICAL", riskScore: 1 };
+      if (reason === 'TOOL_EXECUTION_ERROR' || reason === 'tool_execution_error') {
+        runtime.record('tool_error', {decision:'ALLOW',reasonCode:'TOOL_EXECUTION_ERROR'}, false, ctx);
+        eventStore.incident(key, {kind:'tool_error',phase:'tools',reasonCode:'TOOL_EXECUTION_ERROR',message:'工具执行失败，错误内容经检查后返回；这不是安全风险阻断',stopConfirmed:false});
+        return;
+      }
+      const result = { decision: "REVIEW", reasonCode: reason, categories: [], riskScore: 0 };
       runtime.markHook("tool_result_gate");
       runtime.record("tool_results", result, true, ctx);
       eventStore.completePhase(key, "tools", { ...result, status: "error" });
@@ -221,6 +246,8 @@ export function registerProtectAgent(api, dependencies = {}) {
     "before_agent_run",
     async (event, ctx) => {
       const key = contextKey(ctx) ?? "unscoped";
+      runIdentities.set(key, ctx);
+      stoppedRuns.delete(key);
       runtime.markHook("before_agent_run");
       eventStore.beginRun(key, conversationId(ctx));
       if (conversationId(ctx)) runSessions.set(key, conversationId(ctx));
@@ -236,17 +263,21 @@ export function registerProtectAgent(api, dependencies = {}) {
         runtime.record("input", result, true, ctx);
         eventStore.completeInput(key, result);
         if (result.decision !== "ALLOW") {
+          stoppedRuns.set(key, {kind:'security_block',reasonCode:result.reasonCode});
+          eventStore.incident(key, {kind:'security_block', phase:'input', reasonCode:result.reasonCode, message:'输入安全检查未通过，本次请求已阻断',stopConfirmed:false});
           return inputBlock(result);
         }
         rememberRunContext(runContexts, contextKey(ctx), event.prompt);
         return { outcome: "pass" };
       } catch {
-        runtime.record("input", { decision: "BLOCK", riskLevel: "CRITICAL" }, true, ctx);
+        runtime.record("input", { decision: "REVIEW", reasonCode:'INPUT_CHECK_UNAVAILABLE' }, true, ctx);
         eventStore.completeInput(key, {
           decision: "BLOCK",
           riskLevel: "CRITICAL",
           riskScore: 1,
         });
+        stoppedRuns.set(key, {kind:'check_unavailable',reasonCode:'INPUT_CHECK_UNAVAILABLE'});
+        eventStore.incident(key, {kind:'check_unavailable',phase:'input',reasonCode:'INPUT_CHECK_UNAVAILABLE',message:'输入检测服务不可用，本次请求未执行',stopConfirmed:false});
         return inputBlock();
       }
     },
@@ -259,6 +290,7 @@ export function registerProtectAgent(api, dependencies = {}) {
       ctx = toolContext(event, ctx);
       runtime.markHook("before_tool_call");
       const key = contextKey(ctx) ?? "unscoped";
+      if (stoppedRuns.has(key)) return toolBlock();
       eventStore.beginPhase(key, "tools");
       const text = boundedSerialize({
         toolName: event.toolName,
@@ -281,6 +313,7 @@ export function registerProtectAgent(api, dependencies = {}) {
             ...result,
             status: "blocked",
           });
+          stopRun(ctx, {kind:'security_block',phase:'tools',reasonCode:result.reasonCode,message:'工具调用安全检查未通过，已请求停止任务'});
           return toolBlock(result);
         }
         if (result.decision === "REVIEW" || highImpactTools.has(event.toolName)) {
@@ -289,12 +322,19 @@ export function registerProtectAgent(api, dependencies = {}) {
             status: "review",
             decision: "REVIEW",
           });
-          return toolApproval(event.toolName, result);
+          const waitingAt = performance.now();
+          eventStore.incident(key, {kind:'approval_pending',phase:'tools',reasonCode:'APPROVAL_REQUIRED',message:'此操作需要确认，请在 OpenClaw 审批卡片中选择允许一次或拒绝。等待超过 60 秒将停止任务。',stopConfirmed:false});
+          return toolApproval(event.toolName, result, resolution => {
+            runtime.record('approval', {decision:resolution==='allow-once'?'ALLOW':'REVIEW',reasonCode:'APPROVAL_'+String(resolution).toUpperCase().replaceAll('-','_'),durationMs:Math.round(performance.now()-waitingAt)}, true, ctx);
+            if (resolution === 'allow-once') eventStore.clearIncident(key);
+            else stopRun(ctx, {kind:'approval_denied',phase:'tools',reasonCode:resolution==='timeout'?'APPROVAL_TIMEOUT':'APPROVAL_DENIED',message:resolution==='timeout'?'操作确认超时，已停止继续尝试。请重新发起并完成操作确认。':'操作未获允许，已请求停止任务。'});
+          });
         }
         eventStore.completePhase(key, "tools", { ...result, status: "passed" });
       } catch {
-        runtime.record("tools", {decision:"BLOCK",riskLevel:"CRITICAL"}, true, ctx);
-        eventStore.completePhase(key, "tools", { status: "error", decision: "BLOCK" });
+        runtime.record("tools", {decision:"REVIEW",reasonCode:'TOOL_CHECK_UNAVAILABLE'}, true, ctx);
+        eventStore.completePhase(key, "tools", { status: "error", decision: "REVIEW" });
+        stopRun(ctx, {kind:'check_unavailable',phase:'tools',reasonCode:'TOOL_CHECK_UNAVAILABLE',message:'工具调用安全检查失败，已请求停止任务'});
         return toolBlock();
       }
     },
@@ -371,8 +411,12 @@ export function registerProtectAgent(api, dependencies = {}) {
   api.on("agent_end", (_event, ctx) => {
     const key = contextKey(ctx);
     if (key) {
+      if (stoppedRuns.has(key)) {
+        eventStore.confirmStopped(key);
+      }
       runContexts.delete(key);
       runSessions.delete(key);
+      runIdentities.delete(key);
     }
   });
 }

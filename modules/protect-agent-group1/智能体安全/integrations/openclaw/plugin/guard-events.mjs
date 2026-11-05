@@ -89,6 +89,7 @@ function normalizePersistedSnapshot(value) {
   if (statuses.size !== STEP_DEFINITIONS.length) return null;
   return {
     sessionDigest: typeof value.sessionDigest === "string" ? value.sessionDigest : null,
+    incident: value.incident ?? null,
     version: "1",
     sequence: value.sequence,
     updatedAt: value.updatedAt,
@@ -180,6 +181,28 @@ export function createGuardEventStore(options = {}) {
   }
 
   return {
+    incident(key, incident) {
+      const state = current(key);
+      if (!state) return;
+      state.incident = { ...incident, at: now() };
+      if (incident.kind !== 'tool_error' && incident.kind !== 'approval_pending') {
+        state.status = 'blocked';
+        state.decision = incident.kind === 'security_block' ? 'BLOCK' : 'REVIEW';
+      }
+      return publish(key, state);
+    },
+    clearIncident(key) {
+      const state = current(key);
+      if (!state) return;
+      state.incident = null;
+      return publish(key, state);
+    },
+    confirmStopped(key) {
+      const state = current(key);
+      if (!state?.incident || state.incident.kind === 'tool_error') return;
+      state.incident.stopConfirmed = true;
+      return publish(key, state);
+    },
     beginRun(key, sessionDigest) {
       if (typeof key !== "string" || !key) return publicSnapshot(latest);
       return publish(key, {...createRunState(now()), ...(sessionDigest ? {sessionDigest} : {})});

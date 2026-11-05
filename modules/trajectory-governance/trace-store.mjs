@@ -66,7 +66,7 @@ export function summarize(events, manifest) {
   if (!manifest) issues.push('unsealed');
   const ended = ends.at(-1);
   const lastModel = events.filter(e => e.event_type === 'model.ended').at(-1);
-  const blockedInput=events.some(e=>e.event_type==='protection.input'&&e.payload?.enforced===true&&e.payload?.decision!=='ALLOW');
+  const blockedInput=events.some(e=>(e.event_type==='protection.input'&&e.payload?.enforced===true&&e.payload?.decision!=='ALLOW')||e.event_type==='protection.stop_requested');
   const interrupted = !ended || ended.payload?.success === false || lastModel?.payload?.outcome === 'error';
   return {
     trace_id: events[0].trace_id, run_id: events[0].run_id,

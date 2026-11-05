@@ -263,7 +263,7 @@ export function defineWorkspace() {
         const status =
           trace.trace_status === "complete"
             ? "记录完整"
-            : trace.trace_status === "blocked" ? "输入已阻断"
+            : trace.trace_status === "blocked" ? "安全检查已中止"
             : trace.trace_status === "invalid"
               ? "校验异常"
               : trace.trace_status === "interrupted"
@@ -381,8 +381,10 @@ export function defineWorkspace() {
         waiting.replaceWith(f);
         return f;
       } catch (e) {
-        if (waiting.isConnected)
+        if (waiting.isConnected) {
+          waiting.setAttribute("role", "alert");
           waiting.textContent = "无法打开" + title + "：" + e.message;
+        }
       }
     }
     subpanel(body, url, title, back = "settings") {
@@ -393,9 +395,19 @@ export function defineWorkspace() {
         back === "settings" ? "返回防护设置" : "返回审批队列",
         () => this.render(),
       );
-      bar.append(backButton, node("span", title, "muted"));
-      body.append(bar);
-      this.frame(body, url, title);
+      const content = node("div", undefined, "tool-pane");
+      const reload = button("重新加载", async () => {
+        reload.disabled = true;
+        content.replaceChildren();
+        // Request a fresh credential; reusing the iframe URL would replay a
+        // consumed single-use ticket. Do not prefetch that URL before loading.
+        try { await this.frame(content, url, title); }
+        finally { reload.disabled = false; }
+      });
+      reload.title = "重新认证并打开当前面板";
+      bar.append(backButton, node("span", title, "muted"), reload);
+      body.append(bar, content);
+      reload.click();
       backButton.focus();
     }
     admission(body, data) {
@@ -500,7 +512,7 @@ export function defineWorkspace() {
         ["complete", "完整记录"],
         ["partial", "不完整"],
         ["interrupted", "已中断"],
-        ["blocked", "输入已阻断"],
+        ["blocked", "安全检查已中止"],
         ["invalid", "校验异常"],
       ]) {
         const o = node("option", label);

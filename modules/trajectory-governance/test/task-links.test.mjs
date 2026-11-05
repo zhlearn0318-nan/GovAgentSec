@@ -229,6 +229,7 @@ test("MCP pending requests merge with approvals; duplicate submissions execute o
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const config = {
+    identityMode: "loopback_static_dev", // Explicit test-only identity.
     statusPath,
     approvalPath: path.join(root, "approvals.json"),
     agentGuardBaseUrl: `http://127.0.0.1:${server.address().port}`,

@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from build_config import build
+from check_identity import check
 
 ROOT = Path(__file__).resolve().parents[1]
 pipeline = ROOT / 'modules' / 'supply-chain-group4' / '02-Skill供应链安全检测流水线' / 'skill_security_pipeline.py'
@@ -12,6 +13,19 @@ scanner = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(scanner)
 
 class ReleaseTests(unittest.TestCase):
+    def test_identity_check_uses_bridge_token_names_and_rejects_dev_mode(self):
+        service_env = {'AGENTGUARD_OIDC_ENABLED': 'true', 'AGENTGUARD_OIDC_ISSUER': 'https://identity.example', 'AGENTGUARD_OIDC_AUDIENCE': 'agentguard'}
+        bridge_env = {'AGENTGUARD_MCP_BEARER_TOKEN': 'test-placeholder'}
+        config = {'mcp': {'servers': {'agentguard-notices': {'enabled': False, 'env': bridge_env}}}}
+        result = check(config, service_env)
+        self.assertTrue(result['configured'])
+        self.assertFalse(result['verified'])
+        bridge_env['AGENTGUARD_MCP_IDENTITY_MODE'] = 'loopback_static_dev'
+        self.assertFalse(check(config, service_env)['configured'])
+        bridge_env.clear()
+        bridge_env['AGENTGUARD_MCP_TOKEN'] = 'unsupported-name'
+        self.assertFalse(check(config, service_env)['configured'])
+
     def test_trajectory_capture_is_opt_in(self):
         args = ({}, Path('C:/OpenClaw'), Path('C:/Docker/docker.exe'))
         default = {row['path']: row['value'] for row in build(*args)}

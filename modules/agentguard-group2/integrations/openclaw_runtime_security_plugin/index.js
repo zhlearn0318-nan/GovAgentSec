@@ -1,3 +1,4 @@
+import {allowPage, deny} from '../../../govagentsec-ui/access.mjs';
 import { brandPage } from "../../../govagentsec-ui/design.mjs";
 import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
@@ -291,6 +292,9 @@ function summarizeAudits(events) {
   return { counts, evidence: { complete, total: requests.length, coverage_percent: requests.length ? Math.round(complete * 100 / requests.length) : 0 }, requests: requests.slice(0, 100), timeline, incidents };
 }
 
+function requireDevelopmentIdentity(config) {
+  if(config.identityMode !== 'loopback_static_dev') throw new Error('开发身份执行已停用。正式审批需要组织 OIDC 身份与逐用户授权委托；管理页面登录不代替业务身份。');
+}
 async function buildSnapshot(config) {
   const baseUrl = safeString(config.agentGuardBaseUrl, "http://127.0.0.1:8080").replace(/\/+$/u, "");
   const [health, ready, version, audits, controlStatuses, approvalRecords] = await Promise.all([
@@ -316,9 +320,10 @@ async function buildSnapshot(config) {
   const incidents = timeline.filter((item) => item.status === "error" || ["approval_error", "reconciliation_required"].includes(item.status) || /ERROR|FAILED|UNAVAILABLE|D105/u.test(item.reason_code));
   return redact({
     generated_at: new Date().toISOString(), scope: "group2_tool_runtime_governance",
+    identity: {mode:config.identityMode??"disabled", executionEnabled:config.identityMode==="loopback_static_dev", reason:"正式业务身份未接入时停用动作试算和审批执行"},
     services: {
       agentguard: health, dependencies: ready, version,
-      openclaw_mcp: { ok: Array.isArray(controlStatuses), records: Array.isArray(controlStatuses) ? controlStatuses.length : 0 },
+      openclaw_mcp: { ok: config.identityMode === "loopback_static_dev" && Array.isArray(controlStatuses), records: Array.isArray(controlStatuses) ? controlStatuses.length : 0 },
     },
     counts: auditSummary.counts, evidence: auditSummary.evidence, requests: auditSummary.requests,
     approvals: approvalRecords.slice().reverse().map(publicApproval),
@@ -379,6 +384,7 @@ function buildCandidateAction(kind, input = {}) {
 }
 
 async function evaluateAction(config, body) {
+  requireDevelopmentIdentity(config);
   const baseUrl = safeString(config.agentGuardBaseUrl, "http://127.0.0.1:8080").replace(/\/+$/u, "");
   const request = buildCandidateAction(safeString(body.kind), body.input || {});
   const startedAt = performance.now();
@@ -412,6 +418,7 @@ async function evaluateAction(config, body) {
 
 const resolvingRequests = new Set();
 async function resolveApproval(config, body) {
+  requireDevelopmentIdentity(config);
   const id = body?.control_request_id;
   if(resolvingRequests.has(id)) throw new Error('该请求正在处理，请等待执行回执');
   resolvingRequests.add(id);
@@ -484,6 +491,7 @@ async function handler(req, res, config) {
     return true;
   }
   if (method === "GET" && (requestUrl.pathname === `${ROUTE_ROOT}/panel` || requestUrl.pathname === `${ROUTE_ROOT}/`)) {
+    if(!allowPage(req,res)) return true;
     let html = brandPage(await readFile(PANEL_PATH, "utf8"), "runtime", {compact:requestUrl.searchParams.has("workspace")}).replaceAll("__AGENTGUARD_PAGE_TOKEN__", issuePageToken());
     if(requestUrl.searchParams.get("section")==="approvals") html=html.replace("</body>",'<script>switchPage("approvals");</script></body>');
     writeResponse(res, 200, "text/html; charset=utf-8", html, {
@@ -491,6 +499,7 @@ async function handler(req, res, config) {
     });
     return true;
   }
+  if (method === "GET" && requestUrl.pathname.startsWith(`${ROUTE_ROOT}/api/`) && !validatePageToken(req.headers?.["x-agentguard-page-token"])) { deny(res); return true; }
   if (method === "GET" && requestUrl.pathname === `${ROUTE_ROOT}/api/bootstrap`) {
     sendJson(res, 200, {
       ok: true,
@@ -502,6 +511,7 @@ async function handler(req, res, config) {
   if (method === "GET" && requestUrl.pathname === `${ROUTE_ROOT}/api/snapshot`) { sendJson(res, 200, await buildSnapshot(config), SANDBOX_CORS_HEADERS); return true; }
   if (method === "GET" && requestUrl.pathname === `${ROUTE_ROOT}/api/evidence`) {
     writeResponse(res, 200, "application/json; charset=utf-8", JSON.stringify(await buildSnapshot(config), null, 2), {
+      ...SANDBOX_CORS_HEADERS,
       "Content-Disposition": `attachment; filename="AgentGuard-runtime-evidence-${new Date().toISOString().slice(0, 10)}.json"`,
     });
     return true;

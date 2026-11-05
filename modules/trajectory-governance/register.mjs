@@ -23,6 +23,15 @@ export function registerTrajectory(api) {
   }
   const tasks = new TaskLinks(store, api.config ?? {});
   const failures = new Set();
+  globalThis[Symbol.for('govagentsec.protection.audit')] = entry => {
+    if (!entry.runId) return;
+    try {
+      store.append({event_type:'protection.'+entry.phase,run_id:entry.runId,seal:false,
+        session_key:entry.sessionKey??null,session_id:entry.sessionId??null,tool_call_id:entry.toolCallId,
+        payload:{decision:entry.decision,enforced:entry.enforced,riskLevel:entry.riskLevel,at:entry.at},
+      });
+    } catch(error) {failures.add(entry.runId);api.logger.warn('Protection audit capture failed: '+error.message);}
+  };
   const record = (type, payload) => (event, ctx = {}) => {
     const runId = event.runId ?? ctx.runId;
     try {
@@ -34,7 +43,8 @@ export function registerTrajectory(api) {
       });
       if (type === 'run.ended' || type === 'model.output') {
         const { events, manifest } = store.read(saved.trace_id);
-        if (!manifest && events.some(e => e.event_type === 'run.ended') && events.some(e => e.event_type === 'model.output')) store.seal(saved.trace_id);
+        const blockedInput=events.some(e=>e.event_type==='protection.input'&&e.payload?.enforced===true&&e.payload?.decision!=='ALLOW');
+        if (!manifest && events.some(e => e.event_type === 'run.ended') && (blockedInput || events.some(e => e.event_type === 'model.output'))) store.seal(saved.trace_id);
       }
       if (type === 'run.ended') failures.delete(runId);
     } catch (error) {

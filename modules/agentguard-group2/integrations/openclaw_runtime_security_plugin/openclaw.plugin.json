@@ -24,6 +24,15 @@
       },
       "wechatWebhookUrl": {
         "type": "string"
+      },
+      "identityMode": {
+        "type": "string",
+        "enum": [
+          "disabled",
+          "oidc_token",
+          "loopback_static_dev"
+        ],
+        "default": "disabled"
       }
     }
   },

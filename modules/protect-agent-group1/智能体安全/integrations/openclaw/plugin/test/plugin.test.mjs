@@ -320,8 +320,8 @@ test("before_agent_finalize requests a safe revision when output is blocked", as
 
   assert.equal(result.action, "revise");
   assert.doesNotMatch(result.reason, /unsafe response/);
-  assert.equal(snapshot.status, "blocked");
-  assert.equal(snapshot.steps[3].status, "blocked");
+  assert.equal(snapshot.status, "running");
+  assert.equal(snapshot.steps[3].status, "review");
 });
 
 

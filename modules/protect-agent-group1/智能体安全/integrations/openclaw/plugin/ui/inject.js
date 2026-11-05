@@ -86,7 +86,7 @@
 
     const toggle = element("button", "protect-guard__summary");
     toggle.type = "button";
-    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-expanded", "true");
     toggle.setAttribute("aria-controls", "protect-agent-guard-body");
     const icon = element("span", "protect-guard__shield", "◆");
     icon.setAttribute("aria-hidden", "true");
@@ -102,7 +102,7 @@
     toggle.append(icon, summaryCopy, connection, chevron);
 
     const body = element("div", "protect-guard__body");
-    body.hidden = true;
+    body.hidden = false;
     body.id = "protect-agent-guard-body";
     const track = element("span", "protect-guard__track");
     track.setAttribute("aria-hidden", "true");
@@ -165,7 +165,7 @@
       const row = list.querySelector(`[data-step-id="${step.id}"]`);
       row.dataset.status = step.status;
       row.querySelector(".protect-guard__marker").textContent = markers[step.status] ?? "·";
-      row.querySelector(".protect-guard__step-state").textContent = stateLabels[step.status];
+      row.querySelector(".protect-guard__step-state").textContent = step.id === "input" && step.status === "passed" ? "已检查" : stateLabels[step.status];
     }
     footerValue.textContent = snapshot.riskScore === null
       ? "等待运行"
@@ -177,13 +177,10 @@
     if (polling) return;
     polling = true;
     try {
-      const response = await fetch(STATE_URL, {
-        cache: "no-store",
-        credentials: "same-origin",
-        headers: { Accept: "application/json" },
-      });
-      if (!response.ok) throw new Error("state unavailable");
-      const snapshot = normalizeSnapshot(await response.json());
+      const host=document.querySelector('openclaw-app-shell');
+      const gateway=host?.context?.gateway.snapshot;
+      if(!gateway?.connected) throw new Error('not authenticated');
+      const snapshot=normalizeSnapshot(await gateway.client.request('govagentsec.protection.state',{sessionKey:host.activeSessionKey}));
       if (!snapshot) throw new Error("invalid state");
       connection.lastChild.textContent = "在线";
       panel.dataset.connection = "online";

@@ -1,4 +1,5 @@
 import path from "node:path";
+import {registerUiAccess} from "../../../../../govagentsec-ui/access.mjs";
 
 import {
   boundedSerialize,
@@ -9,6 +10,7 @@ import {
 } from "./client.mjs";
 import { createGuardEventStore } from "./guard-events.mjs";
 import { registerProtectionUiRoutes } from "./ui-routes.mjs";
+import { registerProtectionRuntime } from "./result-gate.mjs";
 
 
 const BLOCK_MESSAGE = "Protect Agent 已阻止此请求，因为安全检查未通过。";
@@ -122,8 +124,47 @@ export function registerProtectAgent(api, dependencies = {}) {
   });
   const highImpactTools = new Set(config.highImpactTools ?? []);
   const runContexts = new Map();
+  const runSessions = new Map();
+  const runtime = registerProtectionRuntime({
+    config,
+    conversationAllowed: api.config?.plugins?.entries?.[api.id ?? "protect-agent"]?.hooks?.allowConversationAccess === true,
+    probe: dependencies.probe,
+    async screenToolResult(prepared, ctx, signal) {
+      const key = contextKey(ctx) ?? "unscoped";
+      eventStore.beginPhase(key, "tools");
+      const result = await client.screen({
+        kind: "tool_result",
+        text: prepared.text,
+        conversationId: conversationId(ctx) ?? runSessions.get(key),
+        toolName: ctx?.toolName,
+        query: runContexts.get(key)?.originalTask ?? "Review this OpenClaw tool result.",
+      }, { signal });
+      runtime.markHook("tool_result_gate");
+      runtime.record("tool_results", result, true, ctx);
+      eventStore.completePhase(key, "tools", {
+        ...result, status: result.decision === "ALLOW" ? "passed" : "blocked",
+      });
+      if (result.decision === "ALLOW") rememberToolResult(runContexts, key, {
+        toolName: ctx?.toolName, result: prepared.snapshot,
+      });
+      return result;
+    },
+    recordFailure(ctx) {
+      const key = contextKey(ctx) ?? "unscoped";
+      const result = { decision: "BLOCK", riskLevel: "CRITICAL", riskScore: 1 };
+      runtime.markHook("tool_result_gate");
+      runtime.record("tool_results", result, true, ctx);
+      eventStore.completePhase(key, "tools", { ...result, status: "error" });
+    },
+  });
 
-  async function screenOutput(content, ctx, isQuoted = false) {
+  function toolContext(event, ctx) {
+    return { ...ctx, runId: ctx?.runId ?? event?.runId,
+      toolCallId: ctx?.toolCallId ?? event?.toolCallId,
+      toolName: ctx?.toolName ?? event?.toolName };
+  }
+
+  async function screenOutput(content, ctx, isQuoted = false, enforced = false) {
     const key = contextKey(ctx) ?? "unscoped";
     eventStore.beginPhase(key, "output");
     try {
@@ -139,16 +180,19 @@ export function registerProtectAgent(api, dependencies = {}) {
           isQuoted,
         },
       });
+      runtime.record("output", result, enforced, ctx);
       if (result.decision !== "ALLOW") {
-        eventStore.completePhase(key, "output", { ...result, status: "blocked" });
+        eventStore.completePhase(key, "output", { ...result,
+          status: enforced ? "blocked" : "review", decision: enforced ? result.decision : "REVIEW" });
         return false;
       }
       eventStore.completePhase(key, "output", { ...result, status: "passed" });
       return true;
     } catch {
+      runtime.record("output", { decision: "BLOCK", riskLevel: "CRITICAL" }, enforced, ctx);
       eventStore.completePhase(key, "output", {
-        status: "error",
-        decision: "BLOCK",
+        status: enforced ? "error" : "review",
+        decision: enforced ? "BLOCK" : "REVIEW",
         riskLevel: "CRITICAL",
         riskScore: 1,
       });
@@ -156,6 +200,7 @@ export function registerProtectAgent(api, dependencies = {}) {
     }
   }
 
+  registerUiAccess(api);
   api.registerService(sidecarService);
   registerProtectionUiRoutes(api, eventStore);
   const registerControlUiDescriptor = api.session?.controls?.registerControlUiDescriptor;
@@ -176,7 +221,10 @@ export function registerProtectAgent(api, dependencies = {}) {
     "before_agent_run",
     async (event, ctx) => {
       const key = contextKey(ctx) ?? "unscoped";
-      eventStore.beginRun(key);
+      runtime.markHook("before_agent_run");
+      eventStore.beginRun(key, conversationId(ctx));
+      if (conversationId(ctx)) runSessions.set(key, conversationId(ctx));
+      while (runSessions.size > 1_024) runSessions.delete(runSessions.keys().next().value);
       try {
         const result = await client.screen(
           {
@@ -185,6 +233,7 @@ export function registerProtectAgent(api, dependencies = {}) {
             conversationId: conversationId(ctx),
           },
         );
+        runtime.record("input", result, true, ctx);
         eventStore.completeInput(key, result);
         if (result.decision !== "ALLOW") {
           return inputBlock(result);
@@ -192,6 +241,7 @@ export function registerProtectAgent(api, dependencies = {}) {
         rememberRunContext(runContexts, contextKey(ctx), event.prompt);
         return { outcome: "pass" };
       } catch {
+        runtime.record("input", { decision: "BLOCK", riskLevel: "CRITICAL" }, true, ctx);
         eventStore.completeInput(key, {
           decision: "BLOCK",
           riskLevel: "CRITICAL",
@@ -206,6 +256,8 @@ export function registerProtectAgent(api, dependencies = {}) {
   api.on(
     "before_tool_call",
     async (event, ctx) => {
+      ctx = toolContext(event, ctx);
+      runtime.markHook("before_tool_call");
       const key = contextKey(ctx) ?? "unscoped";
       eventStore.beginPhase(key, "tools");
       const text = boundedSerialize({
@@ -223,6 +275,7 @@ export function registerProtectAgent(api, dependencies = {}) {
           },
           { signal: ctx?.abortSignal },
         );
+        runtime.record("tools", result, true, ctx);
         if (result.decision === "BLOCK") {
           eventStore.completePhase(key, "tools", {
             ...result,
@@ -240,6 +293,7 @@ export function registerProtectAgent(api, dependencies = {}) {
         }
         eventStore.completePhase(key, "tools", { ...result, status: "passed" });
       } catch {
+        runtime.record("tools", {decision:"BLOCK",riskLevel:"CRITICAL"}, true, ctx);
         eventStore.completePhase(key, "tools", { status: "error", decision: "BLOCK" });
         return toolBlock();
       }
@@ -248,6 +302,11 @@ export function registerProtectAgent(api, dependencies = {}) {
   );
 
   api.on("after_tool_call", async (event, ctx) => {
+    ctx = toolContext(event, ctx);
+    runtime.markHook("after_tool_call");
+    // The host adapter already checked this exact call before returning it.
+    // Do not replace its blocking decision with a second check of the safe stub.
+    if (runtime.consumeToolResult(ctx)) return;
     const key = contextKey(ctx);
     if (key) eventStore.beginPhase(key, "tools");
     const query = runContexts.get(key)?.originalTask ?? "Review this OpenClaw tool result.";
@@ -266,15 +325,18 @@ export function registerProtectAgent(api, dependencies = {}) {
         toolName: event.toolName,
         query,
       });
+      runtime.record("tool_results", result, false, ctx);
       if (key) {
         eventStore.completePhase(key, "tools", {
           ...result,
-          status: result.decision === "ALLOW" ? "passed" : "blocked",
+          status: result.decision === "ALLOW" ? "passed" : "review",
+          decision: result.decision === "ALLOW" ? "ALLOW" : "REVIEW",
         });
       }
       rememberToolResult(runContexts, key, event);
     } catch {
-      if (key) eventStore.completePhase(key, "tools", { status: "error", decision: "BLOCK" });
+      runtime.record("tool_results", { decision: "REVIEW", riskLevel: "UNKNOWN" }, false, ctx);
+      if (key) eventStore.completePhase(key, "tools", { status: "review", decision: "REVIEW" });
       api.logger.warn("Protect Agent could not observe a tool result.");
     }
   });
@@ -282,6 +344,7 @@ export function registerProtectAgent(api, dependencies = {}) {
   api.on(
     "before_agent_finalize",
     async (event, ctx) => {
+      runtime.markHook("before_agent_finalize");
       const allowed = await screenOutput(event.lastAssistantMessage, ctx);
       if (!allowed) {
         return {
@@ -296,7 +359,8 @@ export function registerProtectAgent(api, dependencies = {}) {
   api.on(
     "message_sending",
     async (event, ctx) => {
-      const allowed = await screenOutput(event.content, ctx, event?.isQuoted === true);
+      runtime.markHook("message_sending");
+      const allowed = await screenOutput(event.content, ctx, event?.isQuoted === true, true);
       if (!allowed) {
         return { cancel: true, cancelReason: OUTPUT_CANCEL_REASON };
       }
@@ -308,6 +372,7 @@ export function registerProtectAgent(api, dependencies = {}) {
     const key = contextKey(ctx);
     if (key) {
       runContexts.delete(key);
+      runSessions.delete(key);
     }
   });
 }

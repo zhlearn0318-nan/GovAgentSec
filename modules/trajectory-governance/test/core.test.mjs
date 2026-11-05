@@ -125,3 +125,15 @@ test('real host order: output after agent_end seals once; model error overrides 
   store.seal(store.traceId('run-1'));
   assert.equal(store.read(store.traceId('run-1')).summary.trace_status, 'interrupted');
 });
+
+test('blocked input retains an explicit decision and seals without invented model output',()=>{
+  const hooks={};const store=registerTrajectory({pluginConfig:{dataDir:temp()},logger:{warn(){}},on:(name,handler)=>hooks[name]=handler,registerHttpRoute(){}});
+  const ctx={runId:'input-blocked',sessionKey:'session-blocked'};
+  hooks.before_agent_run({prompt:'test'},ctx);
+  globalThis[Symbol.for('govagentsec.protection.audit')]({...ctx,phase:'input',decision:'BLOCK',enforced:true,riskLevel:'CRITICAL'});
+  hooks.agent_end({success:false,error:'blocked by input guard'},ctx);
+  const trace=store.read(store.traceId(ctx.runId));
+  assert.equal(trace.summary.trace_status,'blocked');assert.ok(trace.manifest);
+  assert.deepEqual(trace.events.map(e=>e.event_type),['run.started','protection.input','run.ended']);
+  assert.equal(trace.summary.tool_count,0);assert.equal(trace.summary.model_count,0);
+});

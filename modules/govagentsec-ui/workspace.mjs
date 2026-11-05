@@ -1,11 +1,81 @@
 import { workspaceStyle, icon } from "/plugins/govagentsec/workspace-style.mjs";
-const titles = {
+import {
+  styles as traceStyles,
+  markup as traceMarkup,
+  mount as mountTraces,
+} from "/plugins/govagentsec/trajectory-ui.mjs";
+export const titles = {
   home: ["工作台", "处理待办，查看最近任务。"],
   admission: ["能力接入", "检查 Skill 与 MCP，管理已接入的能力。"],
   approvals: ["待审批", "先核对具体动作，再决定是否执行。"],
-  audit: ["任务轨迹", "从一次任务追溯调用、审批和执行结果。"],
+  audit: ["审计中心", "从一次任务追溯调用、审批和执行结果。"],
+  compare: [
+    "运行对照与候选记录",
+    "审计中心的高级视图，对照两次运行并查看候选证据。",
+  ],
+  skills: ["已安装技能", "只读核对已安装能力；新能力从准入流程接入。"],
   settings: ["防护设置", "查看实际覆盖，按需调整运行策略。"],
 };
+export function isTestTrace(trace) {
+  return (
+    trace.source === "controlled-validation" ||
+    trace.source === "integration-test" ||
+    trace.purpose === "test" ||
+    /^这是合成集成测试[。:：]/u.test(trace.title ?? "")
+  );
+}
+export function friendlySessionTitle(key, traces = []) {
+  const trace = traces.find((t) => t.session_key === key && !isTestTrace(t));
+  if (trace?.title) return trace.title.slice(0, 42);
+  if (key === "agent:main:main") return "主会话";
+  return key.startsWith("agent:") ? "未命名会话" : key;
+}
+export function coverageRows(coverage) {
+  const runtime = coverage.runtime ?? {};
+  const describe = (stage) => {
+    const labels = {
+      enforce: ["已启用", ""],
+      observe: ["复检 / 观察", "warn"],
+      disabled: ["未启用", "warn"],
+      unavailable: ["不可用", "bad"],
+    };
+    if(runtime.service === "offline" && stage?.mode === "enforce") return ["服务离线 · 默认拒绝", "bad"];
+    return labels[stage?.mode] ?? ["待核验", "warn"];
+  };
+  const input = describe(runtime.input),
+    output = describe(runtime.output),
+    results = describe(runtime.tool_results);
+  const identities = {
+    oidc_token: ["OIDC 身份已配置", ""],
+    loopback_static_dev: ["开发身份", "warn"],
+    disabled: ["已禁用", "warn"],
+    unknown: ["待核验", "warn"],
+  };
+  const identity =
+    identities[coverage.agentguard_identity_mode] ?? identities.unknown;
+  return [
+    [
+      "轨迹采集",
+      "记录模型与工具事件",
+      coverage.capture ? "已配置" : "未启用",
+      coverage.capture ? "" : "warn",
+    ],
+    [
+      "工具执行",
+      coverage.agentguard_configured
+        ? "AgentGuard 受管调用；执行状态以回执为准"
+        : "AgentGuard 尚未配置",
+      ...identity,
+    ],
+    ["输入检查", runtime.input?.reason ?? "等待后端报告检查能力", ...input],
+    ["回复检查", runtime.output?.reason ?? "等待后端报告检查能力", ...output],
+    [
+      "工具返回",
+      runtime.tool_results?.reason ?? "等待后端报告控制能力",
+      ...results,
+    ],
+  ];
+}
 export function go(section) {
   window.dispatchEvent(
     new CustomEvent("gov-navigate", { detail: { section } }),
@@ -117,6 +187,7 @@ export function defineWorkspace() {
       this.cleanup = null;
       const style = node("style", workspaceStyle),
         main = node("main", undefined, "workspace");
+      main.setAttribute("aria-label", titles[this.current][0]);
       const head = node("header", undefined, "heading row spread");
       const intro = node("div");
       intro.append(
@@ -130,6 +201,7 @@ export function defineWorkspace() {
       );
       head.append(intro, actions);
       const body = node("div", undefined, "body");
+      body.setAttribute("aria-live", "polite");
       body.append(node("p", "正在读取本机记录…", "empty"));
       const footer = node("footer", undefined, "workspace-footer");
       footer.append(
@@ -191,6 +263,7 @@ export function defineWorkspace() {
         const status =
           trace.trace_status === "complete"
             ? "记录完整"
+            : trace.trace_status === "blocked" ? "输入已阻断"
             : trace.trace_status === "invalid"
               ? "校验异常"
               : trace.trace_status === "interrupted"
@@ -251,11 +324,13 @@ export function defineWorkspace() {
       left.append(queue);
       const recent = section(
         "最近任务",
-        button("全部轨迹", () => go("audit"), "quiet"),
+        button("进入审计中心", () => go("audit"), "quiet"),
       );
       this.taskList(
         recent,
-        data.traces.filter((t) => t.source === "openclaw").slice(0, 5),
+        data.traces
+          .filter((t) => t.source === "openclaw" && !isTestTrace(t))
+          .slice(0, 5),
       );
       left.append(recent);
       const quick = section("开始操作");
@@ -277,27 +352,7 @@ export function defineWorkspace() {
     coverage(data) {
       const c = section("实际防护状态"),
         list = node("div", undefined, "coverage");
-      for (const [label, desc, state, level] of [
-        [
-          "轨迹采集",
-          "记录模型与工具事件",
-          data.coverage.capture ? "已配置" : "未启用",
-          data.coverage.capture ? "" : "warn",
-        ],
-        [
-          "工具执行",
-          "AgentGuard 受管调用",
-          data.coverage.agentguard_configured ? "已接入" : "未接入",
-          data.coverage.agentguard_configured ? "" : "warn",
-        ],
-        [
-          "输入与回复",
-          "对话检查权限",
-          data.coverage.input_hooks === "configured" ? "已配置" : "未授权",
-          "warn",
-        ],
-        ["工具返回", "检查后的强制截断", "仅观察", "warn"],
-      ]) {
+      for (const [label, desc, state, level] of coverageRows(data.coverage)) {
         const r = node("div", undefined, "coverage-row"),
           t = node("div");
         t.append(node("span", label), node("small", desc));
@@ -305,24 +360,48 @@ export function defineWorkspace() {
         list.append(r);
       }
       c.append(list);
+      if (this.current !== "settings")
+        c.append(button("检查与配置", () => go("settings"), "quiet"));
       return c;
     }
-    frame(parent, url, title) {
-      const f = node("iframe");
-      f.className = "tool-frame";
-      f.title = title;
-      f.setAttribute("sandbox", this.sandbox ?? "allow-scripts");
-      f.src = url;
-      parent.append(f);
-      return f;
+    async frame(parent, url, title) {
+      const waiting = node("p", "正在认证并打开" + title + "…", "empty");
+      waiting.setAttribute("role", "status");
+      parent.append(waiting);
+      try {
+        const access = await this.gateway.request("govagentsec.ui.open", {
+          path: url,
+        });
+        if (!parent.isConnected || !waiting.isConnected) return;
+        const f = node("iframe");
+        f.className = "tool-frame";
+        f.title = title;
+        f.setAttribute("sandbox", this.sandbox ?? "allow-scripts");
+        f.src = access.url;
+        waiting.replaceWith(f);
+        return f;
+      } catch (e) {
+        if (waiting.isConnected)
+          waiting.textContent = "无法打开" + title + "：" + e.message;
+      }
+    }
+    subpanel(body, url, title, back = "settings") {
+      body.replaceChildren();
+      const bar = node("nav", undefined, "subpanel-nav");
+      bar.setAttribute("aria-label", "子面板导航");
+      const backButton = button(
+        back === "settings" ? "返回防护设置" : "返回审批队列",
+        () => this.render(),
+      );
+      bar.append(backButton, node("span", title, "muted"));
+      body.append(bar);
+      this.frame(body, url, title);
+      backButton.focus();
     }
     admission(body, data) {
       const layout = node("div", undefined, "split"),
         inventory = node("aside", undefined, "section capabilities");
-      inventory.append(
-        node("h2", "已配置 MCP"),
-        node("p", "配置存在不等于已通过准入", "muted"),
-      );
+      inventory.append(node("h2", "已配置 MCP"));
       for (const server of data.servers) {
         const r = node("div", undefined, "cap-row"),
           line = node("div", undefined, "row");
@@ -392,11 +471,11 @@ export function defineWorkspace() {
                 "risk",
               );
             else {
-              body.replaceChildren();
-              this.frame(
+              this.subpanel(
                 body,
                 "/plugins/agentguard-runtime-security/panel?embed=1&workspace=1&section=approvals",
                 "运行防护审批",
+                "approvals",
               );
             }
           }),
@@ -421,14 +500,27 @@ export function defineWorkspace() {
         ["complete", "完整记录"],
         ["partial", "不完整"],
         ["interrupted", "已中断"],
+        ["blocked", "输入已阻断"],
         ["invalid", "校验异常"],
       ]) {
         const o = node("option", label);
         o.value = v;
         type.append(o);
       }
+      const source = node("select");
+      source.setAttribute("aria-label", "记录范围");
+      for (const [value, label] of [
+        ["business", "日常任务"],
+        ["test", "测试记录"],
+        ["all", "全部记录"],
+      ]) {
+        const o = node("option", label);
+        o.value = value;
+        source.append(o);
+      }
       filters.append(
         search,
+        source,
         type,
         node(
           "span",
@@ -448,6 +540,8 @@ export function defineWorkspace() {
           content,
           data.traces.filter(
             (t) =>
+              (source.value === "all" ||
+                (source.value === "test" ? isTestTrace(t) : !isTestTrace(t))) &&
               (type.value === "all" || t.trace_status === type.value) &&
               (t.title || "")
                 .toLowerCase()
@@ -457,8 +551,74 @@ export function defineWorkspace() {
       };
       search.oninput = draw;
       type.onchange = draw;
+      source.onchange = draw;
       body.append(filters, list);
       draw();
+    }
+    compare(body) {
+      const nav = node("div", undefined, "filter");
+      nav.append(button("返回审计中心", () => go("audit")));
+      const includeTest = node("input");
+      includeTest.type = "checkbox";
+      includeTest.id = "compare-tests";
+      const label = node("label", "包含测试记录");
+      label.prepend(includeTest);
+      nav.append(label);
+      body.append(nav);
+      const container = node("div");
+      container.className = "comparison-panel";
+      body.append(container);
+      const root = container.attachShadow({ mode: "open" });
+      const draw = () => {
+        this.cleanup?.();
+        root.replaceChildren();
+        const style = node(
+          "style",
+          traceStyles +
+            ":host{background:transparent}.top,.workspace,.status{display:none}.lower{margin:0 0 16px;border-color:#e0e7e4}.lower>summary{font-weight:600}.toolbar{margin:12px 0}select{max-width:44%}.compare pre{font-size:12px}",
+        );
+        const template = node("template");
+        template.innerHTML = traceMarkup;
+        root.append(style, template.content.cloneNode(true));
+        root.querySelector(".lower").open = true;
+        this.cleanup = mountTraces(root, async (method, params) => {
+          const value = await this.gateway.request(
+            "govagentsec.trajectory." + method,
+            params,
+          );
+          if (method === "list" && !includeTest.checked)
+            value.traces = value.traces.filter((t) => !isTestTrace(t));
+          return value;
+        });
+      };
+      includeTest.onchange = draw;
+      draw();
+    }
+    async skills(body) {
+      const back = button("接入新的技能", () => go("admission"), "primary");
+      body.append(back);
+      const list = section("已安装能力");
+      body.append(list);
+      try {
+        const data = await this.gateway.request("skills.status", {});
+        if (!list.isConnected) return;
+        const skills = data.skills ?? [];
+        for (const skill of skills) {
+          const item = node("div", undefined, "cap-row");
+          item.append(
+            node("h2", skill.name || skill.skillKey || "未命名技能"),
+            node("p", skill.description || "", "muted"),
+            chip(
+              skill.disabled ? "已停用" : skill.eligible ? "可用" : "需配置",
+              skill.disabled || !skill.eligible ? "warn" : "",
+            ),
+          );
+          list.append(item);
+        }
+        if (!skills.length) list.append(node("p", "暂无已安装技能", "empty"));
+      } catch (e) {
+        list.append(node("p", "读取技能清单失败：" + e.message, "error"));
+      }
     }
     settings(body, data) {
       const grid = node("div", undefined, "overview");
@@ -475,12 +635,13 @@ export function defineWorkspace() {
       ])
         rows.append(
           button(label, () => {
-            body.replaceChildren();
-            this.frame(body, url, label);
+            this.subpanel(body, url, label);
           }),
         );
       rows.append(button("OpenClaw 系统设置", () => go("config")));
       controls.append(rows);
+      controls.append(node('p','定制适配基线：OpenClaw 2026.7.1-2。上游更新提示集中显示于本页；升级前需核验宿主适配与安全回归。','muted'));
+      controls.append(node('p','正式身份接入尚待配置组织 issuer、audience、角色与用户令牌委托。完成验证前，AgentGuard 业务执行保持停用。','muted'));
       grid.append(controls);
       body.append(grid);
     }

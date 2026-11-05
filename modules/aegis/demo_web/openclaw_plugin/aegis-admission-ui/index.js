@@ -1,3 +1,4 @@
+import {allowPage} from '../../../../govagentsec-ui/access.mjs';
 import { brandPage } from "../../../../govagentsec-ui/design.mjs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { spawn } from "node:child_process";
@@ -517,12 +518,14 @@ export default definePluginEntry({
     const uploadStore = new UploadSessionStore(uploadsRoot);
     api.registerHttpRoute({ path: CENTER_PATH, auth: "plugin", match: "exact", handler: async (req, res) => {
       if ((req.method ?? "GET").toUpperCase() !== "GET") { res.statusCode = 405; res.end("Method Not Allowed"); return true; }
+      if(!allowPage(req,res)) return true;
       try { sendHtml(res, renderSecurityCenterPage(issueToken())); } catch (error) { sendJson(res, 500, { error: String(error) }); }
       return true;
     }});
     api.registerHttpRoute({ path: PANEL_PATH, auth: "plugin", match: "exact", handler: async (req, res) => {
       if ((req.method ?? "GET").toUpperCase() !== "GET") { res.statusCode = 405; res.end("Method Not Allowed"); return true; }
       if (!isEmbeddedRequest(req)) { sendRedirect(res, "admission"); return true; }
+      if(!allowPage(req,res)) return true;
       try { sendHtml(res, renderAdmissionPage(issueToken()), new URL(req.url,"http://localhost").searchParams.has("workspace")); } catch (error) { sendJson(res, 500, { error: String(error) }); }
       return true;
     }});
@@ -637,7 +640,8 @@ export default definePluginEntry({
       api.registerHttpRoute({ path: routePath, auth: "plugin", match: "exact", handler: async (req, res) => {
         if ((req.method ?? "GET").toUpperCase() !== "GET") { res.statusCode = 405; res.end("Method Not Allowed"); return true; }
         if (!isEmbeddedRequest(req)) { sendRedirect(res, tab); return true; }
-        try { sendHtml(res, renderer(issueToken()), new URL(req.url,"http://localhost").searchParams.has("workspace")); } catch (error) { sendJson(res, 500, { error: String(error) }); }
+        if(!allowPage(req,res)) return true;
+      try { sendHtml(res, renderer(issueToken()), new URL(req.url,"http://localhost").searchParams.has("workspace")); } catch (error) { sendJson(res, 500, { error: String(error) }); }
         return true;
       }});
     }

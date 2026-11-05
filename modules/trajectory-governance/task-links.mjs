@@ -114,18 +114,19 @@ export class TaskLinks {
         : "尚无实际能力版本证据；Skill 使用不按工具名称推测。",
     };
   }
-  status() {
-    const p = this.config.plugins?.entries ?? {};
+  async status() {
+    const p=this.config.plugins?.entries??{};
+    const server=this.config.mcp?.servers?.['agentguard-notices'];
+    const identityMode=!server||server.enabled===false?'disabled':server.env?.AGENTGUARD_MCP_IDENTITY_MODE==='oidc'?'oidc_token':server.env?.AGENTGUARD_MCP_IDENTITY_MODE??'unknown';
+    const runtime=await globalThis[Symbol.for('govagentsec.protection.runtime')]?.snapshot?.()??{
+      service:'unknown',input:{mode:'unavailable',reason:'防护插件未注册'},output:{mode:'unavailable',reason:'防护插件未注册'},tool_results:{mode:'unavailable',reason:'防护插件未注册'}
+    };
     return {
-      capture: p["govagentsec-trajectory"]?.enabled !== false,
-      input_hooks:
-        p["protect-agent"]?.enabled === true &&
-        p["protect-agent"]?.hooks?.allowConversationAccess === true
-          ? "configured"
-          : "not_authorized",
-      tool_result_enforcement: "observation_only",
-      agentguard_configured: Boolean(this.guard.statusPath),
-      skill_attribution: "unknown",
+      capture:p['govagentsec-trajectory']?.enabled===true&&p['govagentsec-trajectory']?.hooks?.allowConversationAccess===true,
+      input_hooks:runtime.input.mode==='enforce'?'configured':'not_authorized',
+      tool_result_enforcement:runtime.tool_results.mode,
+      runtime,agentguard_identity_mode:identityMode,
+      agentguard_configured:Boolean(this.guard.statusPath),skill_attribution:'unknown'
     };
   }
   trace(params) {
@@ -199,13 +200,13 @@ export class TaskLinks {
           approval?.receipt ?? decision?.receipt ?? original.receipt ?? null,
         stages: decision?.stages ?? [],
         source: "AgentGuard",
-        can_resolve: approval?.status === "pending",
+        can_resolve: this.guard.identityMode === "loopback_static_dev" && approval?.status === "pending",
       });
     }
     return redact({
       trace,
       controls,
-      coverage: this.status(),
+      coverage: await this.status(),
       business_result: trace.summary.task_passed,
       capability_evidence: await this.admissions(trace),
     });
@@ -245,7 +246,7 @@ export class TaskLinks {
       total: traces.length,
       pending,
       approval_error: approvalError,
-      coverage: this.status(),
+      coverage: await this.status(),
       servers: Object.entries(this.config.mcp?.servers ?? {}).map(
         ([name, c]) => ({ name, enabled: c.enabled !== false }),
       ),

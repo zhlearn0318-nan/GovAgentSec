@@ -42,8 +42,9 @@ export function mountWorkbench(root, client, sessionKey, options = {}) {
   }
   scope.value = options.scope ?? (sessionKey ? "session" : "all");
   const refreshButton = el("button", "刷新");
-  const manage = el("a", "安全管理");
-  manage.href = "/plugin?plugin=protect-agent&id=govagentsec";
+  const manage = el("a", "审计中心");
+  manage.href = "/plugin?plugin=protect-agent&id=govagentsec&section=audit";
+  manage.onclick=event=>{event.preventDefault();window.dispatchEvent(new CustomEvent("gov-navigate",{detail:{section:"audit"}}));};
   row.append(scope, refreshButton, manage);
   const message = el("p", "读取任务…");
   message.setAttribute("role", "status");
@@ -112,18 +113,10 @@ export function mountWorkbench(root, client, sessionKey, options = {}) {
     );
     views.risk.replaceChildren();
     views.evidence.replaceChildren();
-    card(
-      views.risk,
-      "防护覆盖",
-      value.coverage.input_hooks === "configured"
-        ? "输入/最终回复钩子已配置；检查结果以实际记录为准。"
-        : "输入与最终回复的对话钩子尚未授权，不能视为已经检查。",
-    );
-    card(
-      views.risk,
-      "工具返回内容",
-      "当前结果检查主要用于观察记录，尚未形成返回内容强制截断。",
-    );
+    for (const [key,label] of [['input','输入检查'],['output','回复检查'],['tool_results','工具返回']]) {
+      const stage=value.coverage.runtime?.[key];
+      card(views.risk,label,stage?.reason??'等待后端提供实际防护状态');
+    }
     if (!value.controls.length)
       card(
         views.risk,

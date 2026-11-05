@@ -88,6 +88,7 @@ function normalizePersistedSnapshot(value) {
   }
   if (statuses.size !== STEP_DEFINITIONS.length) return null;
   return {
+    sessionDigest: typeof value.sessionDigest === "string" ? value.sessionDigest : null,
     version: "1",
     sequence: value.sequence,
     updatedAt: value.updatedAt,
@@ -158,6 +159,8 @@ export function createGuardEventStore(options = {}) {
     steps: STEP_DEFINITIONS.map((step) => ({ ...step, status: "pending" })),
   };
 
+  const idle = publicSnapshot(latest);
+
   function publish(key, state) {
     const shared = bridge?.read();
     if (shared) sequence = Math.max(sequence, shared.sequence);
@@ -177,9 +180,9 @@ export function createGuardEventStore(options = {}) {
   }
 
   return {
-    beginRun(key) {
+    beginRun(key, sessionDigest) {
       if (typeof key !== "string" || !key) return publicSnapshot(latest);
-      return publish(key, createRunState(now()));
+      return publish(key, {...createRunState(now()), ...(sessionDigest ? {sessionDigest} : {})});
     },
 
     completeInput(key, result = {}) {
@@ -224,8 +227,8 @@ export function createGuardEventStore(options = {}) {
       const decision = normalizeDecision(result.decision);
       if (phaseId === "output") {
         const allowed = status === "passed" && decision === "ALLOW";
-        state.status = allowed ? "allowed" : "blocked";
-        state.decision = allowed ? "ALLOW" : "BLOCK";
+        state.status = allowed ? "allowed" : status === "review" ? "running" : "blocked";
+        state.decision = allowed ? "ALLOW" : status === "review" ? "REVIEW" : "BLOCK";
       } else if (status === "blocked" || status === "error") {
         state.status = "blocked";
         state.decision = "BLOCK";
@@ -236,7 +239,7 @@ export function createGuardEventStore(options = {}) {
       return publish(key, state);
     },
 
-    snapshot() {
+    snapshot(sessionDigest) {
       const shared = bridge?.read();
       if (
         shared &&
@@ -244,6 +247,10 @@ export function createGuardEventStore(options = {}) {
       ) {
         latest = publicSnapshot(shared);
         sequence = Math.max(sequence, shared.sequence);
+      }
+      if(sessionDigest) {
+        const match=[...runs.values()].reverse().find(r=>r.sessionDigest===sessionDigest);
+        return publicSnapshot(latest.sessionDigest===sessionDigest ? latest : match ?? idle);
       }
       return publicSnapshot(latest);
     },

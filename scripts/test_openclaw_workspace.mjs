@@ -19,14 +19,14 @@ try {
       timezoneId: "Asia/Shanghai",
     }),
     errors = [];
-  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("pageerror", (e) => errors.push(e.stack));
   await page.goto(
     "http://127.0.0.1:18789/plugin?plugin=protect-agent&id=govagentsec#token=" +
       encodeURIComponent(cfg.gateway.auth.token),
   );
   const work = page.locator("govagentsec-workspace"),
     shell = page.locator("govagentsec-shell"),
-    entry = shell.getByRole("button", { name: "任务与轨迹", exact: true });
+    entry = shell.getByRole("button", { name: "当前任务", exact: true });
   await work
     .getByRole("heading", { name: "最近任务", exact: true })
     .waitFor({ timeout: 60000 });
@@ -53,7 +53,7 @@ try {
   for (const [key, title] of [
     ["admission", "能力接入"],
     ["approvals", "待审批"],
-    ["audit", "任务轨迹"],
+    ["audit", "审计中心"],
     ["home", "工作台"],
   ]) {
     await page.locator(`.gov-nav [data-route=${key}]`).click();
@@ -62,7 +62,7 @@ try {
   }
   checks.push("persistent entry across all four primary routes");
   await page.goBack();
-  await work.getByRole("heading", { name: "任务轨迹", exact: true }).waitFor();
+  await work.getByRole("heading", { name: "审计中心", exact: true }).waitFor();
   await page.goForward();
   await work.getByRole("heading", { name: "工作台", exact: true }).waitFor();
   checks.push("browser back and forward");
@@ -162,6 +162,8 @@ try {
     JSON.stringify({ passed: true, checks }, null, 2),
   );
   console.log(JSON.stringify({ passed: true, checks }));
+} catch (error) {
+  console.error(String(error.stack??error).replaceAll(cfg.gateway.auth.token,"[redacted]"));process.exitCode=1;
 } finally {
   await browser.close();
 }

@@ -322,3 +322,8 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Keep pending stages readable at normal sidebar size. */
+.protect-guard__step[data-status="pending"],.protect-guard__step[data-status="skipped"]{opacity:0.85}
+.protect-guard__step-state,.protect-guard__step-copy small{font-size:10px}
+@media(prefers-reduced-motion:reduce){#protect-agent-guard *{animation:none!important;transition:none!important}}

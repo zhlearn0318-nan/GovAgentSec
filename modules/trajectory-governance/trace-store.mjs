@@ -66,12 +66,13 @@ export function summarize(events, manifest) {
   if (!manifest) issues.push('unsealed');
   const ended = ends.at(-1);
   const lastModel = events.filter(e => e.event_type === 'model.ended').at(-1);
+  const blockedInput=events.some(e=>e.event_type==='protection.input'&&e.payload?.enforced===true&&e.payload?.decision!=='ALLOW');
   const interrupted = !ended || ended.payload?.success === false || lastModel?.payload?.outcome === 'error';
   return {
     trace_id: events[0].trace_id, run_id: events[0].run_id,
     session_key: events[0].session_key ?? null, session_id: events[0].session_id ?? null,
     source: events[0].source, task_passed: ended?.payload?.task_passed ?? null,
-    trace_status: interrupted ? 'interrupted' : issues.length ? 'partial' : 'complete',
+    trace_status: blockedInput && ended && manifest ? 'blocked' : interrupted ? 'interrupted' : issues.length ? 'partial' : 'complete',
     issues: [...new Set(issues)], event_count: events.length,
     task_id: events[0].task_id ?? null, task_family: events[0].task_family ?? null,
     skill_usage: 'unknown',

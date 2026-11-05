@@ -1,3 +1,5 @@
+import {deriveConversationId} from "./client.mjs";
+import {allowPage,allowCapability,injectCapability} from '../../../../../govagentsec-ui/access.mjs';
 import { brandPage } from "../../../../../govagentsec-ui/design.mjs";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -13,6 +15,15 @@ const ROUTE_HEADERS = Object.freeze({
   "Referrer-Policy": "no-referrer",
   "X-Content-Type-Options": "nosniff",
 });
+
+function panelCors(req,res) {
+  res.setHeader('Access-Control-Allow-Origin','null');
+  res.setHeader('Access-Control-Allow-Methods','GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers','Content-Type, X-GovAgentSec-Panel');
+  res.setHeader('Vary','Origin');
+  if(req.method==='OPTIONS'){res.writeHead(204);res.end();return true;}
+  return false;
+}
 
 function writeResponse(request, response, contentType, body) {
   if (request.method !== "GET" && request.method !== "HEAD") {
@@ -152,6 +163,7 @@ function assetHandler(relativePath, contentType) {
 }
 
 export function registerProtectionUiRoutes(api, eventStore) {
+  api.registerGatewayMethod?.('govagentsec.protection.state',({params,respond})=>respond(true,eventStore.snapshot(params?.sessionKey ? deriveConversationId(params.sessionKey) : undefined)),{scope:'operator.read'});
   api.registerHttpRoute({
     path: "/plugins/govagentsec/panel",
     auth: "plugin",
@@ -167,6 +179,8 @@ export function registerProtectionUiRoutes(api, eventStore) {
     auth: "plugin",
     match: "exact",
     handler(request, response) {
+      if (panelCors(request,response)) return true;
+      if(!allowCapability(request,response)) return true;
       return writeResponse(
         request,
         response,
@@ -192,7 +206,8 @@ export function registerProtectionUiRoutes(api, eventStore) {
     auth: "plugin",
     match: "exact",
     handler(request, response) {
-      return writeHtml(request, response, brandPage(renderProtectAgentPanel(), "protect", {compact:new URL(request.url,"http://localhost").searchParams.has("workspace")}));
+      if(!allowPage(request,response)) return true;
+      return writeHtml(request,response,injectCapability(brandPage(renderProtectAgentPanel(), "protect", {compact:new URL(request.url,"http://localhost").searchParams.has("workspace")}),['/protect-agent/ui/state']));
     },
   });
   api.registerHttpRoute({
@@ -200,7 +215,8 @@ export function registerProtectionUiRoutes(api, eventStore) {
     auth: "plugin",
     match: "exact",
     handler(request, response) {
-      return writeHtml(request, response, renderSupplyChainPanel());
+      if(!allowPage(request,response)) return true;
+      return writeHtml(request,response,injectCapability(renderSupplyChainPanel(),['/plugins/supply-chain-security/api/scan']));
     },
   });
   api.registerHttpRoute({
@@ -208,11 +224,14 @@ export function registerProtectionUiRoutes(api, eventStore) {
     auth: "plugin",
     match: "exact",
     async handler(request, response) {
+      if (panelCors(request,response)) return true;
       if (request.method !== "POST") {
         response.writeHead(405, { ...ROUTE_HEADERS, Allow: "POST" });
         response.end();
         return true;
       }
+      if (panelCors(request,response)) return true;
+      if(!allowCapability(request,response)) return true;
       try {
         const body = await readJsonBody(request);
         const data = await runGroup4Scan(body?.targetPath);

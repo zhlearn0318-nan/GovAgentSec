@@ -1,0 +1,21 @@
+// Load the actual installed wrapper with relative imports rebound to the host.
+import {readFileSync,writeFileSync,readdirSync,mkdirSync} from 'node:fs';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
+import assert from 'node:assert/strict';
+import {adaptResultGuard} from './install_openclaw_result_guard.mjs';
+import {registerProtectionRuntime} from '../modules/protect-agent-group1/智能体安全/integrations/openclaw/plugin/result-gate.mjs';
+const root=path.join(process.env.APPDATA,'npm/node_modules/openclaw/dist');
+const name=readdirSync(root).find(n=>/^agent-tools.before-tool-call-.*\.js$/.test(n));
+let source=adaptResultGuard(readFileSync(path.join(root,name),'utf8'),new URL('../modules/protect-agent-group1/智能体安全/integrations/openclaw/plugin/result-gate.mjs',import.meta.url).href);
+source=source.replace(/from "(\.\/[^\"]+)"/g,(_m,p)=>'from '+JSON.stringify(pathToFileURL(path.join(root,p)).href)).replace(/import "(\.\/[^\"]+)"/g,(_m,p)=>'import '+JSON.stringify(pathToFileURL(path.join(root,p)).href));
+source=source.replace(/import\("(\.\/[^\"]+)"\)/g,(_m,p)=>'import('+JSON.stringify(pathToFileURL(path.join(root,p)).href)+')');
+mkdirSync('local-validation/result-guard',{recursive:true});
+const file=path.resolve('local-validation/result-guard/host-wrapper.mjs');writeFileSync(file,source);
+const {p:wrap}=await import(pathToFileURL(file).href);
+let calls=0,streamed=false;
+registerProtectionRuntime({config:{},conversationAllowed:true,probe:async()=>true,recordFailure(){},screenToolResult:async()=>{calls++;return {decision:'BLOCK'};}});
+const tool=wrap({name:'read',description:'Synthetic isolated return gate check',parameters:{},execute:async(_id,_params,_signal,update)=>{update?.({content:[{type:'text',text:'unsafe-partial'}]});return {content:[{type:'text',text:'unsafe-result'}]};}}, {runId:'guard-host-test',sessionKey:'guard-test',config:{plugins:{entries:{'protect-agent':{enabled:true}}}}},{emitDiagnostics:false});
+const result=await tool.execute('guard-host-call',{},undefined,()=>{streamed=true});
+assert.equal(calls,1);assert.equal(streamed,false);assert.equal(result.details.govagentsec.withheld,true);assert.ok(!JSON.stringify(result).includes('unsafe-'));
+console.log(JSON.stringify({passed:true,hostWrapper:name,screened:calls,partialOutputSuppressed:!streamed,blockedBeforeReturn:true}));

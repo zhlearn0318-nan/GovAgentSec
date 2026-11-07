@@ -566,6 +566,25 @@ export function defineWorkspace() {
       source.onchange = draw;
       body.append(filters, list);
       draw();
+      this.loadTraceAudit(body, 'graph');
+    }
+    async loadTraceAudit(body, initialTab) {
+      const section = this.current;
+      try {
+        const health = await this.gateway.request('govagentsec.trace.health', {});
+        if (!health.available || this.current !== section) return;
+        const { mountTraceAudit } = await import('/plugins/govagentsec/trace/view.mjs');
+        if (this.current !== section) return;
+        this.cleanup?.();
+        const legacy = node('div');
+        while (body.firstChild) legacy.append(body.firstChild);
+        legacy.hidden = true;
+        const container = node('div'), root = container.attachShadow({mode:'open'});
+        const toggle = button('查看旧版历史记录', () => { legacy.hidden = !legacy.hidden; container.hidden = !legacy.hidden;
+          toggle.textContent = legacy.hidden ? '查看旧版历史记录' : '返回轨迹审计'; }, 'quiet');
+        body.append(toggle, container, legacy);
+        this.cleanup = mountTraceAudit(root, (method, params = {}) => this.gateway.request('govagentsec.trace.' + method, params), {initialTab});
+      } catch { /* Older installations retain their existing audit view. */ }
     }
     compare(body) {
       const nav = node("div", undefined, "filter");
@@ -605,6 +624,7 @@ export function defineWorkspace() {
       };
       includeTest.onchange = draw;
       draw();
+      this.loadTraceAudit(body, 'compare');
     }
     async skills(body) {
       const back = button("接入新的技能", () => go("admission"), "primary");

@@ -3,11 +3,15 @@ import { TraceStore, digest } from './trace-store.mjs';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { TaskLinks } from './task-links.mjs';
 import { renderTrajectoryPanel } from './panel.mjs';
+import { LegacyReader } from '../govagentsec-trace/legacy-reader.mjs';
 
 export function registerTrajectory(api) {
   const config = api.pluginConfig ?? {};
   if (!config.dataDir) throw new Error('trajectory dataDir is required');
-  const store = new TraceStore(path.join(config.dataDir, 'traces'));
+  const legacyStore = new TraceStore(path.join(config.dataDir, 'traces'));
+  const traceConfig = api.config?.plugins?.entries?.['govagentsec-trace'];
+  const store = traceConfig?.enabled && traceConfig.config?.dataDir
+    ? new LegacyReader(legacyStore, path.join(traceConfig.config.dataDir, 'traces')) : legacyStore;
   api.session?.controls?.registerControlUiDescriptor({
     surface: 'tab', id: 'history', label: '历史调用轨迹',
     description: '历史任务、模型与工具调用关系图', icon: 'activity',
@@ -23,7 +27,9 @@ export function registerTrajectory(api) {
   }
   const tasks = new TaskLinks(store, api.config ?? {});
   const failures = new Set();
+  const captureEnabled = api.config?.plugins?.entries?.['govagentsec-trace']?.enabled !== true;
   globalThis[Symbol.for('govagentsec.protection.audit')] = entry => {
+    if (!captureEnabled) return;
     if (!entry.runId) return;
     try {
       store.append({event_type:'protection.'+entry.phase,run_id:entry.runId,seal:false,
@@ -34,6 +40,7 @@ export function registerTrajectory(api) {
     } catch(error) {failures.add(entry.runId);api.logger.warn('Protection audit capture failed: '+error.message);}
   };
   const record = (type, payload) => (event, ctx = {}) => {
+    if (!captureEnabled) return;
     const runId = event.runId ?? ctx.runId;
     try {
       const saved = store.append({ event_type: type, run_id: runId, seal: false,

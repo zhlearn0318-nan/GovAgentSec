@@ -10,7 +10,7 @@ export function safetyGate({ trace_status, hard_findings = [], review, calibrati
     return { decision: 'unverified', score, reason: 'local_calibration_required' };
   }
   if (hard_findings.length) return { decision: 'review', score, reason: 'unresolved_rule_evidence' };
-  return { decision: score >= calibration.threshold ? 'pass' : 'reject', score, threshold: calibration.threshold, reason: 'calibrated_score', judge_digest, rule_version: calibration.rule_version };
+  return { decision: score > calibration.threshold ? 'pass' : 'reject', score, threshold: calibration.threshold, reason: 'calibrated_score', judge_digest, rule_version: calibration.rule_version };
 }
 
 export function qualityGate({ N, U, H, F, recovery_status, factuality_scope }) {

@@ -1,0 +1,14 @@
+{
+  "dataDir": "F:/揭榜挂帅/GovAgentSec/local-validation/trace-audit",
+  "contentMode": "hash",
+  "scoring": {"t_star": 0.6, "calibration_version": "unvalidated-local-v1", "calibrated": false},
+  "generation": {
+    "task_key": "expense-word-template",
+    "name": "expense-word-candidate",
+    "records": "DATA_DIR/records.json",
+    "loaderRoots": ["C:/Users/23684/.openclaw/skills", "C:/Users/23684/.openclaw/workspace/skills"],
+    "inputs": ["待处理文档与目标字段"],
+    "preconditions": ["文档工具已准入"],
+    "output_format": "Word 模板与字段校验结果"
+  }
+}

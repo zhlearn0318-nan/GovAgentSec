@@ -190,6 +190,11 @@ export function registerProtectionRuntime({ config, conversationAllowed, screenT
         executionMs: ctx?.executionMs ?? null, at: new Date().toISOString() };
       globalThis[Symbol.for('govagentsec.protection.audit')]?.({phase, ...lastDecisions[phase],
         runId:ctx?.runId,sessionKey:ctx?.sessionKey,sessionId:ctx?.sessionId,toolCallId:ctx?.toolCallId});
+      // Read-only consumers cannot change the guard's decision or break execution.
+      for (const observe of globalThis[Symbol.for('govagentsec.trace.observers')]?.values() ?? []) {
+        try { observe({phase, ...lastDecisions[phase], runId:ctx?.runId, sessionKey:ctx?.sessionKey,
+          sessionId:ctx?.sessionId, toolCallId:ctx?.toolCallId}); } catch { /* Consumer owns capture health. */ }
+      }
     },
     consumeToolResult(ctx) {
       const key = callKey(ctx);

@@ -24,6 +24,7 @@ const config = {
       "agentguard-runtime-security": {
         enabled: true,
         config: {
+          identityMode: process.env.GOV_TEST_LEGACY_DEV_IDENTITY === '1' ? 'loopback_static_dev' : 'disabled',
           agentGuardBaseUrl: "http://127.0.0.1:8080",
           statusPath: path.join(root, "statuses.json"),
           approvalPath: path.join(data, "approvals.json"),
@@ -157,6 +158,8 @@ try {
     1,
   );
   await panel.getByRole("tab", { name: "风险与审批" }).click();
+  const legacyDev = process.env.GOV_TEST_LEGACY_DEV_IDENTITY === '1';
+  if (legacyDev) {
   await panel
     .getByRole("button", { name: "批准并执行", exact: true })
     .waitFor();
@@ -183,6 +186,10 @@ try {
     {},
     { timeout: 20000 },
   );
+  } else {
+    // Production default has no developer identity; it must not offer execution.
+    assert.equal(await panel.getByRole('button', {name:'批准并执行',exact:true}).count(), 0);
+  }
   await panel.getByRole("tab", { name: "证据", exact: true }).click();
   assert.ok(
     (await panel
@@ -215,24 +222,25 @@ try {
     await page.getByRole("textbox", { name: "聊天草稿" }).inputValue(),
     "保留我的草稿",
   );
+  if (legacyDev) {
   const approval = JSON.parse(
     readFileSync(path.join(data, "approvals.json"), "utf8"),
   ).find(record => record.control_request_id === requests.request_test_payment.control_request_id);
   assert.equal(approval.status, "approved_executed");
   assert.ok(approval.receipt);
   assert.equal(await page.evaluate(()=>window.approvalChanges),1);
+  } else assert.equal(await page.evaluate(()=>window.approvalChanges),0);
   assert.deepEqual(errors, []);
   const report = {
     passed: true,
     trace_id: main,
     scope:
-      "real local AgentGuard requests and approval; synthetic host event fixtures, not an OpenClaw model turn",
+      "local AgentGuard request evidence; synthetic host events; developer approval controls disabled by default",
     checks: [
       "session filter",
       "three decisions",
       "trusted request matching",
-      "in-panel approval",
-      "actual execution receipt",
+      legacyDev ? "in-panel approval and execution receipt" : "no execution approval without organization identity",
       "history switch",
       "draft preserved",
       "no script errors",

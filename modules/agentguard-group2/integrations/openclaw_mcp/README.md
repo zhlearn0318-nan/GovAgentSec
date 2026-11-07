@@ -98,3 +98,8 @@ $openclawEntry = Join-Path $projectRoot 'third_party\runtime\openclaw-client\nod
 - 真实公告业务 API 凭据和脱敏生产数据验证。
 - 使用生产模型路由、逐用户 OIDC 身份与真实授权数据的持续回合审计证据。
 - 并发、超时、断网、OIDC/OPA 故障与审计对账的预生产测试。
+# 受控合成政务文档
+
+新增 `read_gov_document({document_id})`。只接受已登记 ID，不接受路径、身份、密级、审批或票据参数。支持 emergency_plan、material_inventory、duty_contacts、command_contacts、protected_resource。
+
+使用现有 OIDC 或显式隔离测试身份；不自动启用开发身份。正文只来自专用合成数据目录。运行命令、策略映射与未完成验收项见 [受控文档验证](../../../../docs/CONTROLLED_DOCUMENT_VALIDATION.md)。

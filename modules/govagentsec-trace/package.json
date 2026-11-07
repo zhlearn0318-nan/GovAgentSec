@@ -1,0 +1,1 @@
+{"name":"govagentsec-trace","version":"1.0.0","type":"module","private":true,"openclaw":{"extensions":["./index.js"]},"scripts":{"test":"node --test test/*.test.mjs","demo":"node demo.mjs"}}

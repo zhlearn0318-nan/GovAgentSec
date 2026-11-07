@@ -7,7 +7,7 @@ import {
   readApprovals,
   resolveApproval,
 } from "../agentguard-group2/integrations/openclaw_runtime_security_plugin/index.js";
-const actions = {
+const actions = {read_gov_document:'file.read',
   list_notices: "database.query",
   request_test_payment: "payment.transfer",
   run_protected_command: "shell.execute",
@@ -16,6 +16,11 @@ export function controlReferences(trace) {
   const refs = [];
   for (const e of trace.events) {
     if (e.event_type !== "tool.ended" || !e.tool_call_id) continue;
+    if (e.payload.correlation_verified && /^mcp-req-[a-f0-9]{32}$/.test(e.request_id ?? '')) {
+      const tool = e.payload.tool?.replace(/^agentguard-notices__/, '');
+      if (actions[tool] && e.payload.tool === 'agentguard-notices__' + tool) refs.push({control_request_id:e.request_id,tool_call_id:e.tool_call_id,mcp_tool:tool,action_tool:actions[tool]});
+      continue;
+    }
     const starts = trace.events.filter(
       (x) =>
         x.event_type === "tool.started" && x.tool_call_id === e.tool_call_id,
@@ -122,7 +127,7 @@ export class TaskLinks {
       service:'unknown',input:{mode:'unavailable',reason:'防护插件未注册'},output:{mode:'unavailable',reason:'防护插件未注册'},tool_results:{mode:'unavailable',reason:'防护插件未注册'}
     };
     return {
-      capture:p['govagentsec-trajectory']?.enabled===true&&p['govagentsec-trajectory']?.hooks?.allowConversationAccess===true,
+      capture:['govagentsec-trace','govagentsec-trajectory'].some(id=>p[id]?.enabled===true&&p[id]?.hooks?.allowConversationAccess===true),
       input_hooks:runtime.input.mode==='enforce'?'configured':'not_authorized',
       tool_result_enforcement:runtime.tool_results.mode,
       runtime,agentguard_identity_mode:identityMode,

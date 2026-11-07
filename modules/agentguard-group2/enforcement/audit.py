@@ -14,6 +14,8 @@ _SENSITIVE = ("password", "secret", "token", "authorization", "api_key", "apikey
 
 def redact(value: Any, key: str = "") -> Any:
     normalized = key.lower().replace("-", "_")
+    if normalized == "document_content":
+        return "[CONTENT OMITTED]"
     if any(marker in normalized for marker in _SENSITIVE):
         return "***REDACTED***"
     if isinstance(value, Mapping):

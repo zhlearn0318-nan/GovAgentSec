@@ -193,7 +193,7 @@ async function notifyWeChat(config, record) {
   if (!webhook) return { configured: false, status: "not_configured", sent_at: null };
   const action = record.request?.action || {};
   const amount = action.parameters?.amount;
-  const summary = amount ? `${action.tool} · ¥${Number(amount).toLocaleString("zh-CN")}` : `${action.tool} · ${action.operation}`;
+  const summary = action.tool === "file.read" ? `受控文档 ${action.parameters?.document_id ?? "未知"} · ${action.data_level ?? "未知密级"}` : amount ? `${action.tool} · ¥${Number(amount).toLocaleString("zh-CN")}` : `${action.tool} · ${action.operation}`;
   const payload = {
     msgtype: "markdown",
     markdown: { content: `**AgentGuard 待审批通知**\n> 请求：${record.control_request_id}\n> 动作：${summary}\n> 状态：REVIEW（已安全暂停）\n请由工作人员登录 OpenClaw 审批中心处理。` },
@@ -255,12 +255,18 @@ function summarizeAudits(events) {
     previous.tool = safeString(event.tool, previous.tool || "-");
     previous.operation = safeString(event.operation, previous.operation || "-");
     previous.parameters = event.parameters || previous.parameters || {};
+    previous.data_level = event.data_level ?? previous.data_level;
+    previous.document_id = event.document_id ?? previous.document_id;
+    previous.scenario = safeString(event.scenario, previous.scenario || "");
+    previous.identity_note = safeString(event.identity_note, previous.identity_note || "");
+    previous.demo_run_id = safeString(event.demo_run_id, previous.demo_run_id || "");
     previous.policy_effect = effectOf(event);
     previous.status = safeString(result.status, previous.status || "unknown");
     previous.reason_code = safeString(result.reason_code, previous.reason_code || "-");
     previous.policy_reason_codes = Array.isArray(result.policy_reason_codes) ? result.policy_reason_codes : [];
     previous.action_digest = safeString(result.action_digest, previous.action_digest || "");
-    previous.receipt = result.receipt || previous.receipt || null;
+    previous.receipt = result.receipt || null;
+    previous.executed = result.status === "executed_isolated" && Boolean(result.receipt);
     previous.stages.push({ status: safeString(result.status, "unknown"), effect: effectOf(event), reason_code: safeString(result.reason_code, "-") });
     byRequest.set(requestId, previous);
   }
@@ -381,6 +387,21 @@ function buildCandidateAction(kind, input = {}) {
     };
   }
   throw new Error("不支持的动作类型");
+}
+
+async function runGovDocumentDemo(config) {
+  const baseUrl = new URL(safeString(config.agentGuardBaseUrl, "http://127.0.0.1:8080"));
+  if (baseUrl.protocol !== "http:" || baseUrl.hostname !== "127.0.0.1" || baseUrl.username || baseUrl.password) {
+    throw new Error("文档演示仅连接 127.0.0.1 的 AgentGuard 服务");
+  }
+  const startedAt = performance.now();
+  const response = await fetchJson(new URL("/demo/gov-documents", baseUrl), {
+    method: "POST", redirect: "error", headers: { "Content-Type": "application/json" }, body: "{}",
+  }, 60_000);
+  if (!response.ok || !Array.isArray(response.payload?.results)) {
+    throw new Error(response.payload?.message || response.payload?.reason_code || response.error || `AgentGuard 返回 HTTP ${response.status}`);
+  }
+  return { ...response.payload, demo_identity: "本机演示身份", duration_ms: Math.round(performance.now() - startedAt) };
 }
 
 async function evaluateAction(config, body) {
@@ -514,6 +535,19 @@ async function handler(req, res, config) {
       ...SANDBOX_CORS_HEADERS,
       "Content-Disposition": `attachment; filename="AgentGuard-runtime-evidence-${new Date().toISOString().slice(0, 10)}.json"`,
     });
+    return true;
+  }
+  if (method === "POST" && requestUrl.pathname === `${ROUTE_ROOT}/api/demo/gov-documents`) {
+    if (!validatePageToken(req.headers?.["x-agentguard-page-token"])) {
+      sendJson(res, 403, { ok: false, error: { code: "PAGE_TOKEN_INVALID", message: "页面令牌无效或已过期，请刷新页面" } }, SANDBOX_CORS_HEADERS);
+      return true;
+    }
+    try {
+      await readJsonBody(req);
+      sendJson(res, 200, { ok: true, data: await runGovDocumentDemo(config) }, SANDBOX_CORS_HEADERS);
+    } catch (error) {
+      sendJson(res, 502, { ok: false, error: { code: "GOV_DOCUMENT_DEMO_FAILED", message: String(error?.message || error).slice(0, 500) } }, SANDBOX_CORS_HEADERS);
+    }
     return true;
   }
   if (method === "POST" && requestUrl.pathname === `${ROUTE_ROOT}/api/evaluate`) {

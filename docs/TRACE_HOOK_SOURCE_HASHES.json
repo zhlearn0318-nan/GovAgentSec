@@ -1,0 +1,234 @@
+{
+  "openclaw_version": "2026.7.1-2",
+  "mode": "installed_dispatcher_with_synthetic_payloads_not_provider_E2E",
+  "sources": [
+    {
+      "file": "hook-types-DQ9eTy2x.d.ts",
+      "sha256": "fbb4cd0a6254050fa377d4aa97b2d8176caeddea7fead3dbcfba35a987aa10c0"
+    },
+    {
+      "file": "attempt.model-diagnostic-events-CfZQM0hs.js",
+      "sha256": "93dee4bce1f7df5fc695598457c07301e863e5cff67952a0aeda72cef875b2a1"
+    },
+    {
+      "file": "selection-BDanZBTQ.js",
+      "sha256": "c0b0c05bd4b8c79ae334286a6433272f3b428e659130fb580ce0850a3a27c8ba"
+    },
+    {
+      "file": "selection-JInn13lc.js",
+      "sha256": "ccff13111aa60369ac9d88b526a58a7df1f733f1d99d205c01c6186036957e66"
+    },
+    {
+      "file": "run-attempt-CXZNKJ6y.js",
+      "sha256": "5a46bdfd05397a68330a52a75626d33ad0fa5c47aaa718d985bed59f0afe65d5"
+    },
+    {
+      "file": "mcp-http-BUQahgob.js",
+      "sha256": "b6f73ef87fe356b28219bdfda69619a2f922bd5ad96635a9c5c0bcf120f6b3f9"
+    },
+    {
+      "file": "mcp-http-DQ4_3VO8.js",
+      "sha256": "1573668db2e20f7da642fd731b97084bb5f46d0142bb1c3bddb33476459c43d0"
+    },
+    {
+      "file": "native-hook-relay-CU1odSux.js",
+      "sha256": "b1c15d4024c738ff5518e9ca2783c6787c6a41ae6e0c46368378ec468f2ac861"
+    },
+    {
+      "file": "native-hook-relay-XOwljREM.js",
+      "sha256": "b6a0a7e096e1c4cf40f5fe4b7a4a21ff91651b62a2387fb88c063a61b1b790b0"
+    },
+    {
+      "file": "agent-tools.before-tool-call-C95DXQXZ.js",
+      "sha256": "a2d984cbf1085596eb6795b9f27e58cd141a62fe1dff568e607b33446d6455d3"
+    },
+    {
+      "file": "registry-B8eQDFB4.js",
+      "sha256": "25f3ef82756d85281ad5c25375a5cd2f405989a1145ed438de05992e8c995376"
+    },
+    {
+      "file": "registry-BFjeD3FX.js",
+      "sha256": "5968af0c38ba87af4b3bb6fc28011d0dcee567293175319d13f7f285f9280673"
+    },
+    {
+      "file": "registry-BUWrOy2m.js",
+      "sha256": "a8a97c4ffa09c537b5eaab039e56a4678b9787508a9113ee1d8d17720312aa72"
+    },
+    {
+      "file": "registry-BzJmgK-r.js",
+      "sha256": "5ed79335afd217665fbd92cf8a8ea48218d81f15cb7de4fb7cb8f058a88875c8"
+    },
+    {
+      "file": "registry-CAWC0LBH.js",
+      "sha256": "c941e9c9662f47b8d6c5f48ab265269b3a9c338465e59cda0927a065fa02c167"
+    },
+    {
+      "file": "registry-CCU9J1Ai.js",
+      "sha256": "cedc8e12fc02485a4c4c83cf8f6e10112b1d8781d9b4cb433ac38475d1128a69"
+    },
+    {
+      "file": "registry-D0Y_7IE1.js",
+      "sha256": "5996cbc7a4c6e20ce5f5fb3ff3ad686655d1205a4c6e958a465f81d0e2861a48"
+    },
+    {
+      "file": "registry-D61Kc28k.js",
+      "sha256": "138dff610279fbecb9d047cf82600702f0bec34495344a794ef3ec9d02c00dbf"
+    },
+    {
+      "file": "registry-DtLZ3rba.js",
+      "sha256": "a845875a1998c2a6bdd9fe4c824a0a7c3e7da0f3ee75ec56dc6163d4327f7ff0"
+    },
+    {
+      "file": "registry-loaded-C1Zaf4Uh.js",
+      "sha256": "7fa13bbe37a1a3a1137081114cdc4b6577056d8c44601d4e589e04280b7960a2"
+    },
+    {
+      "file": "registry-loaded-read-kWBL-Dpo.js",
+      "sha256": "7bc854ab310f0352a0594b10a7c1e1ddd23b50d5064d79bf01a5d69dfb97381b"
+    },
+    {
+      "file": "registry-lookup-BQxTB40L.js",
+      "sha256": "03d7d0fe36109e53fad9d5b7e234b1d89c0354bb7479cfde35a2b53d776f6cd5"
+    },
+    {
+      "file": "registry-yyGOxKx7.js",
+      "sha256": "cec07f40f834b73c1fc0da3f9d3792248e41e9353b338791f709fb472391c006"
+    },
+    {
+      "file": "hook-runner-global-B8rMIo8I.js",
+      "sha256": "100cdf54e854a1b01f21481d78efa42a8bef91ddbd47082af1cf6c0b441c4169"
+    },
+    {
+      "file": "hook-runner-global-BmIrGlLG.js",
+      "sha256": "c066170e97a2355603f0bdd3079a687bf835632856a741fa9a92683d7d4b2750"
+    }
+  ],
+  "observations": [
+    {
+      "hook": "before_agent_run",
+      "event_fields": [
+        "prompt"
+      ],
+      "context_fields": [
+        "runId",
+        "sessionKey",
+        "sessionId"
+      ],
+      "run_id_present": true,
+      "has_skillsUsed": false,
+      "usage_fields": []
+    },
+    {
+      "hook": "model_call_started",
+      "event_fields": [
+        "runId",
+        "callId",
+        "provider",
+        "model"
+      ],
+      "context_fields": [
+        "runId",
+        "sessionKey",
+        "sessionId"
+      ],
+      "run_id_present": true,
+      "has_skillsUsed": false,
+      "usage_fields": []
+    },
+    {
+      "hook": "model_call_ended",
+      "event_fields": [
+        "runId",
+        "callId",
+        "provider",
+        "model",
+        "durationMs",
+        "outcome"
+      ],
+      "context_fields": [
+        "runId",
+        "sessionKey",
+        "sessionId"
+      ],
+      "run_id_present": true,
+      "has_skillsUsed": false,
+      "usage_fields": []
+    },
+    {
+      "hook": "before_tool_call",
+      "event_fields": [
+        "toolName",
+        "params",
+        "runId",
+        "toolCallId"
+      ],
+      "context_fields": [
+        "runId",
+        "sessionKey",
+        "sessionId"
+      ],
+      "run_id_present": true,
+      "has_skillsUsed": false,
+      "usage_fields": []
+    },
+    {
+      "hook": "after_tool_call",
+      "event_fields": [
+        "toolName",
+        "params",
+        "result",
+        "runId",
+        "toolCallId",
+        "durationMs"
+      ],
+      "context_fields": [
+        "runId",
+        "sessionKey",
+        "sessionId"
+      ],
+      "run_id_present": true,
+      "has_skillsUsed": false,
+      "usage_fields": []
+    },
+    {
+      "hook": "agent_end",
+      "event_fields": [
+        "runId",
+        "success",
+        "messages",
+        "durationMs"
+      ],
+      "context_fields": [
+        "runId",
+        "sessionKey",
+        "sessionId"
+      ],
+      "run_id_present": true,
+      "has_skillsUsed": false,
+      "usage_fields": []
+    },
+    {
+      "hook": "llm_output",
+      "event_fields": [
+        "runId",
+        "sessionId",
+        "provider",
+        "model",
+        "assistantTexts",
+        "usage"
+      ],
+      "context_fields": [
+        "runId",
+        "sessionKey",
+        "sessionId"
+      ],
+      "run_id_present": true,
+      "has_skillsUsed": false,
+      "usage_fields": [
+        "input",
+        "output",
+        "total"
+      ]
+    }
+  ]
+}

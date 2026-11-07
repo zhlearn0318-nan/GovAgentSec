@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from approval.credentials import ApprovalCredentialService, SQLiteApprovalLedger
+from enforcement.documents import scrub_document_receipt
 from enforcement import build_gateway, compute_action_digest
 from enforcement.ledgers import OpenBaoKvTicketLedger
 from enforcement.signers import HmacKeyringSigner, OpenBaoTransitSigner
@@ -41,6 +42,7 @@ from .config import (
     resolve_ticket_secret,
 )
 from .health import DependencyProbes, liveness
+from .gov_document_demo import run_gov_document_demo
 from .opa_runtime import ResidentOpaProcess, build_opa_client
 
 MAX_REQUEST_BYTES = 1024 * 1024
@@ -490,6 +492,8 @@ class AgentGuardService:
                     },
                 }
 
+            if safe_request.get("action", {}).get("tool") == "file.read":
+                result = scrub_document_receipt(result)
             audit_result = copy.deepcopy(result)
             audit_result.pop("ticket", None)
             self.gateway.audit.write({
@@ -543,8 +547,17 @@ class AgentGuardService:
                 self._send(404, {"status": "not_found", "path": self.path})
 
             def do_POST(self) -> None:  # noqa: N802
-                if self.path not in {"/invoke", "/approvals/resolve"}:
+                if self.path not in {"/invoke", "/approvals/resolve", "/demo/gov-documents"}:
                     self._send(404, {"status": "not_found", "path": self.path})
+                    return
+                if self.path == "/demo/gov-documents" and (
+                    self.server.server_address[0] != "127.0.0.1"
+                    or self.client_address[0] != "127.0.0.1"
+                    or self.headers.get("Origin") is not None
+                    or self.headers.get_content_type() != "application/json"
+                ):
+                    self._send(403, {"status": "blocked", "reason_code": "S024_LOCAL_DEMO_ONLY",
+                                     "identity_note": "本机演示身份", "executed": False, "receipt": None})
                     return
                 try:
                     length = int(self.headers.get("Content-Length", "0"))
@@ -589,6 +602,16 @@ class AgentGuardService:
                             "message": "请求体必须是 JSON 对象",
                         },
                     )
+                    return
+                if self.path == "/demo/gov-documents":
+                    try:
+                        result = run_gov_document_demo(service.gateway)
+                    except Exception as exc:
+                        self._send(503, {"status": "blocked", "reason_code": "S025_DEMO_UNAVAILABLE",
+                                         "message": type(exc).__name__, "identity_note": "本机演示身份",
+                                         "executed": False, "receipt": None})
+                        return
+                    self._send(200, result)
                     return
                 if self.path == "/approvals/resolve":
                     try:

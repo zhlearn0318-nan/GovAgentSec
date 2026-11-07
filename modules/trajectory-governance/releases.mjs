@@ -41,6 +41,7 @@ export class Releases {
   }
   review(id) {
     const c = this.workshop.read(id);
+    if (c.generation?.test_only) throw new Error('test-evidence candidates cannot be published');
     if (c.status !== 'pending_approval') throw new Error('candidate is not pending approval');
     const validation = c.validation_passed;
     if (!validation?.task_passed || validation.artifact_hash !== c.artifact_hash || !validation.verifier_hash || !validation.suite_hash || !validation.cases?.length || digest(validation.cases) !== validation.result_hash || validation.cases.some(t => !t.task_passed || t.trace_status !== 'complete')) throw new Error('verified independent task evidence required');

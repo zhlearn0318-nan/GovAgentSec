@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from .config import AdapterConfig, AdapterConfigError
+from enforcement.documents import document_action, scrub_document_receipt
 
 
 class AgentGuardClientError(RuntimeError):
@@ -141,7 +142,7 @@ class AgentGuardClient:
         record = {"control_request_id": request_id, "request": payload,
                   "status": "pending" if result.get("status") == "pending_approval" else result.get("status", "unknown"),
                   "action_digest": result.get("action_digest"), "reason_code": result.get("reason_code"),
-                  "created_at": payload["timestamp"], "receipt": result.get("receipt"),
+                  "created_at": payload["timestamp"], "receipt": scrub_document_receipt(result.get("receipt")), "policy_reason_codes": result.get("policy_reason_codes", []),
                   "executed": result.get("status") == "executed_isolated", "history": []}
         try:
             root.mkdir(parents=True, exist_ok=True)
@@ -152,6 +153,13 @@ class AgentGuardClient:
         except OSError:
             # Observability cannot turn a denial into execution.
             return
+
+    def read_gov_document(self, document_id):
+        try:
+            action = document_action(document_id)
+        except ValueError as exc:
+            raise AgentGuardClientError("MCP_G001_ARGUMENT_INVALID", "文档不可用") from exc
+        return self._invoke(action)
 
     def list_notices(self, limit: int) -> dict[str, Any]:
         if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:

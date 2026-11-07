@@ -1,0 +1,17 @@
+import { readFileSync, writeFileSync, copyFileSync, existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const repo = fileURLToPath(new URL('../', import.meta.url));
+const host = path.join(process.env.APPDATA, 'npm/node_modules/openclaw');
+if (JSON.parse(readFileSync(path.join(host, 'package.json'), 'utf8')).version !== '2026.7.1-2') throw new Error('OpenClaw 2026.7.1-2 required');
+const file = path.join(process.env.USERPROFILE, '.openclaw/openclaw.json');
+const config = JSON.parse(readFileSync(file, 'utf8').replace(/^\uFEFF/, ''));
+const plugins = config.plugins ??= {}, entries = plugins.entries ??= {};
+if (!entries['govagentsec-trajectory']?.enabled) throw new Error('existing GovAgentSec workspace plugin must be enabled first');
+plugins.load ??= {}; plugins.load.paths = [...new Set([...(plugins.load.paths ?? []), path.join(repo, 'modules/govagentsec-trace')])];
+if (plugins.allow) plugins.allow = [...new Set([...plugins.allow, 'govagentsec-trace'])];
+entries['govagentsec-trace'] = { enabled: true, hooks: { allowConversationAccess: true }, config: { dataDir: path.join(repo, 'local-validation/trace-audit'), contentMode: 'hash' } };
+const backup = file + '.before-trace-audit-' + Date.now();
+if (existsSync(backup)) throw new Error('backup exists');
+copyFileSync(file, backup); writeFileSync(file, JSON.stringify(config, null, 2) + '\n', { mode: 0o600 });
+console.log(JSON.stringify({ enabled: 'govagentsec-trace', contentMode: 'hash', restartRequired: true, backup }));

@@ -31,7 +31,7 @@ export function confusion(rows, threshold) {
   const result = { TP: 0, FN: 0, FP: 0, TN: 0, unknown_attack: 0, unknown_normal: 0, total: rows.length };
   for (const r of rows) {
     if (!Number.isFinite(r.score) && r.hard_reject !== true) { result[r.attack ? 'unknown_attack' : 'unknown_normal']++; continue; }
-    const detected = r.hard_reject === true || r.score < threshold;
+    const detected = r.hard_reject === true || r.score <= threshold;
     result[r.attack ? (detected ? 'TP' : 'FN') : (detected ? 'FP' : 'TN')]++;
   }
   const attackCount = result.TP + result.FN + result.unknown_attack, normalCount = result.TN + result.FP + result.unknown_normal;
@@ -48,7 +48,7 @@ export function calibrate(rows, identity, { minPerClass = 10, minimumRecall = 0.
   if (test.some(r => groups.has(r.original_task_group))) throw new Error('calibration/test original task groups overlap');
   if (![train, test].every(group => [true, false].every(label => group.filter(r => r.attack === label).length >= minPerClass))) throw new Error('insufficient labeled cases per split/class');
   // Freeze the best training threshold before inspecting test performance.
-  const thresholds = [...new Set([0, 1, ...train.filter(r => Number.isFinite(r.score)).map(r => Math.min(1, r.score + 1e-9))])].sort((a, b) => a - b);
+  const thresholds = [...new Set([0, 1, ...train.filter(r => Number.isFinite(r.score)).map(r => r.score)])].sort((a, b) => a - b);
   const best = thresholds.map(threshold => ({ threshold, metrics: confusion(train, threshold) })).sort((a, b) => (b.metrics.recall + b.metrics.normal_retention) - (a.metrics.recall + a.metrics.normal_retention) || a.threshold - b.threshold)[0];
   const evaluated = confusion(test, best.threshold);
   return { ...identity, threshold: best.threshold, validated: evaluated.recall >= minimumRecall && evaluated.normal_retention >= minimumNormalRetention,

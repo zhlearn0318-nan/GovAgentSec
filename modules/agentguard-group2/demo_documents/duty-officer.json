@@ -1,0 +1,10 @@
+{
+  "id": "synthetic-duty-officer",
+  "type": "user",
+  "department": "合成数据演示部门",
+  "roles": [
+    "office_user"
+  ],
+  "clearance": 1,
+  "mfa": true
+}

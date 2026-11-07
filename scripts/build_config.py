@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def build(current: dict, state: Path, docker: Path) -> list[dict]:
+def build(current: dict, state: Path, docker: Path, *, trajectory: bool = False) -> list[dict]:
     modules = ROOT / 'modules'
     aegis = modules / 'aegis'
     group1 = modules / 'protect-agent-group1' / '智能体安全'
@@ -52,12 +52,13 @@ def build(current: dict, state: Path, docker: Path) -> list[dict]:
         'plugins.load.paths': paths,
         'plugins.entries.aegis-admission-ui': {'enabled': True},
         'plugins.entries.agentguard-runtime-security': {'enabled': True, 'config': {
+            'identityMode': 'disabled',
             'agentGuardBaseUrl': 'http://127.0.0.1:8080',
             'auditPath': str(runtime / 'state' / 'enforcement_audit.jsonl'),
             'statusPath': str(runtime / 'mcp-control-statuses.json'),
             'approvalPath': str(runtime / 'operator-approvals.json'),
         }},
-        'plugins.entries.protect-agent': {'enabled': True, 'config': {
+        'plugins.entries.protect-agent': {'enabled': True, 'hooks': {'allowConversationAccess': True}, 'config': {
             'mode': 'real', 'baseUrl': 'http://127.0.0.1:19171',
             'pythonPath': str(ROOT / '.runtime' / 'protect' / 'Scripts' / 'python.exe'),
             'projectRoot': str(group1), 'modelRoot': str(ROOT / 'models'),
@@ -65,7 +66,8 @@ def build(current: dict, state: Path, docker: Path) -> list[dict]:
             'tokenFile': str(state / 'govagentsec' / 'protect-agent.token'),
             'requestTimeoutMs': 60000, 'startupTimeoutMs': 300000,
         }},
-        'gateway.controlUi.embedSandbox': 'trusted',
+        'gateway.controlUi.embedSandbox': 'scripts',
+        'gateway.controlUi.allowInsecureAuth': False,
         'hooks.internal.enabled': True,
         'hooks.internal.entries.supply-chain-security': {'enabled': True},
         'security.installPolicy': {'enabled': True, 'targets': ['skill', 'plugin'], 'exec': {
@@ -76,19 +78,33 @@ def build(current: dict, state: Path, docker: Path) -> list[dict]:
             'trustedDirs': [str(python.parent), str(group4 / 'integration'), str(aegis / 'demo_web' / 'tools')],
             'allowInsecurePath': True,
         }},
-        'mcp.servers.agentguard-notices': {'command': py2, 'args': ['-m', 'integrations.openclaw_mcp'], 'cwd': str(group2), 'env': {
+        'mcp.servers.agentguard-notices': {'enabled': False, 'command': py2, 'args': ['-m', 'integrations.openclaw_mcp'], 'cwd': str(group2), 'env': {
             'AGENTGUARD_MCP_BASE_URL': 'http://127.0.0.1:8080',
-            'AGENTGUARD_MCP_IDENTITY_MODE': 'loopback_static_dev',
-            'AGENTGUARD_MCP_DEV_SUBJECT_FILE': str(group2 / 'integrations' / 'openclaw_mcp' / 'dev-subject.example.json'),
+            'AGENTGUARD_MCP_IDENTITY_MODE': 'oidc',
             'AGENTGUARD_MCP_STATUS_STORE_FILE': str(runtime / 'mcp-control-statuses.json'),
         }, 'requestTimeoutMs': 20000, 'connectionTimeoutMs': 8000, 'supportsParallelToolCalls': False,
-            'toolFilter': {'include': ['list_notices', 'request_test_payment', 'run_protected_command', 'get_control_request_status']}},
+            'toolFilter': {'include': ['list_notices', 'request_test_payment', 'run_protected_command', 'get_control_request_status', 'read_gov_document']}},
         'mcp.servers.supply-chain-security': {'command': py2, 'args': [str(group4 / 'integration' / 'group4_mcp_server.py')], 'cwd': str(group4), 'env': {
             'GROUP4_PIPELINE_SCRIPT': pipeline, 'GROUP4_REPORT_DIR': str(runtime / 'group4-reports'),
             'GROUP4_ALLOWED_ROOTS': os.pathsep.join(map(str, roots)),
         }, 'requestTimeoutMs': 30000, 'connectionTimeoutMs': 8000, 'supportsParallelToolCalls': False,
             'toolFilter': {'include': ['security_scan']}},
     }
+    if trajectory:
+        values['plugins.load.paths'].append(str(modules / 'trajectory-governance'))
+        values['plugins.load.paths'] = list(dict.fromkeys(values['plugins.load.paths']))
+        values['plugins.entries.govagentsec-trajectory'] = {
+            'enabled': True,
+            'hooks': {'allowConversationAccess': True},
+            'config': {'dataDir': str(ROOT / 'local-validation' / 'trajectory')},
+        }
+        values['plugins.load.paths'].append(str(modules / 'govagentsec-trace'))
+        values['plugins.entries.govagentsec-trace'] = {
+            'enabled': True,
+            'hooks': {'allowConversationAccess': True},
+            'config': {'dataDir': str(ROOT / 'local-validation' / 'trace-audit'), 'contentMode': 'hash'},
+        }
+        ids = (*ids, 'govagentsec-trajectory', 'govagentsec-trace')
     if 'allow' in plugins:
         values['plugins.allow'] = list(dict.fromkeys(plugins['allow'] + list(ids)))
     return [{'path': path, 'value': value} for path, value in values.items()]
@@ -99,9 +115,10 @@ if __name__ == '__main__':
     parser.add_argument('--state', type=Path, required=True)
     parser.add_argument('--docker', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--trajectory', action='store_true', help='Include opt-in local conversation trajectory capture')
     args = parser.parse_args()
     current = json.loads((args.state / 'openclaw.json').read_text(encoding='utf-8-sig'))
-    batch = build(current, args.state.resolve(), args.docker.resolve())
+    batch = build(current, args.state.resolve(), args.docker.resolve(), trajectory=args.trajectory)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(batch, ensure_ascii=False, indent=2), encoding='utf-8')
     print('Generated configuration batch; no current configuration was changed.')

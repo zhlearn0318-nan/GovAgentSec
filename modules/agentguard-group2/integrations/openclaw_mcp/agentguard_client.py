@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+from pathlib import Path
 import ssl
 import urllib.error
 import urllib.request
@@ -11,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from .config import AdapterConfig, AdapterConfigError
+from enforcement.documents import document_action, scrub_document_receipt
 
 
 class AgentGuardClientError(RuntimeError):
@@ -123,7 +126,40 @@ class AgentGuardClient:
         # return a correlation handle without trusting or leaking backend
         # response fields such as action digests or execution tickets.
         result["_agentguard_request_id"] = payload["request_id"]
+        self._persist_request(payload, result)
         return result
+
+    @staticmethod
+    def _persist_request(payload: dict[str, Any], result: dict[str, Any]) -> None:
+        # Operator-owned metadata only; no bearer credential or execution ticket.
+        status_file = os.environ.get("AGENTGUARD_MCP_STATUS_STORE_FILE")
+        if not status_file:
+            return
+        root = Path(status_file + ".requests")
+        request_id = payload["request_id"]
+        if not isinstance(request_id, str) or len(request_id) != 40 or not request_id.startswith("mcp-req-") or any(c not in "0123456789abcdef" for c in request_id[8:]):
+            return
+        record = {"control_request_id": request_id, "request": payload,
+                  "status": "pending" if result.get("status") == "pending_approval" else result.get("status", "unknown"),
+                  "action_digest": result.get("action_digest"), "reason_code": result.get("reason_code"),
+                  "created_at": payload["timestamp"], "receipt": scrub_document_receipt(result.get("receipt")), "policy_reason_codes": result.get("policy_reason_codes", []),
+                  "executed": result.get("status") == "executed_isolated", "history": []}
+        try:
+            root.mkdir(parents=True, exist_ok=True)
+            temporary = root / (request_id + ".tmp")
+            with temporary.open("x", encoding="utf8") as handle:
+                json.dump(record, handle, ensure_ascii=False)
+            os.replace(temporary, root / (request_id + ".json"))
+        except OSError:
+            # Observability cannot turn a denial into execution.
+            return
+
+    def read_gov_document(self, document_id):
+        try:
+            action = document_action(document_id)
+        except ValueError as exc:
+            raise AgentGuardClientError("MCP_G001_ARGUMENT_INVALID", "文档不可用") from exc
+        return self._invoke(action)
 
     def list_notices(self, limit: int) -> dict[str, Any]:
         if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:

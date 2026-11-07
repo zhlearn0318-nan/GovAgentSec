@@ -1,0 +1,13 @@
+{
+  "id": "govagentsec-trajectory",
+  "name": "GovAgentSec 轨迹审计",
+  "description": "本地轨迹采集；后台经验门控与候选技能隔离。",
+  "activation": { "onStartup": true },
+  "configSchema": {
+    "type": "object", "additionalProperties": false,
+    "properties": {
+      "dataDir": { "type": "string", "minLength": 1 }
+    },
+    "required": ["dataDir"]
+  }
+}

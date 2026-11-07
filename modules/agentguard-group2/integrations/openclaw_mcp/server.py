@@ -26,6 +26,8 @@ TOOL_NAME = "list_notices"
 PAYMENT_TOOL_NAME = "request_test_payment"
 DANGEROUS_TOOL_NAME = "run_protected_command"
 STATUS_TOOL_NAME = "get_control_request_status"
+DOCUMENT_TOOL_NAME = "read_gov_document"
+DOCUMENT_TOOL_DEFINITION = {"name": DOCUMENT_TOOL_NAME, "title": "受控读取合成政务文档", "description": "只读隔离合成数据；密级校验与人工审批由 AgentGuard 执行。", "inputSchema": {"type":"object","properties":{"document_id":{"type":"string"}},"required":["document_id"],"additionalProperties":False}, "annotations":{"readOnlyHint":True,"openWorldHint":False}}
 MAX_CONTROL_STATUS_RECORDS = 200
 
 
@@ -321,7 +323,7 @@ class McpServer:
         if not isinstance(params, Mapping):
             return _error(message_id, -32602, "tools/call params 必须是对象")
         tool_name = params.get("name")
-        allowed_tools = {TOOL_NAME, PAYMENT_TOOL_NAME, DANGEROUS_TOOL_NAME, STATUS_TOOL_NAME} if self.controlled_demo_tools else {TOOL_NAME}
+        allowed_tools = {TOOL_NAME, PAYMENT_TOOL_NAME, DANGEROUS_TOOL_NAME, STATUS_TOOL_NAME, DOCUMENT_TOOL_NAME} if self.controlled_demo_tools else {TOOL_NAME}
         if tool_name not in allowed_tools:
             return _error(message_id, -32602, "未知或未授权的工具")
         arguments = params.get("arguments", {})
@@ -330,7 +332,11 @@ class McpServer:
         if tool_name == STATUS_TOOL_NAME:
             return self._query_control_status(message_id, arguments)
         try:
-            if tool_name == TOOL_NAME:
+            if tool_name == DOCUMENT_TOOL_NAME:
+                if set(arguments) != {"document_id"} or not isinstance(arguments.get("document_id"), str):
+                    return _error(message_id, -32602, "必须且只能提供 document_id")
+                gateway_result = self.client.read_gov_document(arguments["document_id"])
+            elif tool_name == TOOL_NAME:
                 if set(arguments) - {"limit"}:
                     return _error(message_id, -32602, "包含未允许的工具参数")
                 limit = arguments.get("limit", 20)
@@ -375,6 +381,14 @@ class McpServer:
         reason_code = str(gateway_result.get("reason_code", "MCP_G006_UNSAFE_RESPONSE"))
         http_status = gateway_result.get("_agentguard_http_status")
         control_request_id = str(gateway_result.get("_agentguard_request_id", ""))
+        if tool_name == DOCUMENT_TOOL_NAME:
+            business = (gateway_result.get("receipt") or {}).get("business_result") or {}
+            ok = status == "executed_isolated" and http_status == 200 and business.get("adapter") == "isolated_synthetic_document" and business.get("document_id") == arguments["document_id"] and business.get("side_effect") is False
+            output = {"document_id": arguments["document_id"], "control_request_id":control_request_id, "status": status if ok or status in {"pending_approval","blocked"} else "blocked", "reason_code":reason_code, "policy_reason_codes":gateway_result.get("policy_reason_codes", []), "executed":ok}
+            if ok:
+                output["content"] = business.get("document_content", "")
+            self._remember_control_status(tool_name, control_request_id, output)
+            return _response(message_id, {"content":[{"type":"text","text":json.dumps(output,ensure_ascii=False)}],"structuredContent":output,"isError":output["status"] == "blocked"})
         if tool_name != TOOL_NAME:
             expected = status in {"pending_approval", "blocked"} and http_status in {202, 403}
             if not expected:
@@ -481,7 +495,7 @@ class McpServer:
         if not self.initialized:
             return _error(message_id, -32002, "MCP 会话尚未 initialize")
         if method == "tools/list":
-            tools = [TOOL_DEFINITION, PAYMENT_TOOL_DEFINITION, DANGEROUS_TOOL_DEFINITION, STATUS_TOOL_DEFINITION] if self.controlled_demo_tools else [TOOL_DEFINITION]
+            tools = [TOOL_DEFINITION, PAYMENT_TOOL_DEFINITION, DANGEROUS_TOOL_DEFINITION, STATUS_TOOL_DEFINITION, DOCUMENT_TOOL_DEFINITION] if self.controlled_demo_tools else [TOOL_DEFINITION]
             return _response(message_id, {"tools": tools})
         if method == "tools/call":
             return self._call_tool(message_id, message.get("params", {}))

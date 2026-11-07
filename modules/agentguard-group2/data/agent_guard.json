@@ -55,7 +55,8 @@
       "/var/run/",
       "c:\\windows\\system32",
       "db://security/audit",
-      "db://identity/admin"
+      "db://identity/admin",
+      "govdoc://protected/"
     ],
     "dangerous_command_patterns": [
       "(?i).*rm\\s+-rf\\s+[/~].*",
@@ -66,33 +67,165 @@
       "(?i).*remove-item.*-recurse.*"
     ],
     "tools": {
-      "database.query": {"enabled": true, "category": "data"},
-      "file.read": {"enabled": true, "category": "file"},
-      "file.write": {"enabled": true, "category": "file"},
-      "email.send": {"enabled": true, "category": "communication"},
-      "payment.transfer": {"enabled": true, "category": "finance"},
-      "shell.execute": {"enabled": true, "category": "system"},
-      "browser.automate": {"enabled": true, "category": "browser"},
-      "api.call": {"enabled": true, "category": "network"},
-      "plugin.run": {"enabled": false, "category": "extension"}
+      "database.query": {
+        "enabled": true,
+        "category": "data"
+      },
+      "file.read": {
+        "enabled": true,
+        "category": "file"
+      },
+      "file.write": {
+        "enabled": true,
+        "category": "file"
+      },
+      "email.send": {
+        "enabled": true,
+        "category": "communication"
+      },
+      "payment.transfer": {
+        "enabled": true,
+        "category": "finance"
+      },
+      "shell.execute": {
+        "enabled": true,
+        "category": "system"
+      },
+      "browser.automate": {
+        "enabled": true,
+        "category": "browser"
+      },
+      "api.call": {
+        "enabled": true,
+        "category": "network"
+      },
+      "plugin.run": {
+        "enabled": false,
+        "category": "extension"
+      }
     },
     "permissions": [
-      {"role": "office_user", "tool": "database.query", "operations": ["query"]},
-      {"role": "office_user", "tool": "file.read", "operations": ["read"]},
-      {"role": "office_user", "tool": "email.send", "operations": ["send_internal", "send_external"]},
-      {"role": "records_admin", "tool": "database.query", "operations": ["query", "export"]},
-      {"role": "records_admin", "tool": "file.read", "operations": ["read"]},
-      {"role": "records_admin", "tool": "file.write", "operations": ["write", "delete"]},
-      {"role": "finance_operator", "tool": "payment.transfer", "operations": ["transfer"]},
-      {"role": "ops_engineer", "tool": "shell.execute", "operations": ["execute"]},
-      {"role": "ops_engineer", "tool": "browser.automate", "operations": ["browse", "submit"]},
-      {"role": "ops_engineer", "tool": "api.call", "operations": ["invoke", "deploy"]},
-      {"role": "security_admin", "tool": "database.query", "operations": ["query", "export"]},
-      {"role": "security_admin", "tool": "file.read", "operations": ["read"]},
-      {"role": "security_admin", "tool": "file.write", "operations": ["write", "delete"]},
-      {"role": "security_admin", "tool": "shell.execute", "operations": ["execute"]},
-      {"role": "security_admin", "tool": "browser.automate", "operations": ["browse", "submit"]},
-      {"role": "security_admin", "tool": "api.call", "operations": ["invoke", "deploy"]}
+      {
+        "role": "office_user",
+        "tool": "database.query",
+        "operations": [
+          "query"
+        ]
+      },
+      {
+        "role": "office_user",
+        "tool": "file.read",
+        "operations": [
+          "read"
+        ]
+      },
+      {
+        "role": "office_user",
+        "tool": "email.send",
+        "operations": [
+          "send_internal",
+          "send_external"
+        ]
+      },
+      {
+        "role": "records_admin",
+        "tool": "database.query",
+        "operations": [
+          "query",
+          "export"
+        ]
+      },
+      {
+        "role": "records_admin",
+        "tool": "file.read",
+        "operations": [
+          "read"
+        ]
+      },
+      {
+        "role": "records_admin",
+        "tool": "file.write",
+        "operations": [
+          "write",
+          "delete"
+        ]
+      },
+      {
+        "role": "finance_operator",
+        "tool": "payment.transfer",
+        "operations": [
+          "transfer"
+        ]
+      },
+      {
+        "role": "ops_engineer",
+        "tool": "shell.execute",
+        "operations": [
+          "execute"
+        ]
+      },
+      {
+        "role": "ops_engineer",
+        "tool": "browser.automate",
+        "operations": [
+          "browse",
+          "submit"
+        ]
+      },
+      {
+        "role": "ops_engineer",
+        "tool": "api.call",
+        "operations": [
+          "invoke",
+          "deploy"
+        ]
+      },
+      {
+        "role": "security_admin",
+        "tool": "database.query",
+        "operations": [
+          "query",
+          "export"
+        ]
+      },
+      {
+        "role": "security_admin",
+        "tool": "file.read",
+        "operations": [
+          "read"
+        ]
+      },
+      {
+        "role": "security_admin",
+        "tool": "file.write",
+        "operations": [
+          "write",
+          "delete"
+        ]
+      },
+      {
+        "role": "security_admin",
+        "tool": "shell.execute",
+        "operations": [
+          "execute"
+        ]
+      },
+      {
+        "role": "security_admin",
+        "tool": "browser.automate",
+        "operations": [
+          "browse",
+          "submit"
+        ]
+      },
+      {
+        "role": "security_admin",
+        "tool": "api.call",
+        "operations": [
+          "invoke",
+          "deploy"
+        ]
+      }
     ]
   }
 }

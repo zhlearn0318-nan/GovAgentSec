@@ -68,7 +68,7 @@ class OpaClient:
         )
         try:
             command = [
-                str(self.opa_path.relative_to(self.project_root)),
+                str(self.opa_path),
                 "eval",
                 "--format=json",
                 "--data",

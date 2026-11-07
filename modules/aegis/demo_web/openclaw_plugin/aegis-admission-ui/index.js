@@ -1,3 +1,4 @@
+import {allowPage} from '../../../../govagentsec-ui/access.mjs';
 import { brandPage } from "../../../../govagentsec-ui/design.mjs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { spawn } from "node:child_process";
@@ -69,13 +70,13 @@ function sendStreamEvent(res, event) {
   if (!res.destroyed && !res.writableEnded) res.write(`${JSON.stringify(event)}\n`);
 }
 
-function sendHtml(res, html) {
+function sendHtml(res, html, compact = false) {
   res.statusCode = 200;
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; font-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'");
   res.setHeader("X-Content-Type-Options", "nosniff");
-  res.end(brandPage(html, "aegis"));
+  res.end(brandPage(html, "aegis", {compact}));
 }
 
 function isEmbeddedRequest(req) {
@@ -517,13 +518,15 @@ export default definePluginEntry({
     const uploadStore = new UploadSessionStore(uploadsRoot);
     api.registerHttpRoute({ path: CENTER_PATH, auth: "plugin", match: "exact", handler: async (req, res) => {
       if ((req.method ?? "GET").toUpperCase() !== "GET") { res.statusCode = 405; res.end("Method Not Allowed"); return true; }
+      if(!allowPage(req,res)) return true;
       try { sendHtml(res, renderSecurityCenterPage(issueToken())); } catch (error) { sendJson(res, 500, { error: String(error) }); }
       return true;
     }});
     api.registerHttpRoute({ path: PANEL_PATH, auth: "plugin", match: "exact", handler: async (req, res) => {
       if ((req.method ?? "GET").toUpperCase() !== "GET") { res.statusCode = 405; res.end("Method Not Allowed"); return true; }
       if (!isEmbeddedRequest(req)) { sendRedirect(res, "admission"); return true; }
-      try { sendHtml(res, renderAdmissionPage(issueToken())); } catch (error) { sendJson(res, 500, { error: String(error) }); }
+      if(!allowPage(req,res)) return true;
+      try { sendHtml(res, renderAdmissionPage(issueToken()), new URL(req.url,"http://localhost").searchParams.has("workspace")); } catch (error) { sendJson(res, 500, { error: String(error) }); }
       return true;
     }});
     api.registerHttpRoute({ path: API_PATH, auth: "plugin", match: "exact", handler: async (req, res) => {
@@ -637,7 +640,8 @@ export default definePluginEntry({
       api.registerHttpRoute({ path: routePath, auth: "plugin", match: "exact", handler: async (req, res) => {
         if ((req.method ?? "GET").toUpperCase() !== "GET") { res.statusCode = 405; res.end("Method Not Allowed"); return true; }
         if (!isEmbeddedRequest(req)) { sendRedirect(res, tab); return true; }
-        try { sendHtml(res, renderer(issueToken())); } catch (error) { sendJson(res, 500, { error: String(error) }); }
+        if(!allowPage(req,res)) return true;
+      try { sendHtml(res, renderer(issueToken()), new URL(req.url,"http://localhost").searchParams.has("workspace")); } catch (error) { sendJson(res, 500, { error: String(error) }); }
         return true;
       }});
     }

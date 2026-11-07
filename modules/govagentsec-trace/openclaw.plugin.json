@@ -1,0 +1,10 @@
+{
+  "id": "govagentsec-trace",
+  "name": "GovAgentSec 轨迹审计",
+  "activation": {"onStartup": true},
+  "configSchema": {
+    "type": "object", "additionalProperties": false,
+    "properties": {"dataDir": {"type": "string", "minLength": 1}, "contentMode": {"type": "string", "enum": ["hash", "summary"], "default": "hash"}},
+    "required": ["dataDir"]
+  }
+}

@@ -6,7 +6,21 @@
 
 Windows 集成发行版。已在原生 Windows、OpenClaw `2026.7.1-2` 上完成整套安装、真实模型推理、联合准入与五个控制台页面验收，详见 [验收记录](docs/VALIDATION.md)。
 
-最新界面采用共享帆盾标识、青色主题和本地滚动动效，首页提供 **输入防护链、运行时安全、供应链安全** 三个入口。下文介绍的第四模块 Group4 仍保留代码、MCP 测评能力及联合安装策略；其独立页面继续可用，但不再显示在首页导航中。
+
+## 政安纵深（当前版本主题）
+
+评委演示与能力叙事统一为 **政安纵深** 四层（与控制台模块一一对应）：
+
+| 中文名 | 对应能力 | 说明 |
+| --- | --- | --- |
+| 行为护栏 | 输入防护链（原 Group1） | 提示注入、内容安全、工具结果与输出检查 |
+| 权限闸门 | AgentGuard | 受管工具策略、审批、执行票据；含政务受管读文件演示 |
+| 过程台账 | 轨迹审计 | 会话轨迹、调用关系图、审批与准入证据 |
+| 经验自演进 | 轨迹转 Skill | 质量+安全双门控，候选隔离后经联合准入，不自动安装 |
+
+文档总索引见 [docs/README.md](docs/README.md)。宿主锁定 OpenClaw `2026.7.1-2`。
+
+当前版本将安全功能直接放入 OpenClaw 工作区：左侧固定 **工作台、能力接入、待审批、任务轨迹**；顶栏常驻 **任务与轨迹**，切换页面或折叠侧栏后仍可打开。首页展示真实待办、最近对话任务和防护覆盖；能力接入直接使用紧凑的 Skill/MCP 表单。详见 [原生工作区使用与部署](docs/openclaw-workspace.md)。
 
 | 模块 | 功能 | 源码 |
 | --- | --- | --- |
@@ -14,8 +28,11 @@ Windows 集成发行版。已在原生 Windows、OpenClaw `2026.7.1-2` 上完成
 | AgentGuard | 工具调用策略、审批、一次性执行票据与审计 | `modules/agentguard-group2` |
 | 输入防护链 | PIGuard、Qwen3Guard、TrustRAG 检测与 OpenClaw 生命周期保护 | `modules/protect-agent-group1` |
 | 安全测评与审计 | Skill 文档、权限和代码行为检查 | `modules/supply-chain-group4` |
+| 轨迹治理 | 会话轨迹图、AgentGuard 审批关联、MCP 配置准入证据与受控技能演进 | `modules/trajectory-governance` |
 
 ## 项目功能
+
+完整的使用前、使用中、使用后流程，以及各模块如何衔接，见 [产品使用逻辑与模块协同](docs/产品使用逻辑与模块协同.md)。该文档区分现有能力、当前接入状态和下一步整合项。
 
 ### 1. Aegis：扩展安装与供应链准入
 
@@ -115,7 +132,7 @@ cd GovAgentSec
 .\Install.cmd
 ```
 
-也可直接双击 `Install.cmd`。安装器检查并通过 winget 补齐缺失的应用，下载固定版本 Python 依赖、官方模型权重、OPA 和沙箱镜像，完成真实推理与准入检查后接入 OpenClaw。首次 Docker/WSL2 初始化、Windows 权限提示或系统重启需按系统提示完成，再重新运行安装器；模型提供商凭据需自行填写。
+也可直接双击 `Install.cmd`。安装器检查并通过 winget 补齐缺失的应用，下载固定版本 Python 依赖、官方模型权重、OPA 和沙箱镜像，完成真实推理与准入检查后接入 OpenClaw。当前定制宿主基线为 `2026.7.1-2`，安装时校验适配结构，保留配置和宿主文件备份。首次 Docker/WSL2 初始化、Windows 权限提示或系统重启需按系统提示完成，再重新运行安装器；模型提供商凭据需自行填写。
 
 权重保存在本地 `models/`，不放进 Git 仓库。下载支持重试及权重断点续传；复装复用校验通过的文件和已有固定摘要镜像。
 
@@ -146,11 +163,28 @@ TrustRAG 当前接入官方第一阶段聚类与 n-gram 过滤，不代表论文
 
 ## 数据与配置
 
-不分发作者的密钥、令牌、聊天记录、上传文件、审计数据库或已安装 Skill。新部署的历史记录从空开始。当前 AgentGuard 集成使用本机回环地址和演示身份，面向本机操作；多用户远程部署需要单独配置身份认证。
+受管 MCP 新增 `read_gov_document`，用于隔离合成数据的密级、受保护资源和一次性审批演示。参见 [运行命令、验证结果与限制](docs/CONTROLLED_DOCUMENT_VALIDATION.md)。
 
-界面内嵌使用 OpenClaw 的 `trusted` 模式，加载这套本地插件页面。动态代码扫描仍使用禁止联网、只读根文件系统、非特权用户的 Docker 容器。
+不分发作者的密钥、令牌、聊天记录、上传文件、审计数据库或已安装 Skill。新部署的历史记录从空开始。AgentGuard 开发身份默认停用。正式业务执行需要组织 OIDC 配置和逐用户授权委托，接入检查见 [身份与交付说明](docs/DELIVERY_ACCEPTANCE.md)。安装会启用本地轨迹采集和输入检查；新 govagentsec-trace 默认仅保存脱敏后的内容哈希和事件元信息，不保存 prompt、参数及输出原文。
+
+界面内嵌使用 OpenClaw 的 `scripts` 模式，保留来源隔离。敏感面板由已认证管理员通过一次性访问凭据打开；匿名请求拒绝访问状态与审计数据。动态代码扫描仍使用禁止联网、只读根文件系统、非特权用户的 Docker 容器。
 
 ## 项目结构与文档
+
+### 轨迹审计与候选 Skill
+
+OpenClaw **审计中心**提供 JSONL 驱动的调用图、毫秒时间线、同 task_key 多运行对比及候选来源。人工确认任务归属后，按安全 S 严格门控，再按质量 Q 取 TopK，归纳到隔离的 skill-workshop，重新通过 Aegis + Group4 联合准入；不会自动安装。
+
+```powershell
+node scripts/probe_trace_hooks.mjs
+node modules/govagentsec-trace/demo.mjs
+```
+
+演示产生六条本地合成轨迹和候选，并调用真实联合准入验证通过与拒绝。默认评审明确标为本地测试来源，不代表本地模型已经标定。详见 [运行与接口](modules/govagentsec-trace/README.md)、[固定版本 Hook 核验](docs/TRACE_HOOK_VERIFICATION.md)、[评分规则与边界](docs/TRACE_SCORING_AND_EVOLUTION.md)、[本轮验证结果](docs/TRACE_DELIVERY_VALIDATION.md)。
+
+真实 Agent 采集冒烟：`powershell -NoProfile -ExecutionPolicy Bypass -File scripts/smoke_real_trace.ps1`。它连接真实 OpenClaw、要求本地模型与已授权 AgentGuard MCP，校验同一 runId 的事件、参数哈希、执行回执和哈希链；失败退出非零并写 report.json。[前置条件、历史阻塞与复跑](docs/TRACE_LIVE_SMOKE.md)。
+
+2026-11-07 已跑通**六条真实轨迹的本地演进演示**：`node scripts/evolve_real_demo.mjs local-validation/trace-audit`。优先复用，不足再补采；同任务 4 条安全通过、2 条隔离，TopK 取 3 条，候选公共步骤为“受控读预案 → 查询公告”，良性联合准入通过、毒技能拒绝，输出评分/对比/候选/调用图素材。本机使用获授权的 `loopback_static_dev` 演示身份，非生产 OIDC；`admission_passed` 不等于发布。[报告、复现命令与恢复轨迹缺失边界](docs/REAL_MULTI_TRACE_EVOLUTION.md)。
 
 ```text
 GovAgentSec/
@@ -162,6 +196,7 @@ GovAgentSec/
 │  ├─ agentguard-group2/        # 运行时策略、审批与审计
 │  ├─ protect-agent-group1/     # 输入、工具结果与输出防护
 │  ├─ supply-chain-group4/      # Skill 专项检查
+│  ├─ govagentsec-trace/        # JSONL 轨迹、双门控、候选 Skill
 │  └─ govagentsec-ui/           # 首页及三个安全入口共享的界面资源
 ├─ scripts/                     # 下载、配置生成及验证工具
 ├─ hooks/                       # 网关启动集成标记

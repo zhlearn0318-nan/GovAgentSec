@@ -18,6 +18,7 @@ from approval.credentials import (
 from identity import OidcIdentityError, OidcVerifier
 from security_kernel import WasmSecurityKernel
 
+from .documents import validate_document_action, scrub_document_receipt
 from .audit import AuditLogger
 from .adapters import BusinessAdapterError, LocalTestBusinessAdapters
 from .tickets import ExecutionTicketStore, TicketError, compute_action_digest
@@ -26,6 +27,7 @@ from .ledgers import TicketLedger
 
 
 DEFAULT_REGISTRY = {
+    ("file.read", "read"): {"module": "database_query.wat", "argument": "item_count"},
     ("database.query", "query"): {
         "module": "database_query.wat",
         "argument": "limit",
@@ -62,6 +64,13 @@ class EnforcementGateway:
 
     def authorize(self, request: Mapping[str, Any], ttl_seconds: int = 30) -> dict[str, Any]:
         safe_request = copy.deepcopy(dict(request))
+        if safe_request.get("action", {}).get("tool") == "file.read":
+            try:
+                validate_document_action(safe_request["action"])
+                if self.business_adapters is None:
+                    raise ValueError("adapter unavailable")
+            except Exception:
+                return self._block(safe_request, "G016_DOCUMENT_UNAVAILABLE", "文档不可用", policy_effect="registry_rejected")
         try:
             decision = self.opa.decide(safe_request)
         except Exception as exc:
@@ -87,6 +96,7 @@ class EnforcementGateway:
                 "status": "pending_approval",
                 "http_status": 202,
                 "reason_code": "G003_APPROVAL_PENDING",
+                "policy_reason_codes": list(decision.get("reason_codes", [])),
                 "policy_effect": effect,
                 "action_digest": decision.get("action_digest", ""),
                 "receipt": None,
@@ -333,6 +343,7 @@ class EnforcementGateway:
 
     def _audit(self, request: Mapping[str, Any], result: Mapping[str, Any]) -> None:
         action = request.get("action", {})
+        context = request.get("context", {})
         self.audit.write(
             {
                 "event": "enforcement_decision",
@@ -342,7 +353,16 @@ class EnforcementGateway:
                 "tool": action.get("tool", ""),
                 "operation": action.get("operation", ""),
                 "parameters": action.get("parameters", {}),
-                "result": dict(result),
+                "data_level": action.get("data_level"),
+                "document_id": action.get("parameters", {}).get("document_id"),
+                "scenario": context.get("scenario", ""),
+                "identity_note": context.get("identity_note", ""),
+                "demo_run_id": context.get("demo_run_id", ""),
+                "result": scrub_document_receipt({
+                    **result,
+                    "policy_reason_codes": result.get("policy_reason_codes", []),
+                    "executed": result.get("status") == "executed_isolated" and result.get("receipt") is not None,
+                }),
             }
         )
 

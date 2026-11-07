@@ -79,6 +79,7 @@ class ServiceConfig:
     openbao_timeout_seconds: float = 5.0
 
     # 身份
+    allow_development_identity: bool = False
     oidc_enabled: bool = False
     oidc_issuer: str = ""
     oidc_audience: str = "agentguard"
@@ -212,6 +213,7 @@ ENV_FIELD_MAP: dict[str, str] = {
     "openbao_namespace": "OPENBAO_NAMESPACE",
     "openbao_key_name": "OPENBAO_TICKET_KEY",
     "openbao_timeout_seconds": "OPENBAO_TIMEOUT_SECONDS",
+    "allow_development_identity": "ALLOW_DEVELOPMENT_IDENTITY",
     "oidc_enabled": "OIDC_ENABLED",
     "oidc_issuer": "OIDC_ISSUER",
     "oidc_audience": "OIDC_AUDIENCE",

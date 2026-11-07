@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import {issueCapability} from "../../../../../../govagentsec-ui/access.mjs";
+const request = method => ({method,url:"/protect-agent/ui/state",headers:{"x-govagentsec-panel":issueCapability(["/protect-agent/ui/state"])}});
 
 import { registerProtectionUiRoutes } from "../ui-routes.mjs";
 
 function createResponse() {
   return {
     statusCode: null,
-    headers: null,
+    headers: {},
+    setHeader(name,value){this.headers[name]=value;},
     body: null,
     writeHead(statusCode, headers) {
       this.statusCode = statusCode;
@@ -41,7 +44,7 @@ test("the state route returns only the browser-safe snapshot without caching", (
   const route = setupStateRoute(snapshot);
   const response = createResponse();
 
-  route.handler({ method: "GET" }, response);
+  route.handler(request("GET"), response);
 
   assert.equal(route.auth, "plugin");
   assert.equal(route.match, "exact");
@@ -56,8 +59,8 @@ test("the state route is read-only and supports bodyless HEAD checks", () => {
   const rejected = createResponse();
   const head = createResponse();
 
-  route.handler({ method: "POST" }, rejected);
-  route.handler({ method: "HEAD" }, head);
+  route.handler(request("POST"), rejected);
+  route.handler(request("HEAD"), head);
 
   assert.equal(rejected.statusCode, 405);
   assert.equal(rejected.headers.Allow, "GET, HEAD");
@@ -65,3 +68,5 @@ test("the state route is read-only and supports bodyless HEAD checks", () => {
   assert.equal(head.statusCode, 200);
   assert.equal(head.body, undefined);
 });
+
+test("unauthenticated state requests never expose protection state",()=>{const response=createResponse();setupStateRoute({status:"blocked"}).handler({method:"GET",url:"/protect-agent/ui/state",headers:{}},response);assert.equal(response.statusCode,401);assert.ok(!response.body.includes("blocked"));});

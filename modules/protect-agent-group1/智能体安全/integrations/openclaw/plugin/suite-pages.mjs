@@ -61,25 +61,25 @@ export function renderGovAgentSecPanel() {
       <div class="hub-node" data-node="aegis">供应链安全<span>Aegis</span></div>
     </div>
   </header>
-  <nav class="gov-tabs" aria-label="政安智枢模块">
+  <nav class="gov-tabs" aria-label="安全管理流程">
     <a href="/plugins/govagentsec/panel?view=overview" aria-current="page" data-gov-view="overview">安全总览</a>
-    <a href="/plugins/govagentsec/panel?view=protect#protect" data-gov-view="protect">输入防护链</a>
-    <a href="/plugins/govagentsec/panel?view=agentguard#agentguard" data-gov-view="agentguard">运行时安全</a>
-    <a href="/plugins/govagentsec/panel?view=aegis#aegis" data-gov-view="aegis">供应链安全</a>
+    <a href="/plugins/govagentsec/panel?view=aegis#aegis" data-gov-view="aegis">使用前 · 准入中心</a>
+    <a href="/plugins/govagentsec/panel?view=agentguard#agentguard" data-gov-view="agentguard">使用中 · 运行防护</a>
+    <a href="/plugins/govagentsec/panel?view=trajectory#trajectory" data-gov-view="trajectory">使用后 · 审计中心</a>
   </nav>
   <section id="gov-overview" class="gov-view">
     <article class="gov-section">
-      <div class="gov-section-head"><div><h2>安全能力总览</h2><p>集中查看输入防护、运行时安全与供应链安全的入口状态。</p></div><div id="sync-state" class="sync-state" role="status" aria-live="polite">正在核对模块状态</div></div>
+      <div class="gov-section-head"><div><h2>安全能力总览</h2><p>先审核能力，再控制执行，最后按任务追溯。页面可访问不代表全部检查已启用。</p></div><div id="sync-state" class="sync-state" role="status" aria-live="polite">正在核对模块状态</div></div>
       <div class="gov-modules">
-        <article class="gov-module"><span class="module-code">CONVERSATION GUARD</span><h3>输入防护链</h3><p>输入、策略、工具与模型输出的完整对话防护链。</p><footer><span id="health-protect" class="module-health">检查中</span><button type="button" data-open-module="protect">进入模块</button></footer></article>
+        <article class="gov-module"><span class="module-code">CONVERSATION GUARD</span><h3>输入防护链</h3><p>检查输入、工具与回复风险；对话检查需宿主授权。</p><footer><span id="health-protect" class="module-health">检查中</span><button type="button" data-open-module="protect">进入模块</button></footer></article>
         <article class="gov-module"><span class="module-code">RUNTIME CONTROL</span><h3>AgentGuard 安全中心</h3><p>工具调用三态决策、人工审批、执行票据与隔离回执。</p><footer><span id="health-agentguard" class="module-health">检查中</span><button type="button" data-open-module="agentguard">进入模块</button></footer></article>
         <article class="gov-module"><span class="module-code">SUPPLY CHAIN</span><h3>Aegis 供应链安全中心</h3><p>安装前准入、供应链报告、审计记录与安全规则管理。</p><footer><span id="health-aegis" class="module-health">检查中</span><button type="button" data-open-module="aegis">进入模块</button></footer></article>
       </div>
       <div class="gov-flow" aria-label="安全功能导航顺序">
-        <div class="flow-cell"><span>输入防护链</span><strong>审查输入与输出风险</strong></div>
-        <div class="flow-cell"><span>运行时安全</span><strong>AgentGuard 管控工具行为</strong></div>
-        <div class="flow-cell"><span>供应链安全</span><strong>Aegis 核验来源与风险</strong></div>
-        <div class="flow-cell"><span>安全总览</span><strong>集中查看三域防护状态</strong></div>
+        <div class="flow-cell"><span>使用前</span><strong>审核 Skill 与 MCP 接入</strong></div>
+        <div class="flow-cell"><span>使用中</span><strong>检查内容并控制受管动作</strong></div>
+        <div class="flow-cell"><span>使用后</span><strong>核对轨迹、审批与执行证据</strong></div>
+        <div class="flow-cell"><span>持续改进</span><strong>验证候选，再确认发布</strong></div>
       </div>
     </article>
   </section>
@@ -97,11 +97,13 @@ export function renderGovAgentSecPanel() {
   const modules={
     aegis:{title:'Aegis 供应链安全中心',detail:'供应链准入与规则治理',code:'AG',path:'/plugins/aegis-security-center/panel',statusPath:'/plugins/aegis-security-center/panel'},
     agentguard:{title:'AgentGuard 安全中心',detail:'运行时策略、审批与回执',code:'RG',path:'/plugins/agentguard-runtime-security/panel',statusPath:'/plugins/agentguard-runtime-security/panel'},
-    protect:{title:'输入防护链',detail:'输入、工具、检索与输出防护',code:'PA',path:'/plugins/protect-agent/panel',statusPath:'/protect-agent/ui/state'}
+    protect:{title:'输入防护链',detail:'输入、工具、检索与输出防护',code:'PA',path:'/plugins/protect-agent/panel',statusPath:'/protect-agent/ui/state'},
+    trajectory:{title:'审计中心',detail:'任务过程、执行证据与候选验证',code:'TR',path:'/plugins/govagentsec/trajectory-panel'}
   };
   const tabs=[...document.querySelectorAll('[data-gov-view]')],overview=document.getElementById('gov-overview'),moduleView=document.getElementById('gov-module-view'),frame=document.getElementById('module-frame');
   function selectTab(name){for(const tab of tabs){if(tab.dataset.govView===name)tab.setAttribute('aria-current','page');else tab.removeAttribute('aria-current')}}
   function openView(name){
+    if(name==='trajectory'&&window.top===window.self){location.assign('/plugin?plugin=govagentsec-trajectory&id=history');return}
     // OpenClaw's opaque sandbox cannot host another frame with frame-ancestors
     // 'self'. Navigate this frame to the module while keeping the outer sandbox.
     if(modules[name]&&window.origin==='null'){location.replace(modules[name].path);return}
@@ -119,7 +121,7 @@ export function renderGovAgentSecPanel() {
   });
   frame.addEventListener('load',()=>{document.getElementById('frame-state').textContent='模块已加载';document.getElementById('frame-state').className='module-health online'});
   async function checkModule(key,item){const badge=document.getElementById('health-'+key);try{const response=await fetch(item.statusPath,{credentials:'same-origin',cache:'no-store'});if(!response.ok)throw new Error();badge.textContent='在线';badge.className='module-health online';return true}catch{badge.textContent='需要检查';badge.className='module-health offline';return false}}
-  async function checkAll(){const results=await Promise.all(Object.entries(modules).map(([key,item])=>checkModule(key,item)));const online=results.filter(Boolean).length;document.getElementById('sync-state').textContent=online===results.length?'三个模块入口均可访问':online+' / '+results.length+' 个模块入口可访问'}
+  async function checkAll(){const results=await Promise.all(Object.entries(modules).filter(([,item])=>item.statusPath).map(([key,item])=>checkModule(key,item)));const online=results.filter(Boolean).length;document.getElementById('sync-state').textContent=online===results.length?'管理入口可访问，执行状态请查看任务详情':online+' / '+results.length+' 个模块入口可访问'}
   const initial=location.hash.slice(1)||new URLSearchParams(location.search).get('view');openView(modules[initial]?initial:'overview');if(window.origin!=='null')checkAll();else document.getElementById('sync-state').textContent='请选择模块进入工作台';`;
   return page("政安智枢 GovAgentSec", body, script);
 }

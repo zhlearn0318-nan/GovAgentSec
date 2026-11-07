@@ -1,0 +1,24 @@
+{
+  "subtitle": "政安智枢 · 安全工作区",
+  "passwordPlaceholder": "按网关配置填写",
+  "showToken": "显示令牌",
+  "hideToken": "隐藏令牌",
+  "toggleTokenVisibility": "切换令牌可见性",
+  "showPassword": "显示密码",
+  "hidePassword": "隐藏密码",
+  "togglePasswordVisibility": "切换密码可见性",
+  "failure": {
+    "rawError": "技术详情",
+    "docsAuth": "网关登录帮助",
+    "docsPairing": "设备配对帮助",
+    "docsInsecure": "安全连接帮助",
+    "authRequired": {"title":"请先登录", "summary":"网关已运行，请使用管理员提供的令牌或密码连接。", "stepPaste":"在网关主机运行 openclaw dashboard --no-open 获取登录入口。", "stepGenerate":"未配置令牌时，请管理员运行 openclaw doctor --generate-gateway-token。", "stepConnect":"填写后点击连接。"},
+    "authFailed": {"title":"登录凭据不匹配", "summary":"令牌或密码已失效，或属于其他网关。", "stepDashboard":"请管理员重新运行 openclaw dashboard --no-open。", "stepReplace":"使用当前网关的新凭据。", "stepMode":"根据网关配置选择令牌或密码登录。"},
+    "rateLimited": {"title":"登录尝试过于频繁", "summary":"网关已暂时限制登录尝试。", "stepStop":"请暂停重试。", "stepWait":"稍后使用正确凭据重新连接。", "stepCheckClients":"共享主机请检查是否有其他客户端反复登录失败。"},
+    "pairing": {"title":"等待设备授权", "scopeTitle":"等待权限授权", "roleTitle":"等待角色授权", "metadataTitle":"等待设备信息更新", "summary":"此浏览器需要网关管理员批准后才能访问。", "upgradeSummary":"此设备请求了新的访问权限，需要重新批准。", "stepList":"管理员在网关主机运行 openclaw devices list。", "stepApproveId":"确认设备后运行 openclaw devices approve {requestId}。", "stepApprove":"从待审批设备列表中批准当前设备。", "stepReconnect":"授权完成后重新连接。"},
+    "insecure": {"title":"需要安全连接", "summary":"当前浏览器无法在此连接上创建设备身份。", "stepHttps":"使用 HTTPS，或在网关本机访问 http://127.0.0.1:18789。", "stepLocalCompat":"本交付默认保留设备认证，请使用本机地址或配置 HTTPS。", "stepAvoidDisable":"远程访问请由管理员配置安全连接。"},
+    "origin": {"title":"访问来源未授权", "summary":"当前页面地址不在网关允许的来源列表内。", "stepAllowedOrigins":"请管理员检查 gateway.controlUi.allowedOrigins。", "stepFullOrigin":"填写包含协议和端口的完整来源地址。", "stepRestart":"更新配置后重新连接网关。"},
+    "protocol": {"title":"控制台与网关版本不一致", "summary":"当前页面与网关使用的连接协议不同。", "stepDashboard":"使用 openclaw dashboard 重新打开配套控制台。", "stepDevUi":"开发页面需要与当前网关版本一起构建。", "stepRestart":"更新后重启网关并刷新页面。"},
+    "network": {"title":"无法连接网关", "summary":"请检查网关服务是否运行以及连接地址是否正确。", "stepGateway":"在网关主机运行 openclaw status 检查服务。", "stepUrl":"本机使用 ws://127.0.0.1:18789；HTTPS 页面使用 wss://。", "stepDashboard":"运行 openclaw dashboard --no-open 获取当前登录入口。"}
+  }
+}

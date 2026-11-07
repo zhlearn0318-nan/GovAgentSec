@@ -1,0 +1,6 @@
+{
+  "dataDir": "F:/揭榜挂帅/GovAgentSec/local-validation/trajectory",
+  "python": "F:/揭榜挂帅/GovAgentSec/.runtime/protect/Scripts/python.exe",
+  "loaderRoots": ["C:/Users/23684/.openclaw/workspace/skills", "C:/Users/23684/.openclaw/skills", "C:/Users/23684/.openclaw/plugin-skills"],
+  "judge": { "endpoint": "http://127.0.0.1:11435", "model": "qwen3:4b", "numGpu": 0, "timeoutMs": 180000, "maxInputBytes": 10000 }
+}

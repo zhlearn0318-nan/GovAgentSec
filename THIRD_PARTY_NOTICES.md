@@ -10,6 +10,7 @@ GovAgentSec integration code and the contributors' Aegis, Protect Agent and Grou
 | Qwen3Guard | https://huggingface.co/Qwen/Qwen3Guard-Gen-0.6B | Apache-2.0; upstream license downloaded with model |
 | SimCSE | https://huggingface.co/princeton-nlp/sup-simcse-bert-base-uncased | Model card does not declare a license; weights fetched directly, not redistributed in this repository |
 | TrustRAG | https://github.com/HuichiZhou/TrustRAG | MIT; original LICENSE retained in `third_party/TrustRAG` |
+| SkillClaw generation helpers | https://github.com/AMAP-ML/SkillClaw/tree/334ddf82856826b7a259470c6670fb0ef5ce2dc4 | MIT; license and pinned provenance in `third_party/SkillClaw`; minimal initializer adapted, generation helpers unchanged |
 | OPA | https://github.com/open-policy-agent/opa | Apache-2.0; executable fetched from official release with checksum verification |
 | Cisco Skill Scanner / MCP Scanner | https://github.com/cisco-ai-defense | Built from commits pinned by the Aegis runtime bootstrap; see each upstream repository license |
 | PyTorch | https://pytorch.org | Official binary downloaded separately; upstream binary distribution licenses apply |

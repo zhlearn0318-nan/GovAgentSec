@@ -1,0 +1,9 @@
+{
+  "name": "govagentsec-trajectory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --test test/*.test.mjs" },
+  "peerDependencies": { "openclaw": "2026.7.1-2" },
+  "openclaw": { "extensions": ["./index.js"] }
+}

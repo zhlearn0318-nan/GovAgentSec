@@ -1,0 +1,6 @@
+{
+  "repository": "https://github.com/AMAP-ML/SkillClaw",
+  "commit": "334ddf82856826b7a259470c6670fb0ef5ce2dc4",
+  "license": "MIT",
+  "scope": "Create/evolve prompt, parser and supporting modules only; no server, storage or publishing engine. GovAgentSec injects its loopback-only client. Generation modules unchanged; evolve_server/__init__.py adapted to avoid server imports."
+}

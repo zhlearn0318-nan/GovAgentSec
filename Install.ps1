@@ -92,7 +92,7 @@ if ($servingThisRelease) {
     Invoke-Checked $protectPython @((Join-Path $root 'scripts\verify_real_models.py'))
 }
 $batch = Join-Path $root '.runtime\config-batch.json'
-Invoke-Checked $protectPython @((Join-Path $root 'scripts\build_config.py'),'--state',$OpenClawState,'--docker',$docker,'--output',$batch)
+Invoke-Checked $protectPython @((Join-Path $root 'scripts\build_config.py'),'--state',$OpenClawState,'--docker',$docker,'--output',$batch,'--trajectory')
 Invoke-Checked $openclaw @('config','set','--batch-file',$batch,'--dry-run','--replace')
 New-Item -ItemType Directory -Path (Join-Path $aegis 'demo_web\data\openclaw-final') -Force | Out-Null
 Invoke-Checked $protectPython @((Join-Path $root 'scripts\verify_admission.py'),'--batch',$batch)
@@ -136,6 +136,8 @@ New-Item -ItemType Directory -Path (Join-Path $aegis 'demo_web\data\openclaw-fin
 $uiIndex = Join-Path $controlUiRoot 'index.html'
 $uiBackup = Join-Path $stateRoot ('control-ui.before-install.' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '.html')
 Copy-Item -LiteralPath $uiIndex -Destination $uiBackup
+$openclawRoot = Split-Path (Split-Path $controlUiRoot)
+$hostBackup = Join-Path $stateRoot ('host.before-delivery.' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
 $previousStopped = $false
 $newStarted = $false
 $existingGroup2Ready = $false
@@ -159,12 +161,15 @@ try {
     Invoke-Checked 'powershell.exe' @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $group2 'start_agentguard_live.ps1'))
     $newStarted = $true
     Invoke-Checked 'powershell.exe' @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $modules 'protect-agent-group1\智能体安全\integrations\openclaw\plugin\install-control-ui.ps1'),'-ControlUiRoot',$controlUiRoot)
+    Invoke-Checked 'node.exe' @((Join-Path $root 'scripts\install_delivery.mjs'),$openclawRoot,$hostBackup)
+    Invoke-Checked $protectPython @((Join-Path $root 'scripts\harden_openclaw.py'),'--state',$OpenClawState,'--openclaw-root',$openclawRoot,'--apply')
     Invoke-Checked $openclaw @('gateway','restart')
     Invoke-Checked 'powershell.exe' @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $root 'Verify.ps1'),'-OpenClawState',$OpenClawState)
     Invoke-Checked 'powershell.exe' @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $group2 'register_agentguard_task.ps1'))
 } catch {
     $failure = $_.Exception.Message
     if ($newStarted -and -not $existingGroup2Ready) { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $group2 'stop_agentguard_live.ps1') }
+    if (Test-Path -LiteralPath (Join-Path $hostBackup 'manifest.json')) { & node.exe (Join-Path $root 'scripts\install_delivery.mjs') $openclawRoot $hostBackup --restore }
     Copy-Item -LiteralPath $backup -Destination (Join-Path $OpenClawState 'openclaw.json') -Force
     Copy-Item -LiteralPath $uiBackup -Destination $uiIndex -Force
     if ($previousStopped) { & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $priorGroup2 'start_agentguard_live.ps1') }

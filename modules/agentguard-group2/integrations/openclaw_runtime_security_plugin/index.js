@@ -1,6 +1,7 @@
+import {allowPage, deny} from '../../../govagentsec-ui/access.mjs';
 import { brandPage } from "../../../govagentsec-ui/design.mjs";
 import { randomBytes, randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -116,7 +117,17 @@ function approvalPathOf(config) {
 
 async function readApprovals(config) {
   const records = await readJson(approvalPathOf(config), []);
-  return Array.isArray(records) ? records : [];
+  const merged = new Map();
+  if (config.statusPath) {
+    const root = `${config.statusPath}.requests`;
+    let names = []; try { names = await readdir(root); } catch (error) { if(error.code !== 'ENOENT') throw error; }
+    for (const name of names.filter(n => /^mcp-req-[a-f0-9]{32}\.json$/.test(n))) {
+      const item = await readJson(join(root, name), null);
+      if(item?.control_request_id === name.slice(0,-5) && item.status === 'pending') merged.set(item.control_request_id, item);
+    }
+  }
+  for(const record of Array.isArray(records) ? records : []) merged.set(record.control_request_id,record);
+  return [...merged.values()];
 }
 
 async function writeApprovals(config, records) {
@@ -182,7 +193,7 @@ async function notifyWeChat(config, record) {
   if (!webhook) return { configured: false, status: "not_configured", sent_at: null };
   const action = record.request?.action || {};
   const amount = action.parameters?.amount;
-  const summary = amount ? `${action.tool} · ¥${Number(amount).toLocaleString("zh-CN")}` : `${action.tool} · ${action.operation}`;
+  const summary = action.tool === "file.read" ? `受控文档 ${action.parameters?.document_id ?? "未知"} · ${action.data_level ?? "未知密级"}` : amount ? `${action.tool} · ¥${Number(amount).toLocaleString("zh-CN")}` : `${action.tool} · ${action.operation}`;
   const payload = {
     msgtype: "markdown",
     markdown: { content: `**AgentGuard 待审批通知**\n> 请求：${record.control_request_id}\n> 动作：${summary}\n> 状态：REVIEW（已安全暂停）\n请由工作人员登录 OpenClaw 审批中心处理。` },
@@ -244,12 +255,18 @@ function summarizeAudits(events) {
     previous.tool = safeString(event.tool, previous.tool || "-");
     previous.operation = safeString(event.operation, previous.operation || "-");
     previous.parameters = event.parameters || previous.parameters || {};
+    previous.data_level = event.data_level ?? previous.data_level;
+    previous.document_id = event.document_id ?? previous.document_id;
+    previous.scenario = safeString(event.scenario, previous.scenario || "");
+    previous.identity_note = safeString(event.identity_note, previous.identity_note || "");
+    previous.demo_run_id = safeString(event.demo_run_id, previous.demo_run_id || "");
     previous.policy_effect = effectOf(event);
     previous.status = safeString(result.status, previous.status || "unknown");
     previous.reason_code = safeString(result.reason_code, previous.reason_code || "-");
     previous.policy_reason_codes = Array.isArray(result.policy_reason_codes) ? result.policy_reason_codes : [];
     previous.action_digest = safeString(result.action_digest, previous.action_digest || "");
-    previous.receipt = result.receipt || previous.receipt || null;
+    previous.receipt = result.receipt || null;
+    previous.executed = result.status === "executed_isolated" && Boolean(result.receipt);
     previous.stages.push({ status: safeString(result.status, "unknown"), effect: effectOf(event), reason_code: safeString(result.reason_code, "-") });
     byRequest.set(requestId, previous);
   }
@@ -281,6 +298,9 @@ function summarizeAudits(events) {
   return { counts, evidence: { complete, total: requests.length, coverage_percent: requests.length ? Math.round(complete * 100 / requests.length) : 0 }, requests: requests.slice(0, 100), timeline, incidents };
 }
 
+function requireDevelopmentIdentity(config) {
+  if(config.identityMode !== 'loopback_static_dev') throw new Error('开发身份执行已停用。正式审批需要组织 OIDC 身份与逐用户授权委托；管理页面登录不代替业务身份。');
+}
 async function buildSnapshot(config) {
   const baseUrl = safeString(config.agentGuardBaseUrl, "http://127.0.0.1:8080").replace(/\/+$/u, "");
   const [health, ready, version, audits, controlStatuses, approvalRecords] = await Promise.all([
@@ -306,9 +326,10 @@ async function buildSnapshot(config) {
   const incidents = timeline.filter((item) => item.status === "error" || ["approval_error", "reconciliation_required"].includes(item.status) || /ERROR|FAILED|UNAVAILABLE|D105/u.test(item.reason_code));
   return redact({
     generated_at: new Date().toISOString(), scope: "group2_tool_runtime_governance",
+    identity: {mode:config.identityMode??"disabled", executionEnabled:config.identityMode==="loopback_static_dev", reason:"正式业务身份未接入时停用动作试算和审批执行"},
     services: {
       agentguard: health, dependencies: ready, version,
-      openclaw_mcp: { ok: Array.isArray(controlStatuses), records: Array.isArray(controlStatuses) ? controlStatuses.length : 0 },
+      openclaw_mcp: { ok: config.identityMode === "loopback_static_dev" && Array.isArray(controlStatuses), records: Array.isArray(controlStatuses) ? controlStatuses.length : 0 },
     },
     counts: auditSummary.counts, evidence: auditSummary.evidence, requests: auditSummary.requests,
     approvals: approvalRecords.slice().reverse().map(publicApproval),
@@ -368,7 +389,23 @@ function buildCandidateAction(kind, input = {}) {
   throw new Error("不支持的动作类型");
 }
 
+async function runGovDocumentDemo(config) {
+  const baseUrl = new URL(safeString(config.agentGuardBaseUrl, "http://127.0.0.1:8080"));
+  if (baseUrl.protocol !== "http:" || baseUrl.hostname !== "127.0.0.1" || baseUrl.username || baseUrl.password) {
+    throw new Error("文档演示仅连接 127.0.0.1 的 AgentGuard 服务");
+  }
+  const startedAt = performance.now();
+  const response = await fetchJson(new URL("/demo/gov-documents", baseUrl), {
+    method: "POST", redirect: "error", headers: { "Content-Type": "application/json" }, body: "{}",
+  }, 60_000);
+  if (!response.ok || !Array.isArray(response.payload?.results)) {
+    throw new Error(response.payload?.message || response.payload?.reason_code || response.error || `AgentGuard 返回 HTTP ${response.status}`);
+  }
+  return { ...response.payload, demo_identity: "本机演示身份", duration_ms: Math.round(performance.now() - startedAt) };
+}
+
 async function evaluateAction(config, body) {
+  requireDevelopmentIdentity(config);
   const baseUrl = safeString(config.agentGuardBaseUrl, "http://127.0.0.1:8080").replace(/\/+$/u, "");
   const request = buildCandidateAction(safeString(body.kind), body.input || {});
   const startedAt = performance.now();
@@ -400,7 +437,16 @@ async function evaluateAction(config, body) {
   return redact({ request_id: request.request_id, task_id: request.task_id, action: request.action, result: result.payload, notification, duration_ms: Number((performance.now() - startedAt).toFixed(2)) });
 }
 
+const resolvingRequests = new Set();
 async function resolveApproval(config, body) {
+  requireDevelopmentIdentity(config);
+  const id = body?.control_request_id;
+  if(resolvingRequests.has(id)) throw new Error('该请求正在处理，请等待执行回执');
+  resolvingRequests.add(id);
+  try { return await resolveApprovalUnlocked(config, body); }
+  finally { resolvingRequests.delete(id); }
+}
+async function resolveApprovalUnlocked(config, body) {
   const controlRequestId = safeString(body.control_request_id);
   const resolution = safeString(body.resolution).toLowerCase();
   const approverId = safeString(body.approver_id).slice(0, 80);
@@ -466,12 +512,15 @@ async function handler(req, res, config) {
     return true;
   }
   if (method === "GET" && (requestUrl.pathname === `${ROUTE_ROOT}/panel` || requestUrl.pathname === `${ROUTE_ROOT}/`)) {
-    const html = brandPage(await readFile(PANEL_PATH, "utf8"), "runtime").replaceAll("__AGENTGUARD_PAGE_TOKEN__", issuePageToken());
+    if(!allowPage(req,res)) return true;
+    let html = brandPage(await readFile(PANEL_PATH, "utf8"), "runtime", {compact:requestUrl.searchParams.has("workspace")}).replaceAll("__AGENTGUARD_PAGE_TOKEN__", issuePageToken());
+    if(requestUrl.searchParams.get("section")==="approvals") html=html.replace("</body>",'<script>switchPage("approvals");</script></body>');
     writeResponse(res, 200, "text/html; charset=utf-8", html, {
       "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; font-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
     });
     return true;
   }
+  if (method === "GET" && requestUrl.pathname.startsWith(`${ROUTE_ROOT}/api/`) && !validatePageToken(req.headers?.["x-agentguard-page-token"])) { deny(res); return true; }
   if (method === "GET" && requestUrl.pathname === `${ROUTE_ROOT}/api/bootstrap`) {
     sendJson(res, 200, {
       ok: true,
@@ -483,8 +532,22 @@ async function handler(req, res, config) {
   if (method === "GET" && requestUrl.pathname === `${ROUTE_ROOT}/api/snapshot`) { sendJson(res, 200, await buildSnapshot(config), SANDBOX_CORS_HEADERS); return true; }
   if (method === "GET" && requestUrl.pathname === `${ROUTE_ROOT}/api/evidence`) {
     writeResponse(res, 200, "application/json; charset=utf-8", JSON.stringify(await buildSnapshot(config), null, 2), {
+      ...SANDBOX_CORS_HEADERS,
       "Content-Disposition": `attachment; filename="AgentGuard-runtime-evidence-${new Date().toISOString().slice(0, 10)}.json"`,
     });
+    return true;
+  }
+  if (method === "POST" && requestUrl.pathname === `${ROUTE_ROOT}/api/demo/gov-documents`) {
+    if (!validatePageToken(req.headers?.["x-agentguard-page-token"])) {
+      sendJson(res, 403, { ok: false, error: { code: "PAGE_TOKEN_INVALID", message: "页面令牌无效或已过期，请刷新页面" } }, SANDBOX_CORS_HEADERS);
+      return true;
+    }
+    try {
+      await readJsonBody(req);
+      sendJson(res, 200, { ok: true, data: await runGovDocumentDemo(config) }, SANDBOX_CORS_HEADERS);
+    } catch (error) {
+      sendJson(res, 502, { ok: false, error: { code: "GOV_DOCUMENT_DEMO_FAILED", message: String(error?.message || error).slice(0, 500) } }, SANDBOX_CORS_HEADERS);
+    }
     return true;
   }
   if (method === "POST" && requestUrl.pathname === `${ROUTE_ROOT}/api/evaluate`) {
@@ -526,5 +589,5 @@ const plugin = {
   },
 };
 
-export { buildCandidateAction, buildSnapshot, configuredWeChatWebhook, isAllowedOrigin, isLoopbackAddress, publicApproval, summarizeAudits };
+export { resolveApproval, readApprovals, buildCandidateAction, buildSnapshot, configuredWeChatWebhook, isAllowedOrigin, isLoopbackAddress, publicApproval, summarizeAudits };
 export default plugin;

@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from approval.credentials import ApprovalCredentialService, SQLiteApprovalLedger
+from enforcement.documents import scrub_document_receipt
 from enforcement import build_gateway, compute_action_digest
 from enforcement.ledgers import OpenBaoKvTicketLedger
 from enforcement.signers import HmacKeyringSigner, OpenBaoTransitSigner
@@ -41,6 +42,7 @@ from .config import (
     resolve_ticket_secret,
 )
 from .health import DependencyProbes, liveness
+from .gov_document_demo import run_gov_document_demo
 from .opa_runtime import ResidentOpaProcess, build_opa_client
 
 MAX_REQUEST_BYTES = 1024 * 1024
@@ -115,6 +117,9 @@ class AgentGuardService:
         self._closed = False
         self._approval_lock = threading.Lock()
         self._approval_resolutions: dict[str, dict[str, Any]] = {}
+        # Only requests whose requester was verified by this service may be
+        # approved in OIDC mode. Restarting deliberately invalidates this set.
+        self._pending_oidc_approvals: dict[tuple[str, str], dict[str, Any]] = {}
 
         state_dir = self.config.state_path
         state_dir.mkdir(parents=True, exist_ok=True)
@@ -201,6 +206,7 @@ class AgentGuardService:
                 self.config.oidc_audience,
                 require_mfa=self.config.oidc_require_mfa,
                 timeout_seconds=self.config.oidc_timeout_seconds,
+                require_https=True, reject_redirects=True,
             )
         except OidcIdentityError:
             # 身份服务暂时不可用不应让进程崩溃：/readyz 会报告不可用，
@@ -244,9 +250,20 @@ class AgentGuardService:
                     "message": "身份服务不可用，默认拒绝",
                     "receipt": None,
                 }
-            return self.gateway.invoke_authenticated(
-                request, authorization_header, self.verifier
-            )
+            try:
+                authenticated = self.verifier.authenticate_request(request, authorization_header)
+            except OidcIdentityError as exc:
+                return self.gateway._block(
+                    request, exc.code, str(exc), policy_effect="identity_rejected", http_status=401
+                )
+            result = self.gateway.invoke(authenticated)
+            if result.get("status") == "pending_approval":
+                key = (str(authenticated.get("task_id", "")), compute_action_digest(authenticated))
+                with self._approval_lock:
+                    self._pending_oidc_approvals.setdefault(key, copy.deepcopy(authenticated))
+            return result
+        if not self.config.allow_development_identity:
+            return {"status":"blocked","http_status":503,"reason_code":"S006_BUSINESS_IDENTITY_DISABLED","message":"正式身份源未接入，开发身份默认停用","receipt":None}
         return self.gateway.invoke(request)
 
     def invoke_verified(
@@ -290,6 +307,43 @@ class AgentGuardService:
         # client binding, roles, department and MFA.
         return self.gateway.invoke(authenticated)
 
+    def resolve_approval_authenticated(
+        self, payload: Mapping[str, Any], authorization_header: str | None
+    ) -> dict[str, Any]:
+        """Bind approval to the verified approver and stored original request."""
+
+        if not self.config.oidc_enabled and not self.config.allow_development_identity:
+            return {"status":"blocked","http_status":503,"reason_code":"S006_BUSINESS_IDENTITY_DISABLED","receipt":None}
+        request = payload.get("request", {})
+        if not isinstance(request, Mapping):
+            return {"status": "blocked", "http_status": 400, "reason_code": "A400_REQUEST_INVALID", "receipt": None}
+        approver_id = str(payload.get("approver_id", ""))
+        roles = payload.get("approver_roles", [])
+        if self.config.oidc_enabled:
+            if self.verifier is None:
+                return {"status": "blocked", "http_status": 503, "reason_code": "S004_IDENTITY_UNAVAILABLE", "receipt": None}
+            try:
+                subject = self.verifier.authenticate_request({}, authorization_header)["subject"]
+            except OidcIdentityError as exc:
+                return {"status": "blocked", "http_status": 401, "reason_code": exc.code, "message": str(exc), "receipt": None}
+            approver_id, roles = str(subject["id"]), subject["roles"]
+            if "business_approver" not in roles:
+                return {"status": "blocked", "http_status": 403, "reason_code": "A403_APPROVER_ROLE_REQUIRED", "receipt": None}
+            key = (str(request.get("task_id", "")), compute_action_digest(request))
+            with self._approval_lock:
+                original = self._pending_oidc_approvals.get(key)
+                request = copy.deepcopy(original) if original else None
+            if request is None:
+                return {
+                    "status": "blocked", "http_status": 409,
+                    "reason_code": "A409_VERIFIED_PENDING_REQUIRED",
+                    "message": "没有对应的已验证待审批请求，请重新发起动作", "receipt": None,
+                }
+        return self.resolve_approval(
+            request, str(payload.get("resolution", "")), approver_id,
+            roles if isinstance(roles, list) else [], str(payload.get("note", "")),
+        )
+
     def resolve_approval(
         self,
         request: Mapping[str, Any],
@@ -303,8 +357,8 @@ class AgentGuardService:
         This local operator endpoint is used by the OpenClaw Control UI.  It
         re-evaluates the original, digest-bound action before issuing a signed,
         one-use approval credential.  Reject and interrupt never issue a
-        ticket.  Production deployments place this endpoint behind the
-        approver OIDC role configured for the service.
+        ticket. The HTTP entry validates the approver's OIDC token and replaces
+        client-supplied identities before reaching this method.
         """
 
         safe_request = copy.deepcopy(dict(request))
@@ -438,6 +492,8 @@ class AgentGuardService:
                     },
                 }
 
+            if safe_request.get("action", {}).get("tool") == "file.read":
+                result = scrub_document_receipt(result)
             audit_result = copy.deepcopy(result)
             audit_result.pop("ticket", None)
             self.gateway.audit.write({
@@ -491,8 +547,17 @@ class AgentGuardService:
                 self._send(404, {"status": "not_found", "path": self.path})
 
             def do_POST(self) -> None:  # noqa: N802
-                if self.path not in {"/invoke", "/approvals/resolve"}:
+                if self.path not in {"/invoke", "/approvals/resolve", "/demo/gov-documents"}:
                     self._send(404, {"status": "not_found", "path": self.path})
+                    return
+                if self.path == "/demo/gov-documents" and (
+                    self.server.server_address[0] != "127.0.0.1"
+                    or self.client_address[0] != "127.0.0.1"
+                    or self.headers.get("Origin") is not None
+                    or self.headers.get_content_type() != "application/json"
+                ):
+                    self._send(403, {"status": "blocked", "reason_code": "S024_LOCAL_DEMO_ONLY",
+                                     "identity_note": "本机演示身份", "executed": False, "receipt": None})
                     return
                 try:
                     length = int(self.headers.get("Content-Length", "0"))
@@ -538,17 +603,19 @@ class AgentGuardService:
                         },
                     )
                     return
+                if self.path == "/demo/gov-documents":
+                    try:
+                        result = run_gov_document_demo(service.gateway)
+                    except Exception as exc:
+                        self._send(503, {"status": "blocked", "reason_code": "S025_DEMO_UNAVAILABLE",
+                                         "message": type(exc).__name__, "identity_note": "本机演示身份",
+                                         "executed": False, "receipt": None})
+                        return
+                    self._send(200, result)
+                    return
                 if self.path == "/approvals/resolve":
                     try:
-                        result = service.resolve_approval(
-                            payload.get("request", {}),
-                            str(payload.get("resolution", "")),
-                            str(payload.get("approver_id", "")),
-                            list(payload.get("approver_roles", []))
-                            if isinstance(payload.get("approver_roles"), list)
-                            else [],
-                            str(payload.get("note", "")),
-                        )
+                        result = service.resolve_approval_authenticated(payload, self.headers.get("Authorization"))
                     except Exception as exc:
                         self._send(
                             503,

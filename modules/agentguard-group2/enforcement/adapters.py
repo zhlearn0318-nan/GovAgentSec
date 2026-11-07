@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from .documents import DocumentReader
 import sqlite3
 from contextlib import closing
 from decimal import Decimal, InvalidOperation
@@ -27,6 +28,7 @@ class LocalTestBusinessAdapters:
         self.ledger_db = self._confined("business/payment_ledger.sqlite")
         self.notices_db.parent.mkdir(parents=True, exist_ok=True)
         self._initialize()
+        self.documents = DocumentReader()
 
     def _confined(self, relative_path: str) -> Path:
         candidate = (self.root / relative_path).resolve()
@@ -83,6 +85,8 @@ class LocalTestBusinessAdapters:
     def execute(self, request: Mapping[str, Any]) -> dict[str, Any]:
         action = request.get("action", {})
         key = (str(action.get("tool", "")), str(action.get("operation", "")))
+        if key == ("file.read", "read"):
+            return self.documents.execute(request)
         if key == ("database.query", "query"):
             return self._query_notices(action.get("parameters", {}))
         if key == ("payment.transfer", "transfer"):

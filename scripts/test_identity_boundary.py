@@ -8,6 +8,7 @@ from unittest.mock import Mock
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'modules/agentguard-group2'))
 from service.app import AgentGuardService
+from service.config import ServiceConfig
 from identity import OidcIdentityError
 from enforcement import compute_action_digest
 
@@ -30,6 +31,31 @@ def service(oidc=True):
     return instance
 
 class IdentityBoundaryTests(unittest.TestCase):
+    def test_shipping_defaults_never_enable_development_identity(self):
+        config=ServiceConfig()
+        self.assertFalse(config.allow_development_identity)
+        self.assertFalse(config.oidc_enabled)
+
+    def test_gateway_admin_token_is_not_a_business_bearer(self):
+        s=service()
+        s.invoke({'subject':{'id':'admin','roles':['business_approver']}},'Bearer gateway-admin-token')
+        self.assertEqual(s.gateway._block.call_args.kwargs['http_status'],401)
+        s.gateway.invoke.assert_not_called()
+        self.assertEqual(s.resolve_approval_authenticated({'request':{}},'Bearer gateway-admin-token')['http_status'],401)
+        s.resolve_approval.assert_not_called()
+
+    def test_configured_oidc_without_verifier_stays_disabled(self):
+        s=service();s.verifier=None
+        self.assertEqual(s.invoke({},'Bearer verified-test-user')['http_status'],503)
+        self.assertEqual(s.resolve_approval_authenticated({'request':{}},'Bearer verified-test-user')['http_status'],503)
+        s.gateway.invoke.assert_not_called();s.resolve_approval.assert_not_called()
+
+    def test_verified_requester_cannot_self_approve(self):
+        s=service()
+        result=AgentGuardService.resolve_approval(s,{'subject':{'id':'verified-approver'}},'approve','verified-approver',['business_approver'])
+        self.assertEqual(result['reason_code'],'D105_SELF_APPROVAL')
+        s.gateway.invoke.assert_not_called()
+
     def test_default_development_execution_is_disabled(self):
         s=service(False)
         self.assertEqual(s.invoke({'subject':{'roles':['admin']}},None)['http_status'],503)

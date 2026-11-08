@@ -1,0 +1,6 @@
+{
+  "id":"govagentsec-session-sandbox",
+  "name":"GovAgentSec 会话执行隔离",
+  "activation":{"onStartup":true},
+  "configSchema":{"type":"object","additionalProperties":false,"properties":{"dataDir":{"type":"string"}},"required":["dataDir"]}
+}

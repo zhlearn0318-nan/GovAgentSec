@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "openclaw_version": "2026.7.1-2",
+  "session_llm": {
+    "provider": "deepseek",
+    "base_url": "https://api.deepseek.com",
+    "api": "openai-completions",
+    "model": "deepseek-flash",
+    "api_key_env": "DEEPSEEK_API_KEY"
+  },
+  "security_review_llm": {
+    "judge": "ollama",
+    "endpoint": "http://127.0.0.1:11434",
+    "model": "qwen3:8b",
+    "timeoutMs": 90000,
+    "calibration_version": "local-routing-v1-not-production",
+    "calibrated": false
+  },
+  "external_review_enabled": false
+}

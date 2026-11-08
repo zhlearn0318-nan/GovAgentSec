@@ -5,6 +5,27 @@ import { readFile } from "node:fs/promises";
 export const PROTECTION_RUNTIME = Symbol.for("govagentsec.protection.runtime");
 export const RESULT_GATE_VERSION = 1;
 
+export function controlledDocumentDenial(result, ctx, hostConfig) {
+  // Only the host-bound managed tool can supply this verdict. Never parse tool text.
+  const server = hostConfig?.mcp?.servers?.['agentguard-notices'];
+  const details = result?.details, control = details?.structuredContent;
+  // U7b: a host-bound notification denial is authoritative even if the text
+  // classifier says ALLOW. Ordinary tool errors and pending approvals differ.
+  if (server && server.enabled !== false && ctx?.toolName === 'agentguard-notices__submit_emergency_notice'
+    && details?.mcpServer === 'agentguard-notices' && details?.mcpTool === 'submit_emergency_notice'
+    && control?.status === 'blocked' && control.executed === false
+    && /^mcp-req-[a-f0-9]{32}$/.test(control.control_request_id ?? '')
+    && /^(?:G|P|S|MCP_G)\d{3}_[A-Z0-9_]+$/.test(control.reason_code ?? ''))
+    return {decision:'BLOCK',riskLevel:'HIGH',reasonCode:control.reason_code,categories:['agentguard_notification_access']};
+  if (!server || server.enabled === false || ctx?.toolName !== 'agentguard-notices__read_gov_document'
+    || details?.mcpServer !== 'agentguard-notices' || details?.mcpTool !== 'read_gov_document'
+    || control?.status !== 'blocked' || control.executed !== false
+    || !/^mcp-req-[a-f0-9]{32}$/.test(control.control_request_id ?? '')
+    || control.reason_code !== 'G002_POLICY_DENY' || !Array.isArray(control.policy_reason_codes)) return null;
+  const reason = ['D004_CLEARANCE_INSUFFICIENT', 'D005_PROTECTED_RESOURCE'].find(code => control.policy_reason_codes.includes(code));
+  return reason ? {decision:'BLOCK',riskLevel:'HIGH',reasonCode:reason,categories:['agentguard_document_access']} : null;
+}
+
 function runtime() {
   return globalThis[PROTECTION_RUNTIME] ??= { bridgeVersion: 0 };
 }

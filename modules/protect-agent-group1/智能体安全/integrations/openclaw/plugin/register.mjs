@@ -10,7 +10,7 @@ import {
 } from "./client.mjs";
 import { createGuardEventStore } from "./guard-events.mjs";
 import { registerProtectionUiRoutes } from "./ui-routes.mjs";
-import { registerProtectionRuntime } from "./result-gate.mjs";
+import { registerProtectionRuntime, controlledDocumentDenial } from "./result-gate.mjs";
 
 
 const BLOCK_MESSAGE = "Protect Agent 已阻止此请求，因为安全检查未通过。";
@@ -152,7 +152,7 @@ export function registerProtectAgent(api, dependencies = {}) {
     async screenToolResult(prepared, ctx, signal) {
       const key = contextKey(ctx) ?? "unscoped";
       eventStore.beginPhase(key, "tools");
-      const result = await client.screen({
+      const result = controlledDocumentDenial(prepared.snapshot, ctx, api.config) ?? await client.screen({
         kind: "tool_result",
         text: prepared.text,
         conversationId: conversationId(ctx) ?? runSessions.get(key),

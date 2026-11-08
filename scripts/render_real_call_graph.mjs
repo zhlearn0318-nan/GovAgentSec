@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 import { TraceStore } from '../modules/govagentsec-trace/store.mjs';
 import { traceGraph, nodePresentation, graphLanes } from '../modules/govagentsec-trace/view-model.mjs';
 
-const [input, traceId, output = 'local-validation/trace-call-graph'] = process.argv.slice(2);
+const [input, traceId, output = 'local-validation/trace-call-graph', provenance] = process.argv.slice(2);
 let browser;
 try {
   if (!input || !traceId) throw new Error('Usage: node scripts/render_real_call_graph.mjs EVIDENCE_DIR TRACE_ID [OUTPUT_DIR]');
@@ -38,14 +38,14 @@ try {
       <text x="${x + 10}" y="${y + 97}" font-size="12" fill="#637570">${esc(p.tokens)}</text></g>`;
   }).join('');
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" font-family="Microsoft YaHei UI, sans-serif" fill="#233b37">
-    <rect width="100%" height="100%" fill="#fbfdfc"/><text x="24" y="27" font-size="20">真实调用关系图 · ${esc(traceId)}</text>
+    <rect width="100%" height="100%" fill="#fbfdfc"/><text x="24" y="27" font-size="20">${provenance === '--synthetic-upstream' ? '真实宿主 · 合成上游用量回放（非云端实测）' : '真实调用关系图'} · ${esc(traceId)}</text>
     <text x="24" y="46" font-size="12">${graph.nodes.length} 节点 / ${graph.edges.length} 边 · 实线为明确调用关系，虚线为时间顺序</text>
     ${graphLanes.map((name, i) => `<rect x="${20 + i * laneWidth}" y="50" width="${laneWidth}" height="32" fill="#edf4f0"/><text x="${20 + i * laneWidth + laneWidth / 2}" y="72" text-anchor="middle" font-size="14">${esc(name)}</text>`).join('')}
     ${edges}${nodes}</svg>`;
   writeFileSync(path.join(outDir, 'call-graph-real.svg'), svg);
   const html = path.join(outDir, 'call-graph-real.html');
   writeFileSync(html, '<!doctype html><meta charset="utf-8"><title>真实调用关系图</title><body style="margin:0">' + svg + '</body>');
-  const summary = { trace_id: traceId, source: trace.summary.source, integrity: trace.integrity, node_count: graph.nodes.length, edge_count: graph.edges.length,
+  const summary = { trace_id: traceId, source: trace.summary.source, upstream_source: provenance === '--synthetic-upstream' ? 'synthetic-fixture' : 'unspecified', integrity: trace.integrity, node_count: graph.nodes.length, edge_count: graph.edges.length,
     nodes: graph.nodes.map(n => ({ event_id: n.event_id, ...nodePresentation(n) })), edges: graph.edges, png: false };
   writeFileSync(path.join(outDir, 'call-graph-real.json'), JSON.stringify(summary, null, 2));
   const host = path.join(process.env.APPDATA, 'npm/node_modules/openclaw');

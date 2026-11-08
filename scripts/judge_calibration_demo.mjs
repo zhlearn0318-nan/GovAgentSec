@@ -3,13 +3,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdirSync,writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
+import {loadRouting} from '../modules/model-routing/routing.mjs';
 import { TraceStore } from '../modules/govagentsec-trace/store.mjs';
 import { assess,selectTopK } from '../modules/govagentsec-trace/scoring.mjs';
 import { makeLocalJudge,HEURISTIC_VERSION } from '../modules/govagentsec-trace/local-judges.mjs';
 import { createCalibrationFixtures,CALIBRATION_VERSION } from '../modules/govagentsec-trace/calibration-fixtures.mjs';
 
 const repo=fileURLToPath(new URL('../',import.meta.url));
-const options={judge:'ollama',model:'qwen3:8b',endpoint:'http://127.0.0.1:11434',timeout:'45000'};
+const reviewDefaults=loadRouting().security_review_llm;
+const options={judge:reviewDefaults.judge,model:reviewDefaults.model,endpoint:reviewDefaults.endpoint,timeout:String(reviewDefaults.timeoutMs)};
 const args=process.argv.slice(2);
 for(let i=0;i<args.length;i+=2){const key=args[i].replace(/^--/,'');if(!Object.hasOwn(options,key)||!args[i+1])throw Error('Usage: --judge ollama|heuristic --model qwen3:8b --endpoint http://127.0.0.1:11434 --timeout 45000'); options[key]=args[i+1];}
 if(!['ollama','heuristic'].includes(options.judge))throw Error('Calibration requires an actual local judge, not FixtureJudge');

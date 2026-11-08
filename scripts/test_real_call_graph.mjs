@@ -8,8 +8,8 @@ import { TraceStore } from '../modules/govagentsec-trace/store.mjs';
 import { traceGraph, nodePresentation } from '../modules/govagentsec-trace/view-model.mjs';
 
 const [input, traceId, ...flags] = process.argv.slice(2);
-if (!input || !traceId) throw new Error('Usage: node scripts/test_real_call_graph.mjs EVIDENCE_DIR TRACE_ID [--live]');
-const out = path.resolve('local-validation/trace-graph-fix'); mkdirSync(out, { recursive: true });
+if (!input || !traceId) throw new Error('Usage: node scripts/test_real_call_graph.mjs EVIDENCE_DIR TRACE_ID [--live] [--output=DIR]');
+const out = path.resolve(flags.find(f => f.startsWith('--output='))?.slice(9) || 'local-validation/trace-graph-fix'); mkdirSync(out, { recursive: true });
 const traceDir = existsSync(path.join(input, 'traces')) ? path.join(input, 'traces') : input;
 const trace = new TraceStore(traceDir).read(traceId), expected = traceGraph(trace);
 assert.equal(trace.integrity.valid, true); assert.equal(trace.summary.source, 'openclaw');
@@ -59,7 +59,7 @@ const server = createServer((req, res) => {
     </script>`); return;
   }
   const file = req.url.slice(1);
-  if (!['view.mjs', 'view-model.mjs'].includes(file)) { res.writeHead(404); res.end(); return; }
+  if (!['view.mjs', 'view-model.mjs', 'usage.mjs'].includes(file)) { res.writeHead(404); res.end(); return; }
   res.setHeader('Content-Type', 'text/javascript'); res.end(readFileSync(new URL('../modules/govagentsec-trace/' + file, import.meta.url)));
 });
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -72,6 +72,8 @@ async function assertGraph(page, graph) {
   assert.deepEqual(await page.locator('.event').evaluateAll(es => es.map(e => e.dataset.eventId)), graph.nodes.map(n => n.event_id));
   assert.deepEqual(await page.locator('.canvas svg path').evaluateAll(es => es.map(e => ({ from:e.dataset.from, to:e.dataset.to, kind:e.dataset.kind }))), graph.edges);
   assert.deepEqual(await page.locator('.event').evaluateAll(es => es.map(e => e.firstChild.textContent)), graph.nodes.map(n => nodePresentation(n).title));
+  assert.deepEqual(await page.locator('.event').evaluateAll(es => es.map(e => [...e.querySelectorAll('small')].find(s => s.textContent.includes('token '))?.textContent ?? '')),
+    graph.nodes.map(n => nodePresentation(n).tokens));
   const size = await page.locator('.canvas-wrap').evaluate(e => ({ height:e.clientHeight, width:e.clientWidth, scroll:e.scrollHeight }));
   assert.ok(size.height > 100 && size.width > 100 && size.scroll > size.height);
   await page.locator('.event').last().scrollIntoViewIfNeeded();
@@ -88,6 +90,9 @@ try {
   await page.screenshot({path:path.join(out,'evidence-ui.png'),fullPage:true});
   await page.getByRole('button',{name:'毫秒时间线',exact:true}).click();
   assert.equal(await page.locator('.timeline li').count(), expected.nodes.length);
+  for (const n of expected.nodes.filter(n => n.event_type.startsWith('model.'))) {
+    assert.ok((await page.locator(`.timeline-event[data-event-id="${n.event_id}"]`).innerText()).includes(nodePresentation(n).tokens));
+  }
   assert.ok((await page.locator('.timeline').innerText()).includes('ALLOW'));
   assert.ok((await page.locator('.timeline').innerText()).includes('MCP / tool'));
   await page.locator('.timeline li').last().scrollIntoViewIfNeeded();
@@ -142,7 +147,7 @@ try {
   await page.evaluate(()=>{window.trace.summary.assessment={source:'UI missing-field test',quality:null,safety:null}; window.reset();});
   await assertGraph(page,expected); checks.push('missing_optional_scores_do_not_blank_graph');
   await page.evaluate(()=>{window.savedEvents=window.trace.events;window.trace.events=[];window.reset();});
-  await page.getByText('此轨迹尚无可显示事件',{exact:false}).waitFor();
+  await page.getByText('此轨迹尚无事件。',{exact:false}).waitFor();
   await page.evaluate(()=>{window.trace.events=window.savedEvents;window.reset();});
   await assertGraph(page,expected); checks.push('empty_capture_has_explicit_state');
 

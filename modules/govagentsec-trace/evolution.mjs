@@ -59,6 +59,8 @@ export function generateCandidate(store, records, { task_key, name, workshopRoot
     source_traces: selection.selected.map(r => ({ trace_id: r.trace_id, evidence_hash: r.evidence_hash, original_task_group: task_key })),
     generation: { version: GENERATOR_VERSION, source: 'local-deterministic', test_only: selection.selected.some(r => r.test_only), task_key,
       generated_at: new Date().toISOString(), steps, recoveries, required_inputs: fields, operator_context: operator,
-      selection, evidence_hash: digest(steps), requires_human_confirmation: true } });
+      selection, assessment_snapshot:records.filter(r=>r.task_key===task_key).map(r=>({trace_id:r.trace_id,task_key:r.task_key,
+        evidence_hash:r.evidence_hash,quality:r.quality,safety:r.safety,test_only:r.test_only})),
+      evidence_hash: digest(steps), requires_human_confirmation: true } });
   return { candidate, selection };
 }

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from .documents import DocumentReader
+from .notifications import submit_notice
 import sqlite3
 from contextlib import closing
 from decimal import Decimal, InvalidOperation
@@ -85,6 +86,9 @@ class LocalTestBusinessAdapters:
     def execute(self, request: Mapping[str, Any]) -> dict[str, Any]:
         action = request.get("action", {})
         key = (str(action.get("tool", "")), str(action.get("operation", "")))
+        if key == ('notification.submit', 'submit'):
+            with closing(self._connect(self._confined('business/notice_outbox.sqlite'))) as connection:
+                return submit_notice(connection, request)
         if key == ("file.read", "read"):
             return self.documents.execute(request)
         if key == ("database.query", "query"):

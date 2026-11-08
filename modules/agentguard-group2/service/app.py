@@ -160,6 +160,46 @@ class AgentGuardService:
             ticket_store=self.gateway.tickets,
             verifier=self.verifier,
         )
+        # All public service paths require the task guard; context cannot opt out.
+        self.gateway.require_task_policy = True
+
+    def task_contract_authenticated(self, payload, authorization_header):
+        if not self.config.oidc_enabled or self.verifier is None:
+            return {'status':'blocked','http_status':403,'reason_code':'P013_USER_DELEGATION_REQUIRED'}
+        try:
+            subject = self.verifier.authenticate_request({}, authorization_header)['subject']
+            if set(payload) - {'operation', 'task_id', 'tools', 'user_values', 'resource_prefixes'}:
+                raise ValueError('unexpected contract fields')
+            task_id = payload['task_id']
+            if not isinstance(task_id, str) or not 1 <= len(task_id) <= 128:
+                raise ValueError('invalid task id')
+            if payload.get('operation') == 'create':
+                result = self.gateway.task_policies.create(task_id, subject['id'], payload.get('tools'), payload.get('user_values'), payload.get('resource_prefixes'))
+            elif payload.get('operation') == 'tighten':
+                result = self.gateway.task_policies.tighten(task_id, subject['id'], payload['tools'], payload.get('resource_prefixes'))
+            else:
+                raise ValueError('invalid operation')
+            self.gateway.audit.write({'event':'task_contract_updated', 'identity_source':subject.get('identity_source'), 'contract':result})
+            return {'status':'ok','http_status':200,'contract':result}
+        except Exception as exc:
+            return {'status':'blocked','http_status':403,'reason_code':getattr(exc,'code','P003_INVALID_GRANT')}
+
+    def request_task_expansion_authenticated(self, request, authorization_header):
+        """Explicit trusted control operation. Never exposed as an MCP argument."""
+        if not self.config.oidc_enabled or self.verifier is None:
+            return {'status':'blocked','http_status':403,'reason_code':'P013_USER_DELEGATION_REQUIRED'}
+        try:
+            authenticated = self.verifier.authenticate_request(request, authorization_header)
+            self.gateway.task_policies.request_expansion(authenticated)
+            self.gateway.audit.write({'event':'task_expansion_requested',
+                'identity_source':authenticated['subject'].get('identity_source'),
+                'task_id':authenticated['task_id'], 'subject_id':authenticated['subject']['id'],
+                'action_digest':compute_action_digest(authenticated),
+                'scope_digest':self.gateway.task_policies.summary(authenticated['task_id'])['scope_digest']})
+            return self.invoke(authenticated, authorization_header)
+        except Exception as exc:
+            return self.gateway._block(request, getattr(exc,'code','P012_TASK_POLICY_UNAVAILABLE'),
+                '扩权申请未通过校验', policy_effect='task_policy')
 
     # ----------------------------------------------------------- assembly
 
@@ -327,12 +367,16 @@ class AgentGuardService:
             except OidcIdentityError as exc:
                 return {"status": "blocked", "http_status": 401, "reason_code": exc.code, "message": str(exc), "receipt": None}
             approver_id, roles = str(subject["id"]), subject["roles"]
-            if "business_approver" not in roles:
-                return {"status": "blocked", "http_status": 403, "reason_code": "A403_APPROVER_ROLE_REQUIRED", "receipt": None}
             key = (str(request.get("task_id", "")), compute_action_digest(request))
             with self._approval_lock:
                 original = self._pending_oidc_approvals.get(key)
                 request = copy.deepcopy(original) if original else None
+            # Report self-approval consistently, even when the requester also lacks
+            # the approver role. Both identities come from verified server state.
+            if request is not None and str(request.get("subject", {}).get("id")) == approver_id:
+                return {"status": "blocked", "http_status": 403, "reason_code": "D105_SELF_APPROVAL", "receipt": None}
+            if "business_approver" not in roles:
+                return {"status": "blocked", "http_status": 403, "reason_code": "A403_APPROVER_ROLE_REQUIRED", "receipt": None}
             if request is None:
                 return {
                     "status": "blocked", "http_status": 409,
@@ -426,7 +470,11 @@ class AgentGuardService:
                 })
                 return result
 
-            if str(policy.get("effect", "deny")) != "require_approval" or str(
+            try:
+                governance = self.gateway.task_guard(safe_request) if policy.get('effect') in {'allow', 'require_approval'} else None
+            except Exception as exc:
+                return {'status':'blocked','http_status':403,'reason_code':getattr(exc,'code','P012_TASK_POLICY_UNAVAILABLE'),'receipt':None}
+            if (str(policy.get("effect", "deny")) != "require_approval" and not (policy.get('effect') == 'allow' and governance and governance['pending'])) or str(
                 policy.get("action_digest", "")
             ) != action_digest:
                 result = {
@@ -458,6 +506,11 @@ class AgentGuardService:
                         "receipt": None,
                     }
                 else:
+                    if governance and governance['pending']:
+                        try:
+                            self.gateway.task_policies.approve(safe_request, approver_id, roles)
+                        except Exception as exc:
+                            return {'status':'blocked','http_status':403,'reason_code':getattr(exc,'code','P012_TASK_POLICY_UNAVAILABLE'),'receipt':None}
                     approved_request = copy.deepcopy(safe_request)
                     approved_request["approval"] = self.approval_service.issue(
                         approved_request,
@@ -547,7 +600,7 @@ class AgentGuardService:
                 self._send(404, {"status": "not_found", "path": self.path})
 
             def do_POST(self) -> None:  # noqa: N802
-                if self.path not in {"/invoke", "/approvals/resolve", "/demo/gov-documents"}:
+                if self.path not in {"/invoke", "/approvals/resolve", "/demo/gov-documents", "/task-contracts"}:
                     self._send(404, {"status": "not_found", "path": self.path})
                     return
                 if self.path == "/demo/gov-documents" and (
@@ -602,6 +655,10 @@ class AgentGuardService:
                             "message": "请求体必须是 JSON 对象",
                         },
                     )
+                    return
+                if self.path == '/task-contracts':
+                    result = service.task_contract_authenticated(payload, self.headers.get('Authorization'))
+                    self._send(int(result['http_status']), result)
                     return
                 if self.path == "/demo/gov-documents":
                     try:

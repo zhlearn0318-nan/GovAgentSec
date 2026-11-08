@@ -51,7 +51,7 @@ class ExecutionTicketStore:
         self.signer = signer or HmacKeyringSigner.single_key(bytes(secret))
         self.ledger = ledger or SQLiteTicketLedger(database)
 
-    def issue(self, task_id: str, action_digest: str, ttl_seconds: int = 30) -> str:
+    def issue(self, task_id: str, action_digest: str, ttl_seconds: int = 30, scope=None) -> str:
         now = time.time()
         payload = {
             "jti": uuid.uuid4().hex,
@@ -60,6 +60,8 @@ class ExecutionTicketStore:
             "iat": round(now, 6),
             "exp": round(now + ttl_seconds, 6),
         }
+        if scope is not None:
+            payload["scope"] = scope
         encoded = _b64encode(
             json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
         )

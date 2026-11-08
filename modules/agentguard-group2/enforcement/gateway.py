@@ -18,15 +18,18 @@ from approval.credentials import (
 from identity import OidcIdentityError, OidcVerifier
 from security_kernel import WasmSecurityKernel
 
-from .documents import validate_document_action, scrub_document_receipt
+from .documents import validate_document_action, scrub_document_receipt, REGISTRY as DOCUMENT_REGISTRY
 from .audit import AuditLogger
 from .adapters import BusinessAdapterError, LocalTestBusinessAdapters
 from .tickets import ExecutionTicketStore, TicketError, compute_action_digest
 from .signers import OpenBaoTransitSigner, TicketSigner
 from .ledgers import TicketLedger
+from .task_policy import TaskPolicies, TaskPolicyError, value_hash
+from .notifications import validate_notice_action
 
 
 DEFAULT_REGISTRY = {
+    ("notification.submit", "submit"): {"module": "database_query.wat", "argument": "item_count"},
     ("file.read", "read"): {"module": "database_query.wat", "argument": "item_count"},
     ("database.query", "query"): {
         "module": "database_query.wat",
@@ -52,6 +55,7 @@ class EnforcementGateway:
         registry: Mapping[tuple[str, str], Mapping[str, str]] | None = None,
         business_adapters: Any | None = None,
         approval_service: ApprovalCredentialService | None = None,
+        task_policies=None,
     ) -> None:
         self.opa = opa_client
         self.tickets = ticket_store
@@ -61,9 +65,40 @@ class EnforcementGateway:
         self.registry = dict(DEFAULT_REGISTRY if registry is None else registry)
         self.business_adapters = business_adapters
         self.approvals = approval_service
+        self.task_policies = task_policies
+        self.require_task_policy = False
+        # Enabled only by the private OpenClaw identity worker. Public services
+        # cannot choose host execution through request parameters.
+        self.host_dispatch_enabled = False
+
+    def governed(self, request):
+        return (self.require_task_policy or request.get('context', {}).get('source') == 'mcp'
+                or request.get('action', {}).get('tool') == 'notification.submit'
+                or (self.task_policies is not None and self.task_policies.exists(request.get('task_id', ''))))
+
+    def task_guard(self, request):
+        if not self.governed(request):
+            return None
+        if self.task_policies is None:
+            raise TaskPolicyError('P001_CONTRACT_REQUIRED', '任务权限服务不可用')
+        if not self.task_policies.exists(request['task_id']):
+            # Default template grants no sensitive value. Never infer user consent from MCP args.
+            try:
+                self.task_policies.create(request['task_id'], request['subject']['id'])
+            except TaskPolicyError as exc:
+                if exc.code != 'P005_CONTRACT_EXISTS':
+                    raise
+        return self.task_policies.evaluate(request)
 
     def authorize(self, request: Mapping[str, Any], ttl_seconds: int = 30) -> dict[str, Any]:
         safe_request = copy.deepcopy(dict(request))
+        if safe_request.get('action', {}).get('tool') == 'notification.submit':
+            try:
+                validate_notice_action(safe_request['action'])
+                if self.business_adapters is None:
+                    raise ValueError('adapter unavailable')
+            except Exception:
+                return self._block(safe_request, 'G017_NOTICE_UNAVAILABLE', '送审动作不可用', policy_effect='registry_rejected')
         if safe_request.get("action", {}).get("tool") == "file.read":
             try:
                 validate_document_action(safe_request["action"])
@@ -91,15 +126,21 @@ class EnforcementGateway:
                 policy_effect=effect,
                 policy_reason_codes=list(decision.get("reason_codes", [])),
             )
-        if effect == "require_approval":
+        try:
+            governance = self.task_guard(safe_request)
+        except Exception as exc:
+            return self._block(safe_request, getattr(exc, 'code', 'P012_TASK_POLICY_UNAVAILABLE'),
+                               '任务权限校验未通过', policy_effect='task_policy')
+        if effect == "require_approval" or (governance and governance['pending']):
             result = {
                 "status": "pending_approval",
                 "http_status": 202,
-                "reason_code": "G003_APPROVAL_PENDING",
+                "reason_code": governance['reason_code'] if governance and governance['pending'] else "G003_APPROVAL_PENDING",
                 "policy_reason_codes": list(decision.get("reason_codes", [])),
-                "policy_effect": effect,
+                "policy_effect": "require_approval",
                 "action_digest": decision.get("action_digest", ""),
                 "receipt": None,
+                "governance": governance,
             }
             self._audit(safe_request, result)
             return result
@@ -130,6 +171,8 @@ class EnforcementGateway:
                 policy_effect=effect,
             )
         approval = safe_request.get("approval", {})
+        if governance and governance['one_time_expansion'] and not approval.get('approval_id'):
+            return self._block(safe_request, 'G010_APPROVAL_CREDENTIAL_INVALID', '缺少一次性审批凭证', policy_effect='approval_validation')
         validated_approval = None
         if isinstance(approval, Mapping) and approval.get("approval_id"):
             if self.approvals is None:
@@ -154,7 +197,8 @@ class EnforcementGateway:
                 )
         try:
             token = self.tickets.issue(
-                str(safe_request.get("task_id", "")), current_digest, ttl_seconds=ttl_seconds
+                str(safe_request.get("task_id", "")), current_digest, ttl_seconds=ttl_seconds,
+                scope=governance['scope'] if governance else None
             )
         except TicketError as exc:
             return self._block(
@@ -182,6 +226,7 @@ class EnforcementGateway:
             "action_digest": current_digest,
             "ticket": token,
             "receipt": None,
+            "governance": governance,
         }
         self._audit(safe_request, {**result, "ticket": "***REDACTED***"})
         return result
@@ -202,6 +247,14 @@ class EnforcementGateway:
             ticket_payload = self.tickets.consume(
                 ticket, str(safe_request.get("task_id", "")), digest
             )
+            # Signed scope is required even if a caller removes the MCP context later.
+            if ticket_payload.get('scope') or self.governed(safe_request):
+                scope = ticket_payload.get('scope')
+                if not scope or scope.get('subject_id') != safe_request.get('subject', {}).get('id'):
+                    raise TicketError('P002_SUBJECT_MISMATCH', '票据缺少匹配主体的任务作用域')
+                self.task_policies.consume_scope(safe_request, scope)
+        except TaskPolicyError as exc:
+            return self._block(safe_request, exc.code, str(exc), policy_effect='task_policy')
         except TicketError as exc:
             return self._block(
                 safe_request,
@@ -209,6 +262,14 @@ class EnforcementGateway:
                 str(exc),
                 policy_effect="ticket_validation",
             )
+        except Exception:
+            return self._block(safe_request, 'P012_TASK_POLICY_UNAVAILABLE', '任务权限校验不可用', policy_effect='task_policy')
+
+        if self.host_dispatch_enabled and safe_request.get('context', {}).get('host_acl') is True:
+            result = {'status': 'host_authorized', 'http_status': 200,
+                      'reason_code': 'G000_HOST_AUTHORIZED', 'receipt': None}
+            self._audit(safe_request, result)
+            return result
 
         specification = self.registry[tool_key]
         parameter_name = specification["argument"]
@@ -300,7 +361,11 @@ class EnforcementGateway:
         authorization = self.authorize(request)
         if authorization["status"] != "authorized":
             return authorization
-        return self.dispatch(request, authorization["ticket"])
+        if self.host_dispatch_enabled and request.get('context', {}).get('host_acl') is True:
+            return authorization  # Kept in private worker memory until the host retry.
+        result = self.dispatch(request, authorization["ticket"])
+        result['governance'] = authorization.get('governance')
+        return result
 
     def invoke_authenticated(
         self,
@@ -344,17 +409,29 @@ class EnforcementGateway:
     def _audit(self, request: Mapping[str, Any], result: Mapping[str, Any]) -> None:
         action = request.get("action", {})
         context = request.get("context", {})
+        document_id = action.get('parameters', {}).get('document_id')
+        known_document = isinstance(document_id, str) and document_id in DOCUMENT_REGISTRY
+        contract_digest = None
+        if self.task_policies is not None:
+            try:
+                contract_digest = self.task_policies.summary(request.get('task_id', ''))['scope_digest']
+            except Exception:
+                pass  # Identity/OPA may reject before a task contract exists.
         self.audit.write(
             {
                 "event": "enforcement_decision",
                 "request_id": request.get("request_id", ""),
                 "task_id": request.get("task_id", ""),
                 "subject_id": request.get("subject", {}).get("id", ""),
+                "identity_source": request.get('subject', {}).get('identity_source'),
+                "scope_digest": contract_digest,
+                "run_id": context.get('run_id'),
+                "session_key_hash": context.get('session_key_hash'),
                 "tool": action.get("tool", ""),
                 "operation": action.get("operation", ""),
-                "parameters": action.get("parameters", {}),
+                "parameters": {k: {'value_hash': value_hash(v)} for k, v in action.get('parameters', {}).items()},
                 "data_level": action.get("data_level"),
-                "document_id": action.get("parameters", {}).get("document_id"),
+                "document_id": document_id if known_document else None,
                 "scenario": context.get("scenario", ""),
                 "identity_note": context.get("identity_note", ""),
                 "demo_run_id": context.get("demo_run_id", ""),
@@ -441,4 +518,5 @@ def build_gateway(
             else (LocalTestBusinessAdapters(state) if enable_local_adapters else None)
         ),
         approval_service=approval_service,
+        task_policies=TaskPolicies(state / 'task_contracts.sqlite'),
     )

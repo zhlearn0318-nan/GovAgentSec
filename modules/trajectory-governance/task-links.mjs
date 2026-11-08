@@ -5,13 +5,27 @@ import { redact, digest } from "./trace-store.mjs";
 import {
   buildSnapshot,
   readApprovals,
-  resolveApproval,
+  readIdentityStatus,
 } from "../agentguard-group2/integrations/openclaw_runtime_security_plugin/index.js";
+import {requireBusinessDelegation} from '../govagentsec-ui/identity-status.mjs';
+import {modelRoutingStatus} from '../model-routing/routing.mjs';
 const actions = {read_gov_document:'file.read',
+  submit_emergency_notice: 'notification.submit',
   list_notices: "database.query",
   request_test_payment: "payment.transfer",
   run_protected_command: "shell.execute",
 };
+export function toolCoverage(config, observed = []) {
+  const server = config.mcp?.servers?.['agentguard-notices'];
+  const include = server?.toolFilter?.include;
+  const excluded = server?.toolFilter?.exclude ?? [];
+  const known = [...Object.keys(actions), 'get_control_request_status'];
+  const configured = server && server.enabled !== false
+    ? known.filter(name => (!include || include.includes('*') || include.includes(name)) && !excluded.includes('*') && !excluded.includes(name)) : [];
+  const names = [...new Set([...configured.map(n => 'agentguard-notices__' + n), ...observed])];
+  return names.map(name => ({name, managed:configured.some(n => name === 'agentguard-notices__' + n),
+    observed:observed.includes(name)}));
+}
 export function controlReferences(trace) {
   const refs = [];
   for (const e of trace.events) {
@@ -131,6 +145,8 @@ export class TaskLinks {
       input_hooks:runtime.input.mode==='enforce'?'configured':'not_authorized',
       tool_result_enforcement:runtime.tool_results.mode,
       runtime,agentguard_identity_mode:identityMode,
+      model_routing: modelRoutingStatus(this.config),
+      business_identity: await readIdentityStatus(this.guard, identityMode === 'loopback_static_dev' ? identityMode : this.guard.identityMode),
       agentguard_configured:Boolean(this.guard.statusPath),skill_attribution:'unknown'
     };
   }
@@ -196,6 +212,7 @@ export class TaskLinks {
         verified: true,
         status: approval?.status ?? decision?.status ?? original.status,
         action: original.request.action,
+        governance: original.governance ?? null,
         reason:
           approval?.reason_code ??
           decision?.reason_code ??
@@ -205,12 +222,13 @@ export class TaskLinks {
           approval?.receipt ?? decision?.receipt ?? original.receipt ?? null,
         stages: decision?.stages ?? [],
         source: "AgentGuard",
-        can_resolve: this.guard.identityMode === "loopback_static_dev" && approval?.status === "pending",
+        can_resolve: false, // No per-user business bearer delegation in Control UI.
       });
     }
     return redact({
       trace,
       controls,
+      tool_coverage: toolCoverage(this.config, trace.events.filter(e=>e.event_type==='tool.started').map(e=>e.payload?.tool).filter(Boolean)),
       coverage: await this.status(),
       business_result: trace.summary.task_passed,
       capability_evidence: await this.admissions(trace),
@@ -219,9 +237,12 @@ export class TaskLinks {
   async workspace() {
     const traces = this.store.list();
     const references = new Map();
+    const observedTools = new Set();
     for (const summary of traces.slice(0, 100)) {
       if (summary.trace_status === "invalid") continue;
-      for (const ref of controlReferences(this.store.read(summary.trace_id))) {
+      const trace = this.store.read(summary.trace_id);
+      for (const e of trace.events) if (e.event_type==='tool.started' && e.payload?.tool) observedTools.add(e.payload.tool);
+      for (const ref of controlReferences(trace)) {
         if (await this.request(ref))
           references.set(ref.control_request_id, summary);
       }
@@ -237,6 +258,7 @@ export class TaskLinks {
             id: r.control_request_id,
             tool: r.request?.action?.tool,
             parameters: r.request?.action?.parameters,
+            governance: r.governance ?? null,
             reason: r.reason_code,
             created_at: r.created_at,
             trace_id: trace?.trace_id,
@@ -250,6 +272,7 @@ export class TaskLinks {
       traces: traces.slice(0, 100),
       total: traces.length,
       pending,
+      tool_coverage: toolCoverage(this.config, [...observedTools]),
       approval_error: approvalError,
       coverage: await this.status(),
       servers: Object.entries(this.config.mcp?.servers ?? {}).map(
@@ -267,11 +290,6 @@ export class TaskLinks {
     if (!ref || !(await this.request(ref)))
       throw new Error("审批请求未与这次工具调用可信关联");
     if (!this.guard.approvalPath) throw new Error("尚未配置审批结果保存位置");
-    return resolveApproval(this.guard, {
-      control_request_id: ref.control_request_id,
-      resolution: params.resolution,
-      approver_id: params.approver_id,
-      note: params.note,
-    });
+    requireBusinessDelegation();
   }
 }

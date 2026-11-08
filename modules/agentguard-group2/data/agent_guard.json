@@ -67,6 +67,8 @@
       "(?i).*remove-item.*-recurse.*"
     ],
     "tools": {
+      "native.read": {"enabled": true, "category": "workspace_file"},
+      "notification.submit": {"enabled": true, "category": "synthetic_government"},
       "database.query": {
         "enabled": true,
         "category": "data"
@@ -105,6 +107,8 @@
       }
     },
     "permissions": [
+      {"role": "office_user", "tool": "native.read", "operations": ["read"]},
+      {"role": "office_user", "tool": "notification.submit", "operations": ["submit"]},
       {
         "role": "office_user",
         "tool": "database.query",

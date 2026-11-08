@@ -15,7 +15,7 @@ const server = createServer(async (req, res) => {
       await methods.get('govagentsec.trace.' + method)({ params, respond(ok, data, error) { res.writeHead(ok ? 200 : 400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data ?? error)); } }); return;
     }
     if (req.url === '/') { res.setHeader('Content-Type', 'text/html'); res.end('<html lang="zh-CN"><meta charset="utf-8"><title>轨迹审计测试</title><body style="margin:24px;background:#f5f8f6"><main id="root"></main><script type="module">import {mountTraceAudit} from "/view.mjs"; mountTraceAudit(document.querySelector("main").attachShadow({mode:"open"}), async(m,p={})=>{const r=await fetch("/api/"+m+"?params="+encodeURIComponent(JSON.stringify(p)));if(!r.ok)throw Error("request failed");return r.json()});</script></body></html>'); return; }
-    const file = req.url.slice(1); if (!['view.mjs', 'view-model.mjs'].includes(file)) { res.writeHead(404); res.end(); return; }
+    const file = req.url.slice(1); if (!['view.mjs', 'view-model.mjs', 'usage.mjs'].includes(file)) { res.writeHead(404); res.end(); return; }
     res.setHeader('Content-Type', 'text/javascript'); res.end(readFileSync(new URL('../modules/govagentsec-trace/' + file, import.meta.url)));
   } catch { res.writeHead(500); res.end(); }
 });
@@ -46,7 +46,34 @@ try {
   const candidate = page.locator('.candidate').filter({hasText:'expense-word-candidate'}); await candidate.locator('details summary').first().click(); assert.ok((await candidate.innerText()).includes('trace_id'));
   await page.screenshot({ path: path.join(output, 'candidates.png'), fullPage: true });
   await page.setViewportSize({ width: 680, height: 900 }); assert.ok(await page.locator('main').evaluate(e => e.getBoundingClientRect().width < 680));
+  // Isolated UI fixtures: never written to the live JSONL store.
+  await page.evaluate(async()=>{
+    const {mountTraceAudit}=await import('/view.mjs');
+    const list=await (await fetch('/api/list')).json();
+    const id=list.traces.find(t=>t.trace_id).trace_id;
+    window.baseTrace=await(await fetch('/api/detail?params='+encodeURIComponent(JSON.stringify({trace_id:id})))).json();
+    window.remount=async(mode)=>{
+      window.disposeU2?.();const trace=structuredClone(window.baseTrace);trace.summary.source='openclaw';trace.summary.session_key='u2-session';
+      if(mode==='empty'){trace.events=[];trace.summary.missing_fields=['run_start','run_end'];trace.summary.trace_status='partial';}
+      if(mode==='orphan'){trace.events=trace.events.filter(e=>e.event_type!=='tool.started');trace.summary.missing_fields=['orphan_result'];trace.summary.trace_status='partial';}
+      window.u2Calls=[];
+      window.disposeU2=mountTraceAudit(document.querySelector('main').shadowRoot,async(method,params)=>{
+        u2Calls.push({method,params});return method==='list'?{traces:[trace.summary]}:method==='detail'?trace:{candidates:[]};
+      },{sessionKey:mode==='other-session'?'unrelated-session':'u2-session'});
+    };
+    await window.remount('empty');
+  });
+  await page.getByText('此轨迹尚无事件。',{exact:false}).waitFor();assert.equal(await page.locator('.event').count(),0);
+  await page.evaluate(()=>window.remount('orphan'));
+  await page.getByText('工具结果缺少对应的开始事件',{exact:false}).waitFor();
+  assert.equal(await page.getByRole('button',{name:/^工具调用/}).count(),0);
+  await page.screenshot({path:path.join(output,'orphan-isolated.png'),fullPage:true});
+  await page.getByRole('searchbox',{name:'搜索轨迹'}).fill('no-matching-u2-task');
+  await page.getByText('没有此范围的轨迹。',{exact:false}).waitFor();assert.equal(await page.locator('.event').count(),0);
+  await page.evaluate(()=>window.remount('other-session'));
+  await page.getByText('尚无轨迹。',{exact:false}).waitFor();
+  assert.equal(await page.evaluate(()=>u2Calls.filter(c=>c.method==='detail').length),0);
   assert.deepEqual(errors, []);
-  writeFileSync(path.join(output, 'result.json'), JSON.stringify({ passed: true, checks: ['empty','graph','node_detail','timeline','retry','failure','same_task_compare','candidate_provenance','admission_allow_block','responsive','no_page_errors'] }, null, 2));
+  writeFileSync(path.join(output, 'result.json'), JSON.stringify({ passed: true, checks: ['empty','graph','node_detail','timeline','retry','failure','same_task_compare','candidate_provenance','admission_allow_block','responsive','no_page_errors','zero_events_no_fake_nodes','orphan_ineligible','search_reconciles_detail','current_session_only'] }, null, 2));
   console.log(JSON.stringify({ passed: true, screenshots: output }));
 } finally { await browser.close(); server.close(); }

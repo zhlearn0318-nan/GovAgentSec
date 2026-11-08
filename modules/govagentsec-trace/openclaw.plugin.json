@@ -4,7 +4,11 @@
   "activation": {"onStartup": true},
   "configSchema": {
     "type": "object", "additionalProperties": false,
-    "properties": {"dataDir": {"type": "string", "minLength": 1}, "contentMode": {"type": "string", "enum": ["hash", "summary"], "default": "hash"}},
+    "properties": {"dataDir": {"type": "string", "minLength": 1}, "contentMode": {"type": "string", "enum": ["hash", "summary"], "default": "hash"},
+      "usageWrapper": {"type":"object","additionalProperties":false,"properties":{
+        "enabled":{"type":"boolean","default":false},"endpoint":{"type":"string"},
+        "credentialFile":{"type":"string"},"providers":{"type":"array","items":{"type":"string"}}
+      }}},
     "required": ["dataDir"]
   }
 }

@@ -8,6 +8,7 @@
         "env": {
           "AGENTGUARD_MCP_BASE_URL": "https://agentguard.internal.example",
           "AGENTGUARD_MCP_IDENTITY_MODE": "oidc",
+          "AGENTGUARD_MCP_TASK_ID": "task-created-by-authenticated-user",
           "AGENTGUARD_MCP_TOKEN_FILE": "C:\\secure\\agentguard-user.token",
           "AGENTGUARD_MCP_CA_BUNDLE": "C:\\secure\\internal-ca.pem"
         },
@@ -15,7 +16,7 @@
         "connectionTimeoutMs": 8000,
         "supportsParallelToolCalls": false,
         "toolFilter": {
-          "include": ["list_notices", "request_test_payment", "run_protected_command", "get_control_request_status", "read_gov_document"]
+          "include": ["list_notices", "request_test_payment", "run_protected_command", "get_control_request_status", "read_gov_document", "submit_emergency_notice"]
         }
       }
     }

@@ -1,9 +1,9 @@
 # AgentGuard × OpenClaw 受控 MCP 接入
 
-这是一个纯 Python 标准库的 stdio MCP Server。当前本地演示暴露四个受控工具：
-`list_notices`、`request_test_payment`、`run_protected_command` 和只读的
-`get_control_request_status`。代码不导入 SQLite、
-付款系统或 Shell 执行器；实际调用固定发送到 AgentGuard `POST /invoke`，因此仍经过
+这是一个纯 Python 标准库的 stdio MCP Server。当前本地演示暴露六个受控工具：
+`list_notices`、`read_gov_document`、`submit_emergency_notice`、`request_test_payment`、
+`run_protected_command` 和只读的 `get_control_request_status`。MCP 层不直接读写业务数据库、
+付款系统或调用 Shell 执行器；实际调用固定发送到 AgentGuard `POST /invoke`，因此仍经过
 策略决策、一次性票据、安全内核和审计链。远程 Streamable HTTP 入口继续只暴露
 只读的 `list_notices`。
 
@@ -103,3 +103,11 @@ $openclawEntry = Join-Path $projectRoot 'third_party\runtime\openclaw-client\nod
 新增 `read_gov_document({document_id})`。只接受已登记 ID，不接受路径、身份、密级、审批或票据参数。支持 emergency_plan、material_inventory、duty_contacts、command_contacts、protected_resource。
 
 使用现有 OIDC 或显式隔离测试身份；不自动启用开发身份。正文只来自专用合成数据目录。运行命令、策略映射与未完成验收项见 [受控文档验证](../../../../docs/CONTROLLED_DOCUMENT_VALIDATION.md)。
+
+## U7 参数来源与任务契约
+
+敏感参数须有可信来源；未知或工具回执来源转待审批。`submit_emergency_notice` 仅接收注册收件人和模板，获批后写入隔离合成账本，不发送外部消息。
+
+可信控制端通过已验证业务 OIDC 的 `POST /task-contracts` 创建或收紧任务；用操作者配置 `AGENTGUARD_MCP_TASK_ID` 绑定，模型不能传入该值。未配置任务授权时，敏感调用不能再仅凭 OPA ALLOW 自动执行。首次调用只生成无参数授权的只读契约。示例 toolFilter 已列出新工具，安装脚本本轮未在现网执行。
+
+无逐用户 OIDC 委托的管理页面继续只读。说明及一键演示见 [U7 文档](../../../../docs/BEHAVIOR_CONSTRAINT_SOTA_UPGRADE.md)。

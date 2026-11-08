@@ -27,6 +27,8 @@ PAYMENT_TOOL_NAME = "request_test_payment"
 DANGEROUS_TOOL_NAME = "run_protected_command"
 STATUS_TOOL_NAME = "get_control_request_status"
 DOCUMENT_TOOL_NAME = "read_gov_document"
+NOTICE_TOOL_NAME = 'submit_emergency_notice'
+NOTICE_TOOL_DEFINITION = {'name': NOTICE_TOOL_NAME, 'title':'应急通知送审（合成账本）', 'description':'仅写入隔离合成送审账本，不发送消息；任务扩权和收件人来源必须先获人工审批。', 'inputSchema':{'type':'object','properties':{'recipient':{'type':'string','enum':['duty_office','synthetic_external_office']},'template_id':{'type':'string','enum':['typhoon_notice']}},'required':['recipient','template_id'],'additionalProperties':False},'annotations':{'readOnlyHint':False,'openWorldHint':False}}
 DOCUMENT_TOOL_DEFINITION = {"name": DOCUMENT_TOOL_NAME, "title": "受控读取合成政务文档", "description": "只读隔离合成数据；密级校验与人工审批由 AgentGuard 执行。", "inputSchema": {"type":"object","properties":{"document_id":{"type":"string"}},"required":["document_id"],"additionalProperties":False}, "annotations":{"readOnlyHint":True,"openWorldHint":False}}
 MAX_CONTROL_STATUS_RECORDS = 200
 
@@ -323,7 +325,7 @@ class McpServer:
         if not isinstance(params, Mapping):
             return _error(message_id, -32602, "tools/call params 必须是对象")
         tool_name = params.get("name")
-        allowed_tools = {TOOL_NAME, PAYMENT_TOOL_NAME, DANGEROUS_TOOL_NAME, STATUS_TOOL_NAME, DOCUMENT_TOOL_NAME} if self.controlled_demo_tools else {TOOL_NAME}
+        allowed_tools = {TOOL_NAME, PAYMENT_TOOL_NAME, DANGEROUS_TOOL_NAME, STATUS_TOOL_NAME, DOCUMENT_TOOL_NAME, NOTICE_TOOL_NAME} if self.controlled_demo_tools else {TOOL_NAME}
         if tool_name not in allowed_tools:
             return _error(message_id, -32602, "未知或未授权的工具")
         arguments = params.get("arguments", {})
@@ -336,6 +338,10 @@ class McpServer:
                 if set(arguments) != {"document_id"} or not isinstance(arguments.get("document_id"), str):
                     return _error(message_id, -32602, "必须且只能提供 document_id")
                 gateway_result = self.client.read_gov_document(arguments["document_id"])
+            elif tool_name == NOTICE_TOOL_NAME:
+                if set(arguments) != {'recipient', 'template_id'} or not all(isinstance(v,str) for v in arguments.values()):
+                    return _error(message_id, -32602, '必须且只能提供 recipient 和 template_id')
+                gateway_result = self.client.submit_emergency_notice(arguments['recipient'], arguments['template_id'])
             elif tool_name == TOOL_NAME:
                 if set(arguments) - {"limit"}:
                     return _error(message_id, -32602, "包含未允许的工具参数")
@@ -495,7 +501,7 @@ class McpServer:
         if not self.initialized:
             return _error(message_id, -32002, "MCP 会话尚未 initialize")
         if method == "tools/list":
-            tools = [TOOL_DEFINITION, PAYMENT_TOOL_DEFINITION, DANGEROUS_TOOL_DEFINITION, STATUS_TOOL_DEFINITION, DOCUMENT_TOOL_DEFINITION] if self.controlled_demo_tools else [TOOL_DEFINITION]
+            tools = [TOOL_DEFINITION, PAYMENT_TOOL_DEFINITION, DANGEROUS_TOOL_DEFINITION, STATUS_TOOL_DEFINITION, DOCUMENT_TOOL_DEFINITION, NOTICE_TOOL_DEFINITION] if self.controlled_demo_tools else [TOOL_DEFINITION]
             return _response(message_id, {"tools": tools})
         if method == "tools/call":
             return self._call_tool(message_id, message.get("params", {}))

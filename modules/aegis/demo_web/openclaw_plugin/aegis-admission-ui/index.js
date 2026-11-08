@@ -524,7 +524,6 @@ export default definePluginEntry({
     }});
     api.registerHttpRoute({ path: PANEL_PATH, auth: "plugin", match: "exact", handler: async (req, res) => {
       if ((req.method ?? "GET").toUpperCase() !== "GET") { res.statusCode = 405; res.end("Method Not Allowed"); return true; }
-      if (!isEmbeddedRequest(req)) { sendRedirect(res, "admission"); return true; }
       if(!allowPage(req,res)) return true;
       try { sendHtml(res, renderAdmissionPage(issueToken()), new URL(req.url,"http://localhost").searchParams.has("workspace")); } catch (error) { sendJson(res, 500, { error: String(error) }); }
       return true;
@@ -639,7 +638,6 @@ export default definePluginEntry({
     ]) {
       api.registerHttpRoute({ path: routePath, auth: "plugin", match: "exact", handler: async (req, res) => {
         if ((req.method ?? "GET").toUpperCase() !== "GET") { res.statusCode = 405; res.end("Method Not Allowed"); return true; }
-        if (!isEmbeddedRequest(req)) { sendRedirect(res, tab); return true; }
         if(!allowPage(req,res)) return true;
       try { sendHtml(res, renderer(issueToken()), new URL(req.url,"http://localhost").searchParams.has("workspace")); } catch (error) { sendJson(res, 500, { error: String(error) }); }
         return true;

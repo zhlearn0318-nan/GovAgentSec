@@ -115,7 +115,7 @@ try {
         aegis_coinstalled = -not [string]::IsNullOrWhiteSpace($AegisRepositoryPath)
         control_ui_scope = 'group2_tool_runtime_governance'
         mcp_server_names = @($finalServers.PSObject.Properties | ForEach-Object { $_.Name })
-        tool_filter_include = @('list_notices', 'request_test_payment', 'run_protected_command')
+        tool_filter_include = @('list_notices', 'request_test_payment', 'run_protected_command', 'get_control_request_status', 'read_gov_document', 'submit_emergency_notice')
         supports_parallel_tool_calls = $false
         next_step = '.\scripts\start_openclaw_agentguard_demo.ps1'
     } | ConvertTo-Json -Depth 8

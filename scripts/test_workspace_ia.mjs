@@ -3,8 +3,11 @@ import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
 import path from 'node:path';
 import assert from 'node:assert/strict';
+import {identityStatus} from '../modules/govagentsec-ui/identity-status.mjs';
+import {modelRoutingStatus} from '../modules/model-routing/routing.mjs';
 const {chromium}=await import(pathToFileURL(process.env.APPDATA+'/npm/node_modules/openclaw/node_modules/playwright-core/index.mjs').href);
 const repo=process.cwd();const files={
+ 'demo-identity.mjs':'modules/govagentsec-ui/demo-identity.mjs',
  'workspace.mjs':'modules/govagentsec-ui/workspace.mjs','shell.mjs':'modules/govagentsec-ui/shell.mjs','workspace-style.mjs':'modules/govagentsec-ui/workspace-style.mjs','trajectory-ui.mjs':'modules/trajectory-governance/ui.mjs','graph.mjs':'modules/trajectory-governance/graph.mjs','workbench.mjs':'modules/trajectory-governance/workbench.mjs',
 };
 // Explicit sources and exact probe text distinguish fixtures from user work in the same session.
@@ -14,8 +17,18 @@ const traces=[
  {trace_id:'3'.repeat(32),source:'controlled-validation',title:'purchase-holdout-a',trace_status:'complete',tool_count:1,started_at:'2026-11-05T06:00:00Z'},
 ];
 const fixture={traces,total:3,pending:[],servers:[],coverage:{capture:true,agentguard_configured:true,agentguard_identity_mode:'disabled',runtime:{service:'online',input:{mode:'enforce',reason:'输入检查已接通'},output:{mode:'enforce',reason:'回复检查已接通'},tool_results:{mode:'observe',reason:'当前只记录检查结果'}}}};
+fixture.tool_coverage=[{name:'exec',managed:false,observed:true},{name:'agentguard-notices__submit_emergency_notice',managed:true,observed:true}];
+fixture.coverage.model_routing=modelRoutingStatus({agents:{defaults:{model:{primary:'ollama/qwen3:8b'}}},models:{providers:{ollama:{api:'ollama',baseUrl:'http://127.0.0.1:11434'}}}});
 const consumedTickets=new Set();
+let runtimeIdentity=identityStatus('disabled');let runtimeOffline=false;const runtimePosts=[];
 const server=createServer((req,res)=>{const u=new URL(req.url,'http://localhost');res.setHeader('Content-Type','text/html; charset=utf-8');
+ if(u.pathname==='/runtime-fixture'){res.end(readFileSync('modules/agentguard-group2/integrations/openclaw_runtime_security_plugin/ui/panel.html','utf8').replaceAll('__AGENTGUARD_PAGE_TOKEN__','fixture-only'));return;}
+ if(u.pathname.startsWith('/plugins/agentguard-runtime-security/api/')){
+  res.setHeader('Content-Type','application/json');
+  if(req.method==='POST'){runtimePosts.push(u.pathname);res.writeHead(403);res.end('{}');return;}
+  if(runtimeOffline){res.writeHead(503);res.end('{}');return;}
+  res.end(JSON.stringify({identity:runtimeIdentity,approvals:[{status:'pending',tool:'file.read',subject_id:'fixture-requester',control_request_id:'fixture-id'}]}));return;
+ }
  if(u.pathname==='/fixture'){res.end(`<!doctype html><html lang="zh-CN"><body><div id="host"><div class="dashboard-header__breadcrumb-current">插件</div><openclaw-app-sidebar><div class="sidebar-shell__body"><div class="sidebar-sessions"><a href="/chat?session=agent%3Amain%3Adashboard%3Agov-workbench-fixture">agent:main:dashboard:gov-workbench-fixture</a></div><section id="protect-agent-guard">输入防护链</section></div></openclaw-app-sidebar><main class="content"><govagentsec-workspace></govagentsec-workspace></main><govagentsec-shell></govagentsec-shell></div><script type="module">
  import {defineWorkspace,coverageRows,isTestTrace} from '/plugins/govagentsec/workspace.mjs';import {defineShell} from '/plugins/govagentsec/shell.mjs';
  window.fixture=${JSON.stringify(fixture)};window.rpcCalls=[];window.helpers={coverageRows,isTestTrace};window.panelGrantSeq=0;
@@ -32,7 +45,7 @@ try{const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors
  await page.goto(base+'/fixture?plugin=protect-agent&id=govagentsec&section=compare');const work=page.locator('govagentsec-workspace');await work.getByRole('heading',{name:'运行对照与候选记录',exact:true}).waitFor();await work.getByRole('combobox',{name:'左侧运行'}).locator('option').nth(1).waitFor({state:'attached'});assert.equal(await work.getByRole('combobox',{name:'左侧运行'}).locator('option').count(),2);checks.push('compare deep link renders comparison and defaults to non-test records');
  await page.locator('.gov-nav [data-route=audit]').click();await work.getByRole('heading',{name:'审计中心',exact:true}).waitFor();assert.equal(await work.locator('.task-row').count(),1);assert.ok((await work.locator('.task-row').textContent()).includes('真实用户报账任务'));await work.getByRole('combobox',{name:'记录范围'}).selectOption('test');assert.equal(await work.locator('.task-row').count(),2);await work.getByRole('combobox',{name:'记录范围'}).selectOption('all');assert.equal(await work.locator('.task-row').count(),3);checks.push('test filter preserves real user tasks in a test-named session');
  await work.getByRole('button',{name:'运行对照与候选记录',exact:true}).click();assert.equal(new URL(page.url()).searchParams.get('section'),'compare');await work.getByRole('heading',{name:'运行对照与候选记录',exact:true}).waitFor();assert.equal(await page.locator('.gov-nav [data-route=audit]').getAttribute('aria-current'),'page');checks.push('compare button and direct URL share a route and audit highlight');
- await page.locator('.gov-nav [data-route=settings]').click();await work.getByRole('heading',{name:'防护设置',exact:true}).waitFor();assert.equal(await page.locator('.gov-nav [data-route=settings]').getAttribute('aria-current'),'page');assert.equal(await page.locator('.dashboard-header__breadcrumb-current').textContent(),'防护设置');
+ await page.locator('.gov-nav [data-route=settings]').click();await work.getByRole('heading',{name:'防护设置',exact:true}).waitFor();assert.ok(await work.getByText('exec · 未受 AgentGuard 闸门',{exact:true}).isVisible());assert.equal(await work.getByText('exec · 未受 AgentGuard 闸门',{exact:true}).evaluate(e=>getComputedStyle(e).color),'rgb(180, 35, 24)');await work.getByRole('heading',{name:'会话模型（可 API）',exact:true}).waitFor();await work.getByRole('heading',{name:'安全评审（默认本地，轨迹不出域）',exact:true}).waitFor();mkdirSync('local-validation/workspace-ia',{recursive:true});await page.screenshot({path:'local-validation/workspace-ia/model-routing-settings.png'});assert.equal(await page.locator('.gov-nav [data-route=settings]').getAttribute('aria-current'),'page');assert.equal(await page.locator('.dashboard-header__breadcrumb-current').textContent(),'防护设置');
  for(const label of ['输入防护策略','运行防护与审批记录','准入规则']){
   await work.getByRole('button',{name:label,exact:true}).click();const frame=work.locator('iframe');await frame.waitFor();
   assert.equal(await frame.getAttribute('sandbox'),'allow-scripts');const oldUrl=await frame.getAttribute('src');assert.ok(oldUrl.includes('gov_access='));
@@ -51,9 +64,40 @@ try{const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors
  await work.getByRole('button',{name:'返回防护设置'}).click();checks.push('failed page authentication stays recoverable without a retry loop');
  assert.equal(await page.locator('#protect-agent-guard').isVisible(),true);const rows=await page.evaluate(()=>helpers.coverageRows(fixture.coverage));assert.deepEqual(rows.find(r=>r[0]==='工具执行').slice(2),['已禁用','warn']);assert.deepEqual(rows.find(r=>r[0]==='输入检查').slice(2),['已启用','']);assert.deepEqual(rows.find(r=>r[0]==='工具返回').slice(2),['复检 / 观察','warn']);checks.push('coverage comes from runtime modes; disabled identity is never connected');
  await page.locator('.gov-nav [data-route=admission]').click();await work.getByRole('button',{name:'查看已安装 Skill'}).click();await work.getByRole('heading',{name:'已安装技能',exact:true}).waitFor();await work.getByRole('heading',{name:'办公技能'}).waitFor();assert.equal(new URL(page.url()).pathname,'/fixture');assert.equal(await work.getByText('ClawHub').count(),0);checks.push('installed skills are read-only inside the governed workspace');
- assert.equal(await page.locator('.sidebar-sessions a').textContent(),'真实用户报账任务');assert.ok(await page.locator('govagentsec-shell').getByRole('button',{name:'当前任务',exact:true}).isVisible());checks.push('friendly session title and distinct current-task inspector');
+ assert.equal(await page.locator('.sidebar-sessions a').textContent(),'真实用户报账任务');assert.ok(await page.locator('govagentsec-shell').getByRole('button',{name:'任务与轨迹',exact:true}).isVisible());checks.push('friendly session title and distinct current-task inspector');
+ await page.locator('#host').evaluate(e=>e.classList.add('shell--nav-collapsed'));
+ assert.ok(await page.locator('govagentsec-shell').getByRole('button',{name:'审计中心',exact:true}).isVisible());
+ assert.ok(await page.locator('govagentsec-shell').getByRole('button',{name:'任务与轨迹',exact:true}).isVisible());
+ await page.reload();await page.locator('govagentsec-shell').getByRole('button',{name:'任务与轨迹',exact:true}).waitFor();
+ checks.push('persistent topbar audit and task entries survive sidebar collapse and refresh');
  await page.locator('.sidebar-sessions a').evaluate(e=>e.firstChild.data='agent:main:dashboard:gov-workbench-fixture');
  await page.waitForFunction(()=>document.querySelector('.sidebar-sessions a').textContent==='真实用户报账任务');
  checks.push('session label stays friendly after host rerender');
+ const version={ok:true,payload:{oidc_enabled:true}},ready={ok:true,payload:{ready:true,dependencies:{identity:{healthy:true}}}};
+ for(const identity of [identityStatus('disabled'),identityStatus('loopback_static_dev'),identityStatus('oidc',version,ready),identityStatus('oidc',version,{ok:false})]){
+  await page.evaluate(i=>{fixture.coverage.business_identity=i;},identity);
+  for(const route of ['home','approvals','settings']){
+   await page.locator('.gov-nav [data-route='+route+']').click();
+   const banner=work.getByRole('region',{name:'业务身份状态'});
+   await banner.getByText(identity.label,{exact:true}).waitFor();
+   assert.match(await banner.innerText(),/执行与审批已禁用/);
+   if(identity.state==='demo')await banner.getByText('仅本机验收',{exact:true}).waitFor();
+   await banner.getByText('如何配置组织身份',{exact:true}).click();
+   assert.match(await banner.innerText(),/DELIVERY_ACCEPTANCE\.md/);
+  }
+ }
+ assert(!(await page.evaluate(()=>rpcCalls)).some(c=>/\.resolve$|\.invoke$|\.evaluate$/.test(c.method)));
+ checks.push('identity badges and read-only guardrails on home, approvals and settings in four states');
+ const panel=await browser.newPage();panel.on('pageerror',e=>errors.push(e.message));
+ for(const identity of [identityStatus('disabled'),identityStatus('loopback_static_dev'),identityStatus('oidc',version,ready)]){
+  runtimeIdentity=identity;await panel.goto(base+'/runtime-fixture');
+  await panel.locator('#identity-label').getByText(identity.label,{exact:true}).waitFor();
+  for(const id of ['run-action','run-gov-documents','approver-id','approval-note'])assert(await panel.locator('#'+id).isDisabled());
+  assert.equal(await panel.locator('[data-approval="approve"]').count(),0);
+ }
+ runtimeOffline=true;await panel.locator('#refresh').click();
+ await panel.locator('#system-state').getByText(/读取失败/).waitFor();
+ assert(await panel.locator('#run-action').isDisabled());assert(await panel.locator('#run-gov-documents').isDisabled());assert.deepEqual(runtimePosts,[]);
+ await panel.close();checks.push('runtime panel never enables execution, self-approval or demo controls, including refresh failure');
  await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>document.activeElement!==document.body));assert.deepEqual(errors,[]);checks.push('keyboard path and no script errors');mkdirSync('local-validation/workspace-ia',{recursive:true});await page.screenshot({path:'local-validation/workspace-ia/settings-and-skills.png'});writeFileSync('local-validation/workspace-ia/report.json',JSON.stringify({passed:true,checks},null,2));console.log(JSON.stringify({passed:true,checks}));
 }finally{await browser.close();await new Promise(r=>server.close(r));}

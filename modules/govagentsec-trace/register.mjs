@@ -1,9 +1,12 @@
 import path from 'node:path';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { TraceStore } from './store.mjs';
+import { perCallUsage } from './usage.mjs';
+import { wrapperCallKey, appendWrapperUsage } from './wrapper-usage.mjs';
 import { RULE_VERSION, ruleHits, contentEvidence } from './privacy.mjs';
 import { generateCandidate } from './evolution.mjs';
 import { Workshop } from '../trajectory-governance/workshop.mjs';
+import {releaseGate,reviewerIdentity,readReviewReceipt,confirmReview} from './release-gate.mjs';
 
 export const OBSERVERS = Symbol.for('govagentsec.trace.observers');
 export function registerTrace(api) {
@@ -25,6 +28,7 @@ export function registerTrace(api) {
       if (type === 'tool.started' || type === 'model.started') starts.set(key, saved.event_id);
       if (type.endsWith('.ended')) starts.delete(key);
       if (starts.size > 10000) starts.delete(starts.keys().next().value);
+      return saved;
     } catch {
       store?.failure(id, type); failures.push({ trace_id: id ?? null, hook: type, code: 'capture_failed' });
       api.logger.warn('GovAgentSec trace capture incomplete: ' + type);
@@ -49,9 +53,15 @@ export function registerTrace(api) {
       { reason: e.reason, duration_ms: e.durationMs, message_count: e.messageCount });
     sessions.delete(e.sessionId ?? ctx.sessionId);
   });
-  on('model_call_started', 'model.started', e => ({ model: e.model, provider: e.provider, transport: e.transport ?? null }));
-  on('model_call_ended', 'model.ended', e => ({ model: e.model, provider: e.provider, outcome: e.outcome, duration_ms: e.durationMs,
-    error_category: e.errorCategory ?? null, failure_kind: e.failureKind ?? null, first_byte_ms: e.timeToFirstByteMs ?? null, tokens: null }));
+  on('model_call_started', 'model.started', e => ({ model: e.model, provider: e.provider, transport: e.transport ?? null,
+    usage: null, token_scope: 'unavailable', token_missing_reason: 'model_call_not_finished' }));
+  api.on('model_call_ended', async (e, ctx = {}) => {
+    const ended = record('model.ended', e, ctx, { model: e.model, provider: e.provider, outcome: e.outcome, duration_ms: e.durationMs,
+      error_category: e.errorCategory ?? null, failure_kind: e.failureKind ?? null, first_byte_ms: e.timeToFirstByteMs ?? null,
+      ...perCallUsage(e), usage_correlation_key: wrapperCallKey(config.usageWrapper, e, ctx) });
+    try { await appendWrapperUsage(store, ended, ctx, config.usageWrapper); }
+    catch { store?.failure(e.runId ?? ctx.runId, 'model.usage', 'usage_capture_failed'); api.logger.warn('GovAgentSec usage capture incomplete'); }
+  }, { priority: 110 });
   const mcp = name => Object.keys(api.config?.mcp?.servers ?? {}).find(server => name?.startsWith(server.replace(/[^A-Za-z0-9_-]/g, '-').slice(0, 30) + '__'));
   on('before_tool_call', 'tool.started', e => ({ tool: e.toolName, transport: mcp(e.toolName) ? 'mcp' : 'tool', server: mcp(e.toolName) ?? null,
     params: e.params, input_fields: Object.keys(e.params ?? {}).filter(k => /^[A-Za-z_][A-Za-z0-9_]{0,50}$/.test(k)), rule_hits: ruleHits([e.toolName, e.params]) }));
@@ -66,7 +76,7 @@ export function registerTrace(api) {
       if (statusPath) {
         try {
           const row = JSON.parse(readFileSync(path.join(statusPath + '.requests', control.control_request_id + '.json'), 'utf8'));
-          const actions = {read_gov_document:'file.read',list_notices:'database.query',request_test_payment:'payment.transfer',run_protected_command:'shell.execute'};
+          const actions = {read_gov_document:'file.read',list_notices:'database.query',request_test_payment:'payment.transfer',run_protected_command:'shell.execute',submit_emergency_notice:'notification.submit'};
           if (actions[details.mcpTool] && row.control_request_id === control.control_request_id && row.request?.request_id === control.control_request_id && row.request.action?.tool === actions[details.mcpTool]) { request = row; association.task_id = row.request.task_id; }
         } catch { /* Record the missing join, never invent a task ID. */ }
       }
@@ -109,15 +119,18 @@ export function registerTrace(api) {
   const methods = { list: p => ({ traces: store.list().filter(t => !p.session_key || t.session_key === p.session_key), capture_failures: store.failures, failures }),
     detail: p => store.read(p.trace_id), health: () => ({ available: Boolean(store), failures, capture_failures: store?.failures ?? [], version: '2026.7.1-2', content_mode: config.contentMode ?? 'hash' }),
     candidates: () => ({ candidates: candidates() }), assign: p => store.assign(p.trace_id, p),
+    releaseGate: (p,client) => {const w=workshop(),c=w.read(p.candidate_id);return releaseGate(c,store.list().map(t=>t.assessment).filter(Boolean),reviewerIdentity(client),readReviewReceipt(w,c.id));},
+    confirmReview: (p,client) => {if(Object.keys(p).some(k=>!['candidate_id','artifact_hash'].includes(k)))throw Error('unexpected parameters');
+      return confirmReview(workshop(),p.candidate_id,p.artifact_hash,client,store.list().map(t=>t.assessment).filter(Boolean));},
     generate: p => generateCandidate(store, store.list().filter(t => t.task_key === p.task_key && t.assessment).map(t => t.assessment),
       { task_key: p.task_key, name: p.name, workshopRoot: path.join(config.dataDir, 'skill-workshop'), loaderRoots }),
     admit: p => { const policy = api.config?.security?.installPolicy?.exec;
       if (!policy?.command || !policy.args?.[0]) throw new Error('combined policy not configured');
       return workshop().admit(p.candidate_id, { command: policy.command, script: policy.args[0], env: policy.env, openclawVersion: '2026.7.1-2' }); } };
-  for (const [name, fn] of Object.entries(methods)) api.registerGatewayMethod?.('govagentsec.trace.' + name, async ({ params, respond }) => {
-    try { respond(true, fn(params ?? {})); } catch { respond(false, undefined, { code: 'INVALID_REQUEST', message: '记录不存在、采集不可用或参数不完整' }); }
-  }, { scope: ['assign', 'generate', 'admit'].includes(name) ? 'operator.write' : 'operator.read' });
-  for (const file of ['view.mjs', 'view-model.mjs']) api.registerHttpRoute({ path: '/plugins/govagentsec/trace/' + file, auth: 'plugin', match: 'exact', handler: async (req, res) => {
+  for (const [name, fn] of Object.entries(methods)) api.registerGatewayMethod?.('govagentsec.trace.' + name, async ({ params, respond, client }) => {
+    try { respond(true, fn(params ?? {},client)); } catch { respond(false, undefined, { code: 'INVALID_REQUEST', message: '记录不存在、证据变化、身份不足或参数不完整；未执行安装' }); }
+  }, { scope: name==='confirmReview'?'operator.admin':['assign', 'generate', 'admit'].includes(name) ? 'operator.write' : 'operator.read' });
+  for (const file of ['view.mjs', 'view-model.mjs', 'usage.mjs']) api.registerHttpRoute({ path: '/plugins/govagentsec/trace/' + file, auth: 'plugin', match: 'exact', handler: async (req, res) => {
     if (req.method !== 'GET') { res.writeHead(405); res.end(); return true; }
     res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
     res.end(readFileSync(new URL(file, import.meta.url))); return true;

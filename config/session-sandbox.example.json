@@ -1,0 +1,63 @@
+{
+  "agents": {
+    "defaults": {
+      "sandbox": {
+        "mode": "all",
+        "backend": "docker",
+        "scope": "session",
+        "workspaceAccess": "none",
+        "workspaceRoot": "C:\\Users\\USER\\.openclaw\\govagentsec\\session-sandbox\\workspaces",
+        "docker": {
+          "image": "govagentsec-session:node20-v1",
+          "containerPrefix": "gov-session-",
+          "workdir": "/workspace",
+          "network": "none",
+          "readOnlyRoot": true,
+          "capDrop": [
+            "ALL"
+          ],
+          "user": "1000:1000",
+          "tmpfs": [
+            "/tmp:rw,nosuid,nodev,size=64m"
+          ],
+          "pidsLimit": 128,
+          "memory": "512m",
+          "memorySwap": "512m",
+          "cpus": 1,
+          "binds": [],
+          "env": {}
+        },
+        "browser": {
+          "enabled": false,
+          "allowHostControl": false
+        }
+      }
+    }
+  },
+  "tools": {
+    "elevated": {
+      "enabled": false
+    },
+    "exec": {
+      "host": "sandbox"
+    },
+    "fs": {
+      "workspaceOnly": true
+    }
+  },
+  "plugins": {
+    "load": {
+      "paths": [
+        "F:/揭榜挂帅/GovAgentSec/modules/session-sandbox"
+      ]
+    },
+    "entries": {
+      "govagentsec-session-sandbox": {
+        "enabled": true,
+        "config": {
+          "dataDir": "C:/Users/USER/.openclaw/govagentsec/session-sandbox"
+        }
+      }
+    }
+  }
+}

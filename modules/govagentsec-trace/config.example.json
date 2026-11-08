@@ -1,7 +1,12 @@
 {
   "dataDir": "F:/揭榜挂帅/GovAgentSec/local-validation/trace-audit",
   "contentMode": "hash",
-  "scoring": {"t_star": 0.6, "calibration_version": "unvalidated-local-v1", "calibrated": false},
+  "scoring": {"t_star": 0.6, "calibration_version": "unvalidated-local-v1-not-production", "calibrated": false},
+  "judge": "ollama",
+  "endpoint": "http://127.0.0.1:11434",
+  "model": "qwen3:8b",
+  "calibration_version": "unvalidated-local-v1-not-production",
+  "calibrated": false,
   "generation": {
     "task_key": "expense-word-template",
     "name": "expense-word-candidate",

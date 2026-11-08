@@ -105,6 +105,7 @@ class AdapterConfig:
     ca_bundle: str = ""
     timeout_seconds: float = 8.0
     max_response_bytes: int = 1024 * 1024
+    task_id: str = ""
 
     @property
     def invoke_url(self) -> str:
@@ -189,6 +190,7 @@ class AdapterConfig:
                 )
 
         return cls(
+            task_id=(env.get(f'{ENV_PREFIX}TASK_ID') or '').strip(),
             agentguard_base_url=normalized_url,
             identity_mode=identity_mode,
             bearer_token=token,

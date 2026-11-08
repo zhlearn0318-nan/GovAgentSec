@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { mkdirSync,writeFileSync,readFileSync,copyFileSync,existsSync,readdirSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import {loadRouting} from '../modules/model-routing/routing.mjs';
 import { TraceStore } from '../modules/govagentsec-trace/store.mjs';
 import { assess,selectTopK } from '../modules/govagentsec-trace/scoring.mjs';
 import { generateCandidate } from '../modules/govagentsec-trace/evolution.mjs';
@@ -78,11 +79,12 @@ try{
     baseline_exclusion:'single-read or unrelated-tool variants cannot evidence the two-source brief; excluded explicitly before assessment',
     production_task_confirmed_by:'operator request in this task',all_assigned_task_key:TASK_KEY};
   const evidence=path.join(out,'evidence'),store=new TraceStore(path.join(evidence,'traces'));
-  const judge=new OllamaLocalJudge({model:'qwen3:8b',timeoutMs:60000});
+  const reviewConfig=loadRouting().security_review_llm;
+  const judge=new OllamaLocalJudge(reviewConfig);
   // Explicit demo/test assessment, even for real captures. Never claim calibrated=true to pass production gates.
   judge.testOnly=true;
   const scoring={t_star:.75,calibration_version:CALIBRATION_VERSION,calibrated:false,judge_version:judge.version};
-  report.scoring=scoring;report.judge={requested:'OllamaLocalJudge',model:'qwen3:8b',test_only:true,production_calibrated:false};
+  report.scoring=scoring;report.judge={requested:'OllamaLocalJudge',model:reviewConfig.model,endpoint:reviewConfig.endpoint,test_only:true,production_calibrated:false};
   const records=[];
   for(const row of batch.entries){
     const id=row.trace.summary.trace_id;

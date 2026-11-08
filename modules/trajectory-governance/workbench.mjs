@@ -113,6 +113,10 @@ export function mountWorkbench(root, client, sessionKey, options = {}) {
     );
     views.risk.replaceChildren();
     views.evidence.replaceChildren();
+    for (const tool of value.tool_coverage ?? []) {
+      const row = card(views.risk, tool.name, tool.managed ? '已接入受管适配器；执行以关联回执为准' : '未受 AgentGuard 闸门');
+      if (!tool.managed) row.style.color = '#b42318';
+    }
     for (const [key,label] of [['input','输入检查'],['output','回复检查'],['tool_results','工具返回']]) {
       const stage=value.coverage.runtime?.[key];
       card(views.risk,label,stage?.reason??'等待后端提供实际防护状态');
@@ -130,6 +134,15 @@ export function mountWorkbench(root, client, sessionKey, options = {}) {
         control.reason || control.message || "",
       );
       c.append(el("p", "来源：AgentGuard · " + control.mcp_tool));
+      if (control.governance) {
+        const g = control.governance;
+        c.append(el('p', `任务契约 v${g.revision} · ${(g.allowed_tools ?? []).join('、')} · 扩权 ${(g.contract_diff ?? []).join('、') || '无'} · 票据 TTL ${g.ticket_ttl_seconds} 秒`));
+        for (const [field, v] of Object.entries(g.provenance ?? {})) {
+          const row = el('p', `${field} · ${v.source} · ${String(v.value_hash).slice(0,12)}`);
+          if (['unknown','tool_untrusted'].includes(v.source)) row.style.color = '#b42318';
+          c.append(row);
+        }
+      }
       if (control.action) raw(c, "查看具体动作与参数", control.action);
       if (control.can_resolve) {
         const form = el("div");

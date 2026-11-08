@@ -121,3 +121,41 @@ node scripts/render_real_call_graph.mjs "$run/evidence" 1a5fd19d-2474-4141-97e7-
 常见失败：`PREFLIGHT_FAILED`（插件、身份、回执或 MCP 未就绪）、`RESTRICTED_DEMO_AGENT_REQUIRED`（工具范围不符）、`RESTART_GATEWAY_AFTER_CONFIG`（配置尚未加载）、`RUN_TIMEOUT`（本地模型超时）、`SCENARIO_NOT_OBSERVED`（模型未完成指定工具顺序）、`CAPTURE_LOSS`（采集失败）。联合准入失败保持 rejected/unverified，最终非零退出，不改规则强行通过。
 
 本轮改动限于 `scripts/evolve_real_demo.mjs`、`collect_real_evolution.mjs`、`prepare_evolution_agent.mjs`、`render_real_evolution.mjs`、`lib/real_evolution.mjs`、`test_real_evolution.mjs` 和文档。未改安全模块、评分契约、宿主版本或远端仓库。
+
+## UI 发布闸（U3，2026-11-07）
+
+入口：OpenClaw **审计中心 → 候选车间**。每张候选卡展示参与/安全通过/隔离数、逐条 Q/S 与 TopK 原因、保留比例及分母、公共工具步骤摘要，以及联合准入 allow/block 和命中规则。低质量未入选者仍展示分数及 `below_topk`；隔离轨迹和毒候选不被隐藏。醒目提示 **admission_passed ≠ 发布/安装**。
+
+界面状态为 `draft → scored → admitted_allow | admitted_block → ready_for_review`。最后一步仅由人工确认产生；没有 `auto_installed` 状态。它是复核视图状态，不修改 Workshop 原候选状态，也不调用既有生产发布接口。
+
+新增接口：
+
+| RPC | 权限 | 行为 |
+|---|---|---|
+| `govagentsec.trace.releaseGate` | operator.read | 输入 candidate_id，返回评分、准入、身份可用性与回执摘要 |
+| `govagentsec.trace.confirmReview` | operator.admin + 宿主验证的设备管理员 | 只接受 candidate_id、artifact_hash；仅创建候选目录下的 review-receipt.json |
+
+回执记录操作者、时间、候选 ID、候选/准入/筛选证据哈希。候选内容变化、block、评分缺失或身份不足均拒绝确认；重复确认返回已有匹配回执。写入采用独占创建，不能覆盖已有回执。`candidate.json`、SKILL.md 和正式 skills 目录均不由此动作修改。
+
+身份来自固定 OpenClaw 2026.7.1-2 网关 handler 的可信 `client` 上下文：设备令牌已验证、operator 角色、operator.admin 范围及设备 ID。工具参数、显示名、共享网关令牌及 loopback_static_dev 不能充当复核身份。当前没有接入组织 OIDC；设备管理员回执标记 `production_oidc=false`，不能声称实名组织审批。无符合条件身份时按钮禁用，提示需要 OIDC 或宿主验证管理员；本机当前实测为禁用状态。
+
+新生成候选保存同任务评审快照，保留未入选与隔离原因；已有候选无快照时明确标为“当前本地评分”，缺失数据不回填历史分数。生成器仍为确定性公共步骤，Q/S 公式与准入规则不变。测试来源仍为 test_only，人工复核不能解除生产发布限制。
+
+复现（需本机 Edge；实机脚本另需现有网关运行）：
+
+```powershell
+Set-Location 'F:\揭榜挂帅\GovAgentSec'
+node --test modules/govagentsec-trace/test/*.test.mjs modules/trajectory-governance/test/*.test.mjs scripts/test_real_evolution.mjs
+node scripts/test_evolution_release_gate_ui.mjs local-validation/real-evolution/2026-11-07-multi-trace-final
+node scripts/test_evolution_release_gate_live.mjs
+```
+
+UI 脚本使用六条真实轨迹及候选的**隔离副本**，仅在测试副本中补齐旧候选评分快照。确认阶段模拟宿主已验证管理员上下文，不冒充真实 OIDC。报告 source 为 `real-evidence-copy-with-test-auth-context`。实机脚本只查看当前已有候选，source 为 `live-openclaw-existing-workshop`，不点击确认、不导入六轨迹演示候选。
+
+本轮：83/83 自动化测试通过；隔离 UI 8 类检查通过，断言无 install/publish API、正式加载目录为空、Workshop 状态不变；实机两张候选卡确认按钮均禁用，网关配置字节未变。详见 `UPGRADE_ROUND_VALIDATION.md` 的报告和截图路径。本轮没有模型调用、轨迹外发、安装、升级或 git push。
+# 演示稳定性与降级（U16）
+
+一键检查：`node scripts/verify_evolution_gate_demo.mjs`。无组织身份时仅展示门控结果，现网人工确认禁用；Ollama 不可用时明确标注启发式回退，缺失证据隔离。外部评审配置、运行中端点篡改和重定向都必须拒绝，不能把会话 API 许可用于轨迹外发。
+
+候选准入通过不等于安装；隔离测试 loader 的合成技能安装/回滚与现网发布闸分开报告。完整矩阵及三句话术见 [U16 设计](U16_EVOLUTION_GATE_DEMO_STABILITY.md)。
+

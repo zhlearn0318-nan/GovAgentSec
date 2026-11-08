@@ -402,7 +402,9 @@ function Write-OpenClawDemoConfiguration {
         'agentguard-notices__list_notices',
         'agentguard-notices__request_test_payment',
         'agentguard-notices__run_protected_command',
-        'agentguard-notices__get_control_request_status'
+        'agentguard-notices__get_control_request_status',
+        'agentguard-notices__read_gov_document',
+        'agentguard-notices__submit_emergency_notice'
     )
     Set-OpenClawDemoObjectProperty -Object $tools -Name 'alsoAllow' -Value $agentGuardTools
     Set-OpenClawDemoObjectProperty -Object $tools -Name 'deny' -Value @(
@@ -723,7 +725,7 @@ function New-OpenClawDemoMcpDefinition {
         requestTimeoutMs = 20000
         connectionTimeoutMs = 8000
         supportsParallelToolCalls = $false
-        toolFilter = @{ include = @('list_notices', 'request_test_payment', 'run_protected_command', 'get_control_request_status') }
+        toolFilter = @{ include = @('list_notices', 'request_test_payment', 'run_protected_command', 'get_control_request_status', 'read_gov_document', 'submit_emergency_notice') }
     }
 }
 

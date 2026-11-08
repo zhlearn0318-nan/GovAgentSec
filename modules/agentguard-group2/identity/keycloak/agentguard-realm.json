@@ -10,7 +10,8 @@
       {"name": "office_user"},
       {"name": "finance_operator"},
       {"name": "business_approver"},
-      {"name": "security_approver"}
+      {"name": "security_approver"},
+      {"name": "audit_reader"}
     ]
   },
   "clients": [
@@ -79,6 +80,13 @@
     }
   ],
   "users": [
+    {
+      "username": "auditor-test",
+      "enabled": true,
+      "attributes": {"department": ["审计室"], "clearance": ["1"]},
+      "requiredActions": [],
+      "realmRoles": ["audit_reader"]
+    },
     {
       "username": "office-test",
       "enabled": true,

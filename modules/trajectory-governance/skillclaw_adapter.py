@@ -30,6 +30,11 @@ class LocalClient:
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
 
     def request(self, route, body=None):
+        url = urlsplit(self.endpoint)
+        if url.scheme != 'http' or url.hostname not in ('127.0.0.1', '::1') or url.username or url.password or url.path not in ('','/') or url.query or url.fragment:
+            raise ValueError('literal loopback model endpoint required')
+        if route not in ('/api/tags', '/api/show', '/api/chat'):
+            raise ValueError('local model route prohibited')
         request = urllib.request.Request(self.endpoint + route, data=json.dumps(body).encode() if body else None, headers={'Content-Type': 'application/json'})
         with self.opener.open(request, timeout=240) as response:
             return json.load(response)
@@ -47,6 +52,9 @@ class LocalClient:
             raise ValueError('local model not available')
         if model['digest'] != '359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7':
             raise ValueError('generation model differs from pinned digest')
+        metadata = self.request('/api/show', {'model': self.model})
+        if metadata.get('remote_model') or metadata.get('remote_host') or not metadata.get('model_info', {}).get('general.architecture') or not metadata.get('model_info', {}).get('general.parameter_count', 0) > 0:
+            raise ValueError('local generation model weights unverified')
         self.identity = {'model': self.model, 'digest': model['digest'], 'prompt_hash': hashlib.sha256(serialized.encode()).hexdigest()}
         result = await asyncio.to_thread(self.request, '/api/chat', {
             'model': self.model, 'messages': messages, 'stream': False, 'think': False,

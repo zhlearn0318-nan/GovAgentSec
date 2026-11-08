@@ -49,6 +49,9 @@ def run_gov_document_demo(gateway):
         (4, "机密通讯录待审批", "duty_contacts", 2),
     ]:
         req = request(case, scenario, document, clearance)
+        # Fixed synthetic input is explicit test-user authorization, never model arguments.
+        gateway.task_policies.create(req['task_id'], req['subject']['id'],
+            user_values={'file.read':{'document_id':document}})
         show(req, gateway.invoke(req))
 
     # Approve the exact task/action that was pending in scenario 4.

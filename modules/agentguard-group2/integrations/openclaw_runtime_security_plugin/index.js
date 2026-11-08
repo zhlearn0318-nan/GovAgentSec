@@ -1,4 +1,7 @@
 import {allowPage, deny} from '../../../govagentsec-ui/access.mjs';
+import {identityStatus, requireBusinessDelegation} from '../../../govagentsec-ui/identity-status.mjs';
+import {registerDemoIdentity} from './demo-identity.mjs';
+import {registerChatAcl} from './chat-acl.mjs';
 import { brandPage } from "../../../govagentsec-ui/design.mjs";
 import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
@@ -162,6 +165,7 @@ function publicApproval(record) {
     operation: action.operation,
     resource: action.resource,
     parameters: action.parameters || {},
+    governance: record.governance || null,
     subject_id: request.subject?.id,
     department: request.subject?.department,
     reason_code: record.reason_code,
@@ -301,6 +305,11 @@ function summarizeAudits(events) {
 function requireDevelopmentIdentity(config) {
   if(config.identityMode !== 'loopback_static_dev') throw new Error('开发身份执行已停用。正式审批需要组织 OIDC 身份与逐用户授权委托；管理页面登录不代替业务身份。');
 }
+export async function readIdentityStatus(config, mode = config.identityMode) {
+  const base = safeString(config.agentGuardBaseUrl, 'http://127.0.0.1:8080').replace(/\/+$/u, '');
+  const [version, ready] = await Promise.all([fetchJson(base + '/version'), fetchJson(base + '/readyz')]);
+  return identityStatus(mode, version, ready);
+}
 async function buildSnapshot(config) {
   const baseUrl = safeString(config.agentGuardBaseUrl, "http://127.0.0.1:8080").replace(/\/+$/u, "");
   const [health, ready, version, audits, controlStatuses, approvalRecords] = await Promise.all([
@@ -326,7 +335,7 @@ async function buildSnapshot(config) {
   const incidents = timeline.filter((item) => item.status === "error" || ["approval_error", "reconciliation_required"].includes(item.status) || /ERROR|FAILED|UNAVAILABLE|D105/u.test(item.reason_code));
   return redact({
     generated_at: new Date().toISOString(), scope: "group2_tool_runtime_governance",
-    identity: {mode:config.identityMode??"disabled", executionEnabled:config.identityMode==="loopback_static_dev", reason:"正式业务身份未接入时停用动作试算和审批执行"},
+    identity: identityStatus(config.identityMode, version, ready),
     services: {
       agentguard: health, dependencies: ready, version,
       openclaw_mcp: { ok: config.identityMode === "loopback_static_dev" && Array.isArray(controlStatuses), records: Array.isArray(controlStatuses) ? controlStatuses.length : 0 },
@@ -537,35 +546,11 @@ async function handler(req, res, config) {
     });
     return true;
   }
-  if (method === "POST" && requestUrl.pathname === `${ROUTE_ROOT}/api/demo/gov-documents`) {
-    if (!validatePageToken(req.headers?.["x-agentguard-page-token"])) {
-      sendJson(res, 403, { ok: false, error: { code: "PAGE_TOKEN_INVALID", message: "页面令牌无效或已过期，请刷新页面" } }, SANDBOX_CORS_HEADERS);
-      return true;
+  if (method === 'POST' && ['/api/evaluate', '/api/approvals/resolve', '/api/demo/gov-documents'].some(p => requestUrl.pathname === ROUTE_ROOT + p)) {
+    if (!validatePageToken(req.headers?.['x-agentguard-page-token'])) { deny(res); return true; }
+    try { requireBusinessDelegation(); } catch (error) {
+      sendJson(res, 403, {ok:false,error:{code:'BUSINESS_IDENTITY_REQUIRED',message:error.message}}, SANDBOX_CORS_HEADERS);
     }
-    try {
-      await readJsonBody(req);
-      sendJson(res, 200, { ok: true, data: await runGovDocumentDemo(config) }, SANDBOX_CORS_HEADERS);
-    } catch (error) {
-      sendJson(res, 502, { ok: false, error: { code: "GOV_DOCUMENT_DEMO_FAILED", message: String(error?.message || error).slice(0, 500) } }, SANDBOX_CORS_HEADERS);
-    }
-    return true;
-  }
-  if (method === "POST" && requestUrl.pathname === `${ROUTE_ROOT}/api/evaluate`) {
-    if (!validatePageToken(req.headers?.["x-agentguard-page-token"])) {
-      sendJson(res, 403, { ok: false, error: { code: "PAGE_TOKEN_INVALID", message: "页面令牌无效或已过期，请刷新页面" } }, SANDBOX_CORS_HEADERS);
-      return true;
-    }
-    try { sendJson(res, 200, { ok: true, data: await evaluateAction(config, await readJsonBody(req)) }, SANDBOX_CORS_HEADERS); }
-    catch (error) { sendJson(res, 400, { ok: false, error: { code: "EVALUATION_FAILED", message: String(error?.message || error).slice(0, 500) } }, SANDBOX_CORS_HEADERS); }
-    return true;
-  }
-  if (method === "POST" && requestUrl.pathname === `${ROUTE_ROOT}/api/approvals/resolve`) {
-    if (!validatePageToken(req.headers?.["x-agentguard-page-token"])) {
-      sendJson(res, 403, { ok: false, error: { code: "PAGE_TOKEN_INVALID", message: "页面令牌无效或已过期，请刷新页面" } }, SANDBOX_CORS_HEADERS);
-      return true;
-    }
-    try { sendJson(res, 200, { ok: true, data: await resolveApproval(config, await readJsonBody(req)) }, SANDBOX_CORS_HEADERS); }
-    catch (error) { sendJson(res, 400, { ok: false, error: { code: "APPROVAL_ACTION_FAILED", message: String(error?.message || error).slice(0, 500) } }, SANDBOX_CORS_HEADERS); }
     return true;
   }
   if (method === "POST" && requestUrl.pathname === `${ROUTE_ROOT}/api/approvals/notify`) {
@@ -585,6 +570,7 @@ const plugin = {
   id: PLUGIN_ID, name: "AgentGuard 运行时安全中心", description: "第二组工具调用和任务执行安全控制面",
   register(api) {
     const config = api.pluginConfig && typeof api.pluginConfig === "object" ? api.pluginConfig : {};
+    registerChatAcl(api, registerDemoIdentity(api));
     api.registerHttpRoute({ path: ROUTE_ROOT, match: "prefix", auth: "plugin", handler: (req, res) => handler(req, res, config) });
   },
 };

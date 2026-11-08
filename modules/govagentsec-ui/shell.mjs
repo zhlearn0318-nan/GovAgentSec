@@ -18,8 +18,8 @@ html.gov-workspace .content{background:#f5f7f7}html.gov-workspace .update-banner
 .gov-nav{padding:8px 12px 12px;display:grid;gap:3px;border-bottom:1px solid #e0e7e4;margin-bottom:8px}.gov-nav button{display:flex;align-items:center;gap:11px;background:transparent;color:#62756d;border:0;border-radius:6px;padding:10px 12px;font:13px 'Segoe UI','Microsoft YaHei UI',sans-serif;cursor:pointer;text-align:left}.gov-nav button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.gov-nav button[aria-current=page]{color:#1e695b;background:#e3eeea;font-weight:650}.gov-nav button:hover{background:#e9efec}.gov-nav button:focus-visible{outline:2px solid #1e695b}.gov-nav .nav-count{margin-left:auto;font:11px Consolas;color:#946224}.shell--nav-collapsed .gov-nav{padding:8px 4px}.shell--nav-collapsed .gov-nav button{padding:10px}.shell--nav-collapsed .gov-nav span{display:none}
 html.gov-workspace .sidebar-nav>.nav-section__items{display:none}html.gov-workspace .sidebar-nav a[href*='plugin=protect-agent'],html.gov-workspace .sidebar-nav a[href*='plugin=govagentsec-trajectory']{display:none}html.gov-workspace .nav-section--more .nav-section__label-text{font-size:0}html.gov-workspace .nav-section--more .nav-section__label-text:after{content:'系统工具';font-size:11px}
 html.gov-workspace govagentsec-chat-traces{display:none!important}html.gov-workspace .sidebar-brand__title{font-size:0!important;align-items:flex-start!important}html.gov-workspace .sidebar-brand__title>span{display:none}html.gov-workspace .sidebar-brand__title:before{content:'政安智枢';font-size:16px;font-weight:650;color:#233e3b;line-height:1.3}html.gov-workspace .sidebar-brand__title:after{content:'OpenClaw 工作区';font-size:10px;color:#70817e;line-height:1.4}
-html.gov-workspace openclaw-app-topbar{padding-right:240px}html.gov-workspace openclaw-router-outlet:has(govagentsec-workspace){display:block;height:100%;min-height:0;overflow:hidden}html.gov-workspace .content:has(govagentsec-workspace){overflow:hidden;padding:0;display:flex;flex-direction:column}html.gov-workspace openclaw-plugin-page:has(govagentsec-workspace){display:contents}
-@media(max-width:750px){html.gov-workspace .topbar-brand__title{display:none!important}html.gov-workspace .topbar-brand{margin-left:45px;margin-right:auto}html.gov-workspace openclaw-app-topbar{padding-right:165px}.gov-nav{grid-template-columns:1fr 1fr}}`;
+html.gov-workspace openclaw-app-topbar{padding-right:330px}html.gov-workspace openclaw-router-outlet:has(govagentsec-workspace){display:block;height:100%;min-height:0;overflow:hidden}html.gov-workspace .content:has(govagentsec-workspace){overflow:hidden;padding:0;display:flex;flex-direction:column}html.gov-workspace openclaw-plugin-page:has(govagentsec-workspace){display:contents}
+@media(max-width:750px){html.gov-workspace .topbar-brand__title{display:none!important}html.gov-workspace .topbar-brand{margin-left:45px;margin-right:auto}html.gov-workspace openclaw-app-topbar{padding-right:260px}.gov-nav{grid-template-columns:1fr 1fr}}`;
 export function defineShell() {
   if (customElements.get("govagentsec-shell")) return;
   class Shell extends HTMLElement {
@@ -106,7 +106,8 @@ export function defineShell() {
       }
     }
     render() {
-      this.shadowRoot.innerHTML = `<style>${tokens}:host{display:contents}.dock{position:fixed;top:9px;right:18px;z-index:115;display:flex;gap:6px;align-items:center}.dock button{display:flex;align-items:center;gap:7px;height:34px;font-size:12px}.connection{width:6px;height:6px;border-radius:50%;background:#7a8c82}.connection.online{background:#3a8c68}.drawer{position:fixed;top:54px;right:0;bottom:0;width:min(660px,46vw);z-index:112;background:var(--surface);border-left:1px solid var(--line);box-shadow:-8px 0 30px #233e3b0b;display:flex;flex-direction:column}.drawer-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.drawer-head small{display:block;color:var(--muted);font-size:11px;margin-top:2px}.drawer-body{flex:1;overflow:auto;min-height:0}@media(max-width:1100px){.drawer{width:min(660px,90vw)}}@media(max-width:750px){.dock{right:8px;top:8px}.dock button{padding:6px 8px}.dock .settings span{display:none}.drawer{width:100vw;top:52px}.dock .connection{display:none}}</style><div class="dock"><button class="settings" title="防护设置">${icon("settings")}<span>防护设置</span></button><button class="inspect primary" aria-expanded="false" aria-controls="gov-task-inspector" title="查看当前任务 · Ctrl+Shift+G">${icon("audit")}<span>当前任务</span><i class="connection"></i></button></div><section class="drawer" id="gov-task-inspector" role="region" aria-label="任务详情" hidden><header class="drawer-head"><div><h2>任务详情</h2><small>所选任务的详情 · 历史记录统一在审计中心</small></div><button class="close" aria-label="关闭面板">关闭</button></header><div class="drawer-body"></div></section>`;
+      this.shadowRoot.innerHTML = `<style>${tokens}:host{display:contents}.dock{position:fixed;top:9px;right:18px;z-index:115;display:flex;gap:6px;align-items:center}.dock button{display:flex;align-items:center;gap:7px;height:34px;font-size:12px}.connection{width:6px;height:6px;border-radius:50%;background:#7a8c82}.connection.online{background:#3a8c68}.drawer{position:fixed;top:54px;right:0;bottom:0;width:min(660px,46vw);z-index:112;background:var(--surface);border-left:1px solid var(--line);box-shadow:-8px 0 30px #233e3b0b;display:flex;flex-direction:column}.drawer-head{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.drawer-head small{display:block;color:var(--muted);font-size:11px;margin-top:2px}.drawer-body{flex:1;overflow:auto;min-height:0}@media(max-width:1100px){.drawer{width:min(660px,90vw)}}@media(max-width:750px){.dock{right:8px;top:8px}.dock button{padding:6px 8px}.dock .settings span{display:none}.drawer{width:100vw;top:52px}.dock .connection{display:none}}</style><div class="dock"><button class="audit" title="历史轨迹、同任务对比与候选记录">审计中心</button><button class="settings" title="防护设置">${icon("settings")}<span>防护设置</span></button><button class="inspect primary" aria-expanded="false" aria-controls="gov-task-inspector" title="查看当前任务 · Ctrl+Shift+G">${icon("audit")}<span>任务与轨迹</span><i class="connection"></i></button></div><section class="drawer" id="gov-task-inspector" role="region" aria-label="任务详情" hidden><header class="drawer-head"><div><h2>任务详情</h2><small>所选任务的详情 · 历史记录统一在审计中心</small></div><button class="close" aria-label="关闭面板">关闭</button></header><div class="drawer-body"></div></section>`;
+      this.shadowRoot.querySelector(".audit").onclick=()=>this.navigate("audit");
       this.body = this.shadowRoot.querySelector(".drawer-body");
       this.body.attachShadow({ mode: "open" });
       this.shadowRoot.querySelector(".inspect").onclick = () =>
@@ -241,7 +242,7 @@ export function defineShell() {
         /* The workspace shows the full error when opened. */
       }
     }
-    open(trace, tab = "process") {
+    async open(trace, tab = "process") {
       if (!this.gateway || !this.body) return;
       this.cleanup?.();
       if (!this.opened) this.previousFocus = document.activeElement;
@@ -250,7 +251,18 @@ export function defineShell() {
       this.shadowRoot
         .querySelector(".inspect")
         .setAttribute("aria-expanded", "true");
-      this.cleanup = mountWorkbench(
+      const generation=this.openGeneration=(this.openGeneration??0)+1;
+      this.body.shadowRoot.replaceChildren(document.createTextNode('正在读取当前任务轨迹…'));
+      try {
+        const health=await this.gateway.request('govagentsec.trace.health',{});
+        if(!health.available)throw Error('trace unavailable');
+        const {mountTraceAudit}=await import('/plugins/govagentsec/trace/view.mjs');
+        if(!this.opened||generation!==this.openGeneration)return;
+        this.cleanup=mountTraceAudit(this.body.shadowRoot,(method,params={})=>this.gateway.request('govagentsec.trace.'+method,params),{
+          sessionKey:trace?.session_key??(trace?undefined:this.session??''),traceId:trace?.trace_id,compact:true});
+      }catch {
+        if(!this.opened||generation!==this.openGeneration)return;
+        this.cleanup = mountWorkbench(
         this.body.shadowRoot,
         this.gateway,
         trace?.session_key ?? this.session,
@@ -260,6 +272,10 @@ export function defineShell() {
           tab,
         },
       );
+      const degraded=document.createElement('p');degraded.setAttribute('role','status');
+      degraded.textContent='新轨迹插件暂不可用，当前显示旧版任务记录。请启用 govagentsec-trace 后刷新；旧记录不代表新 JSONL 采集已成功。';
+      this.body.shadowRoot.prepend(degraded);
+      }
       this.layout();
       this.shadowRoot.querySelector(".close").focus();
     }
@@ -283,6 +299,7 @@ export function defineShell() {
     close(focus = true) {
       if (!this.opened) return;
       this.opened = false;
+      this.openGeneration=(this.openGeneration??0)+1;
       this.cleanup?.();
       this.cleanup = null;
       this.body.shadowRoot.replaceChildren();

@@ -14,6 +14,8 @@ from typing import Any
 
 from .config import AdapterConfig, AdapterConfigError
 from enforcement.documents import document_action, scrub_document_receipt
+from enforcement.notifications import notice_action
+from enforcement.task_policy import value_hash
 
 
 class AgentGuardClientError(RuntimeError):
@@ -54,7 +56,7 @@ class AgentGuardClient:
         call_id = uuid.uuid4().hex
         return {
             "request_id": f"mcp-req-{call_id}",
-            "task_id": f"mcp-task-{call_id}",
+            "task_id": self.config.task_id or f"mcp-task-{call_id}",
             "timestamp": now,
             "subject": self.config.request_subject(),
             "action": action,
@@ -139,7 +141,12 @@ class AgentGuardClient:
         request_id = payload["request_id"]
         if not isinstance(request_id, str) or len(request_id) != 40 or not request_id.startswith("mcp-req-") or any(c not in "0123456789abcdef" for c in request_id[8:]):
             return
-        record = {"control_request_id": request_id, "request": payload,
+        # The server keeps the trusted approval snapshot. UI files retain hashes only.
+        safe_payload = json.loads(json.dumps(payload))
+        safe_payload['action']['parameters'] = {k: {'value_hash':value_hash(v)} for k,v in payload['action'].get('parameters',{}).items()}
+        safe_payload['action']['resource'] = 'sha256:' + value_hash(payload['action'].get('resource'))
+        safe_payload['context'] = {k:v for k,v in payload.get('context',{}).items() if k in {'source','enforcement_point'}}
+        record = {"control_request_id": request_id, "request": safe_payload, "governance": result.get('governance'),
                   "status": "pending" if result.get("status") == "pending_approval" else result.get("status", "unknown"),
                   "action_digest": result.get("action_digest"), "reason_code": result.get("reason_code"),
                   "created_at": payload["timestamp"], "receipt": scrub_document_receipt(result.get("receipt")), "policy_reason_codes": result.get("policy_reason_codes", []),
@@ -153,6 +160,13 @@ class AgentGuardClient:
         except OSError:
             # Observability cannot turn a denial into execution.
             return
+
+    def submit_emergency_notice(self, recipient, template_id):
+        try:
+            action = notice_action(recipient, template_id)
+        except (ValueError, TypeError) as exc:
+            raise AgentGuardClientError('MCP_G001_ARGUMENT_INVALID', '送审目标或模板不可用') from exc
+        return self._invoke(action)
 
     def read_gov_document(self, document_id):
         try:

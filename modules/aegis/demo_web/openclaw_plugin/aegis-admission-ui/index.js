@@ -186,7 +186,7 @@ async function runAdminOperation(projectRoot, request) {
     // commands in sequence. Cold Windows/Node starts take longer than the
     // ordinary administration operations.
     // Budget for offline scans, three 90s CLI operations, and a possible rollback.
-    const operationTimeoutMs = request?.operation === "admit_mcp" ? 480_000 : 30_000;
+    const operationTimeoutMs = ["preview_mcp", "admit_mcp"].includes(request?.operation) ? 480_000 : 30_000;
     const timeout = setTimeout(() => {
       child.kill();
       reject(new Error(`Aegis administrator operation timed out after ${operationTimeoutMs / 1000}s.`));

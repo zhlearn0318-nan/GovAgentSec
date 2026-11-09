@@ -94,7 +94,7 @@ test('graph exact parents, retry and same-task comparison come from JSONL', asyn
   assert.equal(a.summary.metrics.output_tokens, 80);
   const graph = traceGraph(a); assert.equal(graph.edges.some(e => e.kind === 'call'), true); assert.equal(graph.nodes.some(n => n.retry), true);
   const comparison = compareTraces([a, b]); assert.equal(comparison.success_rate, 1); assert.equal(comparison.rows.length, 2);
-  b.summary.task_key = 'other'; assert.throws(() => compareTraces([a, b]), /task_key/);
+  b.summary.task_key = 'other'; assert.throws(() => compareTraces([a, b]), /同一任务/);
 });
 test('registered observation hooks return undefined, preserve IDs, survive disk failure; all data RPC scoped', async () => {
   const root = temp(), hooks = new Map(), rpc = new Map(), routes = [];

@@ -15,7 +15,7 @@ for(const [id,result] of Object.entries(results)){
  const pointer=values.findLast(v=>v.report||v.root);
  if(pointer){const source=pointer.report??path.join(pointer.root,'report.json');if(fs.existsSync(source)){links[id]=source;fs.copyFileSync(source,path.join(e.out,id+'-report.json'));}}
 }
-if(links['gate-ui'])for(const file of ['gate-disabled.png','gate-confirmed-no-install.png'])fs.copyFileSync(path.join(path.dirname(links['gate-ui']),file),path.join(e.out,file));
+if(links['gate-ui'])for(const file of ['gate-disabled.png','gate-test-only-no-confirm.png'])fs.copyFileSync(path.join(path.dirname(links['gate-ui']),file),path.join(e.out,file));
 const matrix=JSON.parse(fs.readFileSync(path.join(e.out,'degradation-report.json')));
 const liveFile=path.join(e.out,'live/report.json'),live=fs.existsSync(liveFile)?JSON.parse(fs.readFileSync(liveFile)):null;
 e.finish({valid:matrix.passed&&live?.passed===true,source_reports:links,matrix,live,

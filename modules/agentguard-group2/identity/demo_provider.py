@@ -112,15 +112,49 @@ class DemoIdentity:
         self.tasks = {}
         self.snapshots = {}
         self.events = []
+        self.trace_events = []
+        self.trace_projection_failed = False
         self.chat = ChatAcl(self)
         self.delegations = {}
 
     def audit(self, event, **fields):
-        entry = dict(at=datetime.now(timezone.utc).isoformat(), event=event,
+        entry = dict(audit_id=uuid.uuid4().hex, at=datetime.now(timezone.utc).isoformat(), event=event,
                      identity_source=IDENTITY_SOURCE, label=LABEL, production_oidc=False, **fields)
-        self.events.append(entry)
         with (self.directory / 'identity-audit.jsonl').open('a', encoding='utf-8') as file:
             file.write(json.dumps(entry, ensure_ascii=False) + '\n')
+        self.events.append(entry)
+        try:
+            self.project_trace(entry)
+        except Exception:
+            # Observation cannot grant, revoke or break an otherwise valid action.
+            self.trace_projection_failed = True
+
+    def project_trace(self, entry):
+        """Private transport projection of an already persisted audit, never UI input."""
+        record = self.requests.get(entry.get('request_id'), {})
+        if record.get('scenario') != 'chat':
+            return
+        event, status = entry['event'], entry.get('status')
+        kind = None
+        if event == 'demo_identity.task_escalate' and status == 'pending_approval':
+            kind = 'approval.requested'
+        elif event == 'demo_identity.resolve':
+            kind = {'authorized': 'approval.approved', 'rejected': 'approval.rejected',
+                    'blocked': 'approval.denied'}.get(status)
+        elif event == 'chat.host_result' and entry.get('result_linked') and entry.get('execution_recorded') and record.get('approver'):
+            kind, status = 'approval.execution', record.get('execution_status', 'unknown')
+        if not kind:
+            return
+        execution = kind == 'approval.execution'
+        actor = self.users.get(entry.get('subject'), {})
+        self.trace_events.append(dict(
+            audit_id=entry['audit_id'], timestamp=entry['at'], event_type=kind,
+            run_id=entry.get('run_id') if execution else record.get('run_id'),
+            origin_run_id=record.get('run_id'), session_key=record.get('session_key'),
+            request_id=record['request_id'], task_id=record.get('task_id'),
+            tool_call_id=record.get('tool_call_id' if execution else 'origin_tool_call_id'),
+            tool=record.get('host_tool'), status=status, reason_code=entry.get('reason_code'),
+            actor_roles=actor.get('roles', []), production_oidc=False))
 
     def disable(self, reason='operator'):
         if self.service:
@@ -150,11 +184,30 @@ class DemoIdentity:
         return dict(enabled=self.service is not None, label=LABEL, production_oidc=False,
             issuer_transport='in-process-rs256-jwks', default_enabled=False, mfa_synthetic=True,
             execution_enabled=subject is not None and 'audit_reader' not in subject['roles'], user=subject, expires_at=self.expires_at,
-            users=list(self.users.values()), requests=list(self.requests.values()),
+            users=list(self.users.values()), requests=self.request_summaries(subject),
             tasks=self.task_summaries(subject), audit=self.events[-40:] if subject else [],
             chat_session_bindings=(len(self.chat.sessions) if subject else 0),
+            bound_sessions=[s for s,t in self.chat.sessions.items() if bearer and t==bearer],
+            material_selections={s:ids for s,ids in self.chat.material_selections.items() if bearer and self.chat.sessions.get(s)==bearer},
             delegation_reason=reason,
             gateway_login_is_business_identity=False)
+
+    def request_summaries(self, subject):
+        if not subject:
+            return []
+        review = bool({'business_approver', 'audit_reader'}.intersection(subject['roles']))
+        visible = []
+        for record in self.requests.values():
+            if record['requester'] != subject['id'] and not review:
+                continue
+            row = copy.deepcopy(record)
+            expiry = row.get('authorization_expires_at')
+            row['authorization_expired'] = bool(expiry is not None and time.time() >= expiry
+                and not row.get('authorization_consumed_at'))
+            row['can_reapply'] = bool(row.get('scenario')=='chat' and row.get('status')=='authorized'
+                and row['authorization_expired'] and not row.get('renewed_request_id'))
+            visible.append(row)
+        return visible
 
     def revoke(self, bearer, subject):
         token = bearer.split(' ', 1)[1]
@@ -174,7 +227,15 @@ class DemoIdentity:
             contract = self.service.gateway.task_policies.summary(task_id)
             visible = [doc_id for doc_id in REGISTRY if 'file.read' in contract['allowed_tools']
                        and self.service.gateway.task_policies.resource_allowed(contract, document_action(doc_id))]
-            result.append({**contract, 'available_documents': visible})
+            row = {**contract, 'available_documents': visible}
+            # Only a unique live host run locates this contract; historical tasks
+            # never inherit the currently selected conversation.
+            runs = [(run_id, run) for run_id, run in self.chat.runs.items()
+                    if run['task'] == task_id and run['subject'] == owner]
+            if len(runs) == 1:
+                run_id, run = runs[0]
+                row.update(session_key=run['session'], run_id=run_id)
+            result.append(row)
         return result
 
     @staticmethod
@@ -229,6 +290,8 @@ class DemoIdentity:
             request = self.snapshots.get(request_id)
             if not request or not record or record['requester'] != subject['id']:
                 return self.blocked('P002_SUBJECT_MISMATCH')
+            if record.get('scenario')=='chat' and not self.chat.current_scope(record):
+                return self.blocked('P023_TASK_SCOPE_CHANGED')
             if record['status'] != 'blocked' or record.get('reason_code') not in {'P014_RESOURCE_OUTSIDE_TASK','P015_TOOL_OUTSIDE_TASK'}:
                 return self.blocked('P010_PENDING_SNAPSHOT_REQUIRED')
             result = self.service.request_task_expansion_authenticated(copy.deepcopy(request), bearer)
@@ -276,7 +339,9 @@ class DemoIdentity:
         allowed = {'status': set(), 'enable': set(), 'disable': set(), 'login': {'user'},
                    'invoke': {'scenario'}, 'resolve': {'request_id', 'resolution'},
                    'task_create': {'directory'}, 'task_read': {'task_id','document_id'},
-                   'task_escalate': {'request_id'}, 'bind_session': {'session_key'}, 'revoke': set()}
+                   'task_escalate': {'request_id'}, 'bind_session': {'session_key'}, 'revoke': set(),
+                   'materials': {'session_key'}, 'select_materials': {'session_key','material_ids'},
+                   'task_reapply': {'request_id'}}
         if operation not in allowed or not isinstance(payload, dict) or set(payload) - allowed[operation]:
             self.audit('demo_identity.rejected', reason_code='DEMO_UNTRUSTED_FIELD')
             return self.blocked('DEMO_UNTRUSTED_FIELD')
@@ -324,6 +389,12 @@ class DemoIdentity:
                 return self.blocked('DEMO_AUDITOR_READ_ONLY')
             if operation == 'bind_session':
                 return self.chat.bind(payload.get('session_key'), bearer, subject)
+            if operation == 'materials':
+                return self.chat.materials(payload.get('session_key'),bearer,subject)
+            if operation == 'select_materials':
+                return self.chat.select_materials(payload.get('session_key'),payload.get('material_ids'),bearer,subject)
+            if operation == 'task_reapply':
+                return self.chat.reapply(payload.get('request_id'),bearer,subject)
             if operation.startswith('task_'):
                 return self.task_operation(operation, payload, bearer, subject)
             if operation == 'invoke':
@@ -354,6 +425,8 @@ class DemoIdentity:
                 record = self.requests.get(task_id)
                 if not record:
                     return self.blocked('DEMO_REQUEST_UNKNOWN', 409)
+                if record.get('scenario')=='chat' and not self.chat.current_scope(record):
+                    return self.blocked('P023_TASK_SCOPE_CHANGED',409)
                 snapshot = self.snapshots.get(task_id)
                 original = (copy.deepcopy(snapshot) if snapshot else
                     next((copy.deepcopy(r) for (task, _), r in self.service._pending_oidc_approvals.items()
@@ -391,7 +464,11 @@ def main():
                 demo.audit('demo_identity.error', reason_code='DEMO_DEPENDENCY_FAILED')
                 demo.disable('dependency_failure')
                 result = demo.blocked('DEMO_DEPENDENCY_FAILED', 503)
-            print(json.dumps({'id': envelope.get('id'), 'result': result}, ensure_ascii=False), flush=True)
+            print(json.dumps({'id': envelope.get('id'), 'result': result,
+                              'trace_events': demo.trace_events,
+                              'trace_projection_failed': demo.trace_projection_failed}, ensure_ascii=False), flush=True)
+            demo.trace_events = []
+            demo.trace_projection_failed = False
     finally:
         demo.disable('worker_exit')
 

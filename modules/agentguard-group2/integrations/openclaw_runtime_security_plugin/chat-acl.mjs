@@ -49,10 +49,22 @@ export async function hostWorkspace(config,ctx){
   return layout({cfg,rawSessionKey:ctx.sessionKey,workspaceDir:ctx.workspaceDir}).workspaceDir;
 }
 
+export function hostExecutionResult(event){
+  const failed=Boolean(event.error||event.result?.isError||event.result?.details?.isError);
+  if(!event.toolName?.startsWith('agentguard-notices__'))return {success:!failed};
+  // MCP transport success can still mean waiting for approval. Only its typed
+  // business receipt proves execution; never count a pending response as a read.
+  const control=event.result?.details?.structuredContent;
+  if(['pending_approval','blocked'].includes(control?.status))return {success:false,control_status:control.status};
+  if(failed)return {success:false};
+  if(control?.status==='executed_isolated')return {success:true,control_status:control.status};
+  return {success:null};
+}
+
 export function registerChatAcl(api,bridge,{workspaceResolver=ctx=>hostWorkspace(api.config,ctx)}={}){
   // Gateway and pre-warmed Agent registries share the authenticated bridge.
   const runs=bridge.chatRuns??=new Map();
-  const block=code=>({block:true,blockReason:`任务权限阻断：${code}。请在防护设置绑定演示业务身份；越权动作须由另一人审批。`});
+  const block=code=>({block:true,blockReason:`任务权限阻断：${code}。请先在工作台绑定业务身份；越权动作须由另一人审批。`});
   api.on?.('before_agent_run',async(event,ctx)=>{
     if(!ctx.runId||!ctx.sessionKey||!ctx.workspaceDir)return;
     runs.delete(ctx.runId);
@@ -71,13 +83,15 @@ export function registerChatAcl(api,bridge,{workspaceResolver=ctx=>hostWorkspace
     if(!run||run.session!==ctx.sessionKey)return block('P001_CONTRACT_REQUIRED');
     try{
       const result=await bridge.request('chat_tool',{run_id:id,session_key:ctx.sessionKey,
+        tool_call_id:ctx.toolCallId,
         tool_name:event.toolName,params:event.params,action:nativeAction(event.toolName,event.params,run.root)});
       if(result.status!=='host_authorized')return block(result.reason_code??'P012_TASK_POLICY_UNAVAILABLE');
     }catch(e){return block(e.message==='P018_PATH_REJECTED'?e.message:'P012_TASK_POLICY_UNAVAILABLE');}
   },{priority:-10000});
   api.on?.('after_tool_call',async(event,ctx)=>{
     const id=ctx.runId??event.runId;if(!runs.has(id))return;
-    await bridge.request('chat_result',{run_id:id,tool_name:event.toolName,success:!event.error&&!event.result?.isError}).catch(()=>api.logger?.warn('U11 host result audit unavailable'));
+    await bridge.request('chat_result',{run_id:id,session_key:ctx.sessionKey,tool_call_id:ctx.toolCallId,
+      tool_name:event.toolName,...hostExecutionResult(event)}).catch(()=>api.logger?.warn('U11 host result audit unavailable'));
   });
   api.on?.('agent_end',async(event,ctx)=>{
     const id=ctx.runId??event.runId;runs.delete(id);

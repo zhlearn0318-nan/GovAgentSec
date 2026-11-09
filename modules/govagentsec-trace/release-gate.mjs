@@ -21,10 +21,10 @@ export function releaseGate(candidate,records=[],identity=null,receipt=null) {
   const admitted=candidate.status==='admission_passed'&&decision==='allow'&&evidence?.artifact_hash===candidate.artifact_hash;
   const scored=!!selection?.selected?.length&&selection.selected.every(s=>relevant.some(r=>r.trace_id===s.trace_id
     &&r.safety?.decision==='pass'&&Number.isFinite(r.quality?.Q)));
-  const bound=receipt?.candidate_id===candidate.id&&receipt?.artifact_hash===candidate.artifact_hash
+  const bound=!candidate.generation?.test_only&&receipt?.candidate_id===candidate.id&&receipt?.artifact_hash===candidate.artifact_hash
     &&receipt.admission_hash===digest(candidate.admission_passed)&&receipt.selection_hash===digest(selection);
   const state=admitted?(bound?'ready_for_review':'admitted_allow'):decision==='block'||candidate.status==='rejected'?'admitted_block':scored?'scored':'draft';
-  const reason=!identity?'需 OIDC 或宿主验证的具名管理员身份；共享网关令牌/本机开发身份不能确认。':
+  const reason=candidate.generation?.test_only?'本地过程评估候选仅供验证，不能提交生产复核。':!identity?'需 OIDC 或宿主验证的具名管理员身份；共享网关令牌/本机开发身份不能确认。':
     !admitted?'仅联合准入 allow 的候选可提交人工复核。':!scored?'评分与 TopK 证据缺失，不可确认。':bound?'已写入人工复核回执，未安装。':null;
   return redact({state,flow:['draft','scored','admitted_allow|admitted_block','ready_for_review'],
     candidate_id:candidate.id,artifact_hash:candidate.artifact_hash,task_key:task??null,

@@ -35,13 +35,16 @@ const call=async(name,params,context=ctx)=>{
   return gate;
 };
 const check=(id,detail={})=>report.checks.push({id,passed:true,...detail,read_count:reads});
-const requests=async()=> (await bridge.request('status')).requests;
+let requestBearer;
+const requests=async()=> (await bridge.request('status',{},requestBearer)).requests;
 try{
   assert((await call('read',{path:'/workspace/A/test.txt'})).block);assert.equal(reads,0);
   check('no-scope-fail-closed');
   await bridge.request('enable');
   const office='Bearer '+(await bridge.request('login',{user:'office-test'})).access_token;
   const approver='Bearer '+(await bridge.request('login',{user:'approver-test'})).access_token;
+  requestBearer=approver;
+  assert.deepEqual((await bridge.request('status')).requests,[]);
   assert.equal((await bridge.request('bind_session',{session_key:ctx.sessionKey},office)).status,'ok');
   await runner.runBeforeAgentRun({prompt:'读取 /workspace/A/test.txt',messages:[]},ctx);
   const state=await bridge.request('status',{},office),contract=state.tasks.at(-1);

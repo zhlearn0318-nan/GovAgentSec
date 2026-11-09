@@ -91,6 +91,21 @@ export class TaskLinks {
       config_sha256: digest(servers[server]),
     };
   }
+  async capabilityInventory() {
+    const servers=Object.entries(this.config.mcp?.servers??{}).map(([name,server])=>({name,enabled:server.enabled!==false,
+      config_sha256:digest(server),connection:'not_verified',admission:{status:'no_matching_record'}}));
+    const dbPath=this.config.security?.installPolicy?.exec?.env?.AEGIS_OPENCLAW_AUDIT_DB;
+    if(!dbPath||!existsSync(dbPath))return servers;
+    let db;
+    try{
+      const {DatabaseSync}=await import('node:sqlite');db=new DatabaseSync(dbPath,{readOnly:true});
+      const query=db.prepare('SELECT sequence, created_at, decision, reason_code FROM install_policy_audit WHERE target_type = ? AND target_name = ? AND source_tree_sha256 = ? ORDER BY sequence DESC LIMIT 1');
+      for(const server of servers){const record=query.get('mcp',server.name,server.config_sha256);
+        if(record)server.admission={status:'matching_record',integrity:'not_verified_here',...record};}
+    }catch{for(const server of servers)server.admission={status:'unavailable'};}
+    finally{db?.close();}
+    return servers;
+  }
   async admissions(trace) {
     const found = [];
     const dbPath =
@@ -275,9 +290,7 @@ export class TaskLinks {
       tool_coverage: toolCoverage(this.config, [...observedTools]),
       approval_error: approvalError,
       coverage: await this.status(),
-      servers: Object.entries(this.config.mcp?.servers ?? {}).map(
-        ([name, c]) => ({ name, enabled: c.enabled !== false }),
-      ),
+      servers: await this.capabilityInventory(),
     });
   }
   async resolve(params) {

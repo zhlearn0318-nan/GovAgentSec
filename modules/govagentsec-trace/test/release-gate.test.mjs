@@ -23,7 +23,7 @@ test('low-quality and quarantined evidence remain visible outside TopK',()=>{
 function setup(){const root=mkdtempSync(path.join(os.tmpdir(),'review-gate-')),loader=path.join(root,'skills');mkdirSync(loader);
  const w=new Workshop(path.join(root,'skill-workshop'),[loader]);
  const c=w.create({name:'review-fixture',content:'---\nname: review-fixture\n---\nSynthetic instruction-only fixture.',source_traces:[{trace_id:'t',evidence_hash:'h',original_task_group:'task'}],
- generation:{task_key:'task',test_only:true,selection:{selected:[{trace_id:'t'}],decisions:[{trace_id:'t',selected:true}],keep:.9,denominator:2},assessment_snapshot:[{trace_id:'t',task_key:'task',safety:{decision:'pass',S:1},quality:{Q:.9}}]}});
+ generation:{task_key:'task',test_only:false,selection:{selected:[{trace_id:'t'}],decisions:[{trace_id:'t',selected:true}],keep:.9,denominator:2},assessment_snapshot:[{trace_id:'t',task_key:'task',safety:{decision:'pass',S:1},quality:{Q:.9}}]}});
  return {root,loader,w,c};}
 test('shared, developer and spoofed display identity cannot confirm',()=>{
  assert.equal(reviewerIdentity({connect:{role:'operator',scopes:['operator.admin'],device:{id:'a'.repeat(64)}}}),null);

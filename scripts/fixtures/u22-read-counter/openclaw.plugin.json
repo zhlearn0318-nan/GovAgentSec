@@ -1,0 +1,11 @@
+{
+  "id": "u22-read-counter",
+  "name": "U22 isolated Docker read counter",
+  "activation": {"onStartup": true},
+  "configSchema": {
+    "type": "object",
+    "properties": {"targetFile": {"type": "string", "minLength": 1}},
+    "required": ["targetFile"],
+    "additionalProperties": false
+  }
+}

@@ -1,6 +1,6 @@
 // Service facts only: gateway login is never a business identity.
 export const IDENTITY_HELP = 'docs/DELIVERY_ACCEPTANCE.md#安全边界与身份接入';
-export const DELEGATION_REQUIRED = '本管理入口未携带逐用户 OIDC 业务委托，执行与审批已禁用；请使用演示身份源委托入口。网关管理员登录不代替业务身份。';
+export const DELEGATION_REQUIRED = '本入口未登录业务身份，执行与审批已禁用。请从业务登录入口进入；管理页面连接不授予业务权限。';
 export function identityStatus(mode, version, ready) {
   const demoIdp = version?.payload?.demo_identity === true || version?.payload?.identity_source === 'demo_idp_verified_jwt';
   const configured = version?.ok === true && version.payload?.oidc_enabled === true;
@@ -10,9 +10,9 @@ export function identityStatus(mode, version, ready) {
     && ready.payload?.dependencies?.identity?.healthy === true;
   return {
     state: demo ? 'demo' : enabled ? 'oidc_ready' : configured ? 'oidc_unavailable' : 'unconfigured',
-    label: demoIdp ? '演示身份源（非生产）' : demo ? '演示身份（非生产）' : enabled ? '组织身份已启用' : configured ? '组织身份未就绪（OIDC）' : '未配置组织身份（OIDC）',
+    label: demoIdp ? '演示身份源（非生产）' : demo ? '演示身份（非生产）' : enabled ? '身份服务可用' : configured ? '组织身份未就绪' : '组织身份未接入',
     mode: mode ?? 'disabled', executionEnabled: false,
-    reason: (demo ? '仅本机验收。' : enabled ? '身份服务就绪不代表当前用户已获业务授权。' : '') + DELEGATION_REQUIRED,
+    reason: (demo ? '仅处理合成演示数据。' : enabled ? '身份服务就绪不代表当前用户已获业务授权。' : '') + DELEGATION_REQUIRED,
     help: IDENTITY_HELP,
   };
 }

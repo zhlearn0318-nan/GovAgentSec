@@ -260,5 +260,8 @@ test('workspace only returns MCP names and verified trace links; unrelated reque
  const otherId='mcp-req-'+'b'.repeat(32);writeFileSync(path.join(statusPath+'.requests',otherId+'.json'),JSON.stringify({...pending,control_request_id:otherId,request:{...pending.request,request_id:otherId}}));
  const links=new TaskLinks(store,{plugins:{entries:{'agentguard-runtime-security':{config:{statusPath}}}},mcp:{servers:{demo:{command:'private-command',env:{TOKEN:'private-test-value'}}}}});
  const result=await links.workspace();assert.equal(result.pending.find(p=>p.id===requestId).trace_id,trace.summary.trace_id);assert.equal(result.pending.find(p=>p.id===otherId).trace_id,undefined);
- assert.deepEqual(result.servers,[{name:'demo',enabled:true}]);assert.ok(!JSON.stringify(result).includes('private-test-value'));assert.ok(!JSON.stringify(result).includes('private-command'));
+ assert.equal(result.servers.length,1);assert.deepEqual(Object.keys(result.servers[0]).sort(),['admission','config_sha256','connection','enabled','name']);
+ assert.equal(result.servers[0].name,'demo');assert.equal(result.servers[0].enabled,true);assert.equal(result.servers[0].connection,'not_verified');
+ assert.equal(result.servers[0].admission.status,'no_matching_record');assert.match(result.servers[0].config_sha256,/^[a-f0-9]{64}$/);
+ assert.ok(!JSON.stringify(result).includes('private-test-value'));assert.ok(!JSON.stringify(result).includes('private-command'));
 });

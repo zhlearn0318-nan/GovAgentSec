@@ -2,11 +2,14 @@ import path from 'node:path';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { TraceStore } from './store.mjs';
 import { perCallUsage } from './usage.mjs';
+import { NATIVE_APPROVAL, appendNativeApproval } from './native-approval.mjs';
 import { wrapperCallKey, appendWrapperUsage } from './wrapper-usage.mjs';
 import { RULE_VERSION, ruleHits, contentEvidence } from './privacy.mjs';
 import { generateCandidate } from './evolution.mjs';
 import { Workshop } from '../trajectory-governance/workshop.mjs';
 import {releaseGate,reviewerIdentity,readReviewReceipt,confirmReview} from './release-gate.mjs';
+import {AssessmentJobs,selectionPreview} from './assessment-jobs.mjs';
+import {historyPacks,openEvidencePack} from './evidence-packs.mjs';
 
 export const OBSERVERS = Symbol.for('govagentsec.trace.observers');
 export function registerTrace(api) {
@@ -15,6 +18,7 @@ export function registerTrace(api) {
   try { store = new TraceStore(path.join(config.dataDir, 'traces'), config); }
   catch { failures.push({ code: 'store_unavailable' }); api.logger.warn('GovAgentSec trace store unavailable; capture disabled'); }
   const starts = new Map(), sessions = new Map();
+  globalThis[NATIVE_APPROVAL] = entry => appendNativeApproval(store, entry);
   const record = (type, event, ctx = {}, payload = {}, associations = {}) => {
     const id = event.runId ?? ctx.runId;
     try {
@@ -109,27 +113,48 @@ export function registerTrace(api) {
   const loaderRoots = [...new Set([path.join(process.env.USERPROFILE ?? process.env.HOME ?? '.', '.openclaw/skills'),
     path.join(api.config?.agents?.defaults?.workspace ?? path.join(process.env.USERPROFILE ?? '.', '.openclaw/workspace'), 'skills'),
     ...(api.config?.skills?.load?.extraDirs ?? [])])];
-  const workshop = () => new Workshop(path.join(config.dataDir, 'skill-workshop'), loaderRoots);
-  const candidates = () => {
-    const root = path.join(config.dataDir, 'skill-workshop');
+  const currentRoot=path.join(config.dataDir,'skill-workshop');
+  const jobs=new AssessmentJobs(store,path.join(config.dataDir,'assessment-jobs'));
+  const source = p => p.pack_id === undefined ? {store,workshopRoot:currentRoot,read_only:false} : openEvidencePack(p.pack_id);
+  const workshop = (root=currentRoot) => new Workshop(root, loaderRoots);
+  const candidates = (root=currentRoot) => {
     return existsSync(root) ? readdirSync(root).filter(id => /^[a-f0-9-]{36}$/.test(id)).map(id => {
-      try { return workshop().read(id); } catch { return { id, status: 'unreadable' }; }
+      try { return workshop(root).read(id); } catch { return { id, status: 'unreadable' }; }
     }) : [];
   };
-  const methods = { list: p => ({ traces: store.list().filter(t => !p.session_key || t.session_key === p.session_key), capture_failures: store.failures, failures }),
-    detail: p => store.read(p.trace_id), health: () => ({ available: Boolean(store), failures, capture_failures: store?.failures ?? [], version: '2026.7.1-2', content_mode: config.contentMode ?? 'hash' }),
-    candidates: () => ({ candidates: candidates() }), assign: p => store.assign(p.trace_id, p),
-    releaseGate: (p,client) => {const w=workshop(),c=w.read(p.candidate_id);return releaseGate(c,store.list().map(t=>t.assessment).filter(Boolean),reviewerIdentity(client),readReviewReceipt(w,c.id));},
+  const only = (p,keys) => {if (!p || Array.isArray(p) || Object.keys(p).some(k=>!keys.includes(k)))throw Error('UNEXPECTED_PARAMETERS');};
+  const methods = { historyPacks,
+    list: p => {const s=source(p);return { traces:s.store.list().filter(t=>!p.session_key||t.session_key===p.session_key),capture_failures:s.store.failures,failures:s.read_only?[]:failures,read_only:s.read_only };},
+    detail: p => source(p).store.read(p.trace_id), health: () => ({ available: Boolean(store), failures, capture_failures: store?.failures ?? [], version: '2026.7.1-2', content_mode: config.contentMode ?? 'hash' }),
+    candidates: p => ({ candidates: candidates(source(p).workshopRoot),read_only:source(p).read_only }), assign: p => store.assign(p.trace_id, p),
+    assessmentStart: p => {only(p,['task_key','trace_ids','judge']);return jobs.start(p);},
+    assessmentStatus: p => {only(p,['job_id']);return jobs.status(p.job_id);},
+    assessmentCancel: p => {only(p,['job_id']);return jobs.cancel(p.job_id);},
+    selectionPreview: p => {only(p,['task_key','trace_ids','keep','pack_id']);return selectionPreview(source(p).store,p);},
+    releaseGate: (p,client) => {const s=source(p),w=workshop(s.workshopRoot),c=w.read(p.candidate_id);
+      const gate=releaseGate(c,s.store.list().map(t=>t.assessment).filter(Boolean),s.read_only?null:reviewerIdentity(client),readReviewReceipt(w,c.id));
+      if(s.read_only)gate.confirmation={enabled:false,reason:'历史证据包只读；候选尚未安装',receipt:gate.confirmation.receipt};return gate;},
     confirmReview: (p,client) => {if(Object.keys(p).some(k=>!['candidate_id','artifact_hash'].includes(k)))throw Error('unexpected parameters');
       return confirmReview(workshop(),p.candidate_id,p.artifact_hash,client,store.list().map(t=>t.assessment).filter(Boolean));},
-    generate: p => generateCandidate(store, store.list().filter(t => t.task_key === p.task_key && t.assessment).map(t => t.assessment),
-      { task_key: p.task_key, name: p.name, workshopRoot: path.join(config.dataDir, 'skill-workshop'), loaderRoots }),
+    generate: p => {only(p,['task_key','name','trace_ids','snapshot_hash','keep']);const preview=selectionPreview(store,p);
+      if(!p.snapshot_hash||p.snapshot_hash!==preview.snapshot_hash)throw Error('SELECTION_CHANGED');
+      if(!preview.can_generate)throw Error('NEED_TWO_SELECTED_TRACES');
+      return generateCandidate(store,preview.rows,{task_key:p.task_key,name:p.name,workshopRoot:currentRoot,loaderRoots,keep:.9});},
     admit: p => { const policy = api.config?.security?.installPolicy?.exec;
       if (!policy?.command || !policy.args?.[0]) throw new Error('combined policy not configured');
       return workshop().admit(p.candidate_id, { command: policy.command, script: policy.args[0], env: policy.env, openclawVersion: '2026.7.1-2' }); } };
   for (const [name, fn] of Object.entries(methods)) api.registerGatewayMethod?.('govagentsec.trace.' + name, async ({ params, respond, client }) => {
-    try { respond(true, fn(params ?? {},client)); } catch { respond(false, undefined, { code: 'INVALID_REQUEST', message: '记录不存在、证据变化、身份不足或参数不完整；未执行安装' }); }
-  }, { scope: name==='confirmReview'?'operator.admin':['assign', 'generate', 'admit'].includes(name) ? 'operator.write' : 'operator.read' });
+    try {
+      const p=params??{};
+      if(['assign','generate','admit','confirmReview','assessmentStart','assessmentCancel'].includes(name) && p.pack_id!==undefined)throw Error('HISTORY_READ_ONLY');
+      respond(true,await fn(p,client));
+    } catch(error) {
+      const messages={ASSESSMENT_BUSY:'本地评估正在进行，请等待完成。',SELECTION_CHANGED:'来源记录已变化，请重新预览筛选结果。',
+        NEED_TWO_SELECTED_TRACES:'保留后不足两条合格来源，请补充同任务运行。',CONFIRMED_SAME_TASK_REQUIRED:'请先确认所选运行属于同一任务。',
+        HISTORY_READ_ONLY:'历史证据包只读，请回到当前任务操作。',JOB_NOT_FOUND:'评估记录不存在，请检查作业编号。'};
+      respond(false, undefined, { code: 'INVALID_REQUEST', message: messages[error.message]??'记录不存在、证据变化、身份不足或参数不完整；未执行安装' });
+    }
+  }, { scope: name==='confirmReview'?'operator.admin':['assign', 'generate', 'admit','assessmentStart','assessmentCancel'].includes(name) ? 'operator.write' : 'operator.read' });
   for (const file of ['view.mjs', 'view-model.mjs', 'usage.mjs']) api.registerHttpRoute({ path: '/plugins/govagentsec/trace/' + file, auth: 'plugin', match: 'exact', handler: async (req, res) => {
     if (req.method !== 'GET') { res.writeHead(405); res.end(); return true; }
     res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store' });

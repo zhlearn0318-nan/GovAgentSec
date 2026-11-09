@@ -5,7 +5,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { TraceStore } from '../modules/govagentsec-trace/store.mjs';
-import { traceGraph, nodePresentation } from '../modules/govagentsec-trace/view-model.mjs';
+import { traceGraph, nodePresentation, graphLanes } from '../modules/govagentsec-trace/view-model.mjs';
 
 const [input, traceId, ...flags] = process.argv.slice(2);
 if (!input || !traceId) throw new Error('Usage: node scripts/test_real_call_graph.mjs EVIDENCE_DIR TRACE_ID [--live] [--output=DIR]');
@@ -70,6 +70,16 @@ let browser;
 async function assertGraph(page, graph) {
   await page.locator('.event').first().waitFor();
   assert.deepEqual(await page.locator('.event').evaluateAll(es => es.map(e => e.dataset.eventId)), graph.nodes.map(n => n.event_id));
+  assert.deepEqual(await page.locator('.lanes span').allTextContents(), graphLanes);
+  assert.deepEqual(await page.locator('.event').evaluateAll(es => es.map(e => Number(e.dataset.lane))), graph.nodes.map(n => n.lane));
+  const aligned = await page.locator('.canvas').evaluate(canvas => {
+    const headers = [...canvas.querySelectorAll('.lanes span')].map(e => e.getBoundingClientRect());
+    return [...canvas.querySelectorAll('.event')].every(e => {
+      const r=e.getBoundingClientRect(), h=headers[Number(e.dataset.lane)];
+      return Math.abs((r.left+r.right-h.left-h.right)/2)<1;
+    });
+  });
+  assert.equal(aligned,true,'Every event must align with its own lane header');
   assert.deepEqual(await page.locator('.canvas svg path').evaluateAll(es => es.map(e => ({ from:e.dataset.from, to:e.dataset.to, kind:e.dataset.kind }))), graph.edges);
   assert.deepEqual(await page.locator('.event').evaluateAll(es => es.map(e => e.firstChild.textContent)), graph.nodes.map(n => nodePresentation(n).title));
   assert.deepEqual(await page.locator('.event').evaluateAll(es => es.map(e => [...e.querySelectorAll('small')].find(s => s.textContent.includes('token '))?.textContent ?? '')),
@@ -98,7 +108,9 @@ try {
   await page.locator('.timeline li').last().scrollIntoViewIfNeeded();
   await page.screenshot({path:path.join(out,'timeline.png'),fullPage:true}); checks.push('timeline_labels_and_scroll');
   await page.getByRole('button',{name:'调用关系图',exact:true}).click(); await assertGraph(page, expected);
-  await page.locator('.event').first().click(); assert.ok((await page.locator('.detail').innerText()).includes('event_hash'));
+  await page.locator('.event').first().click();
+  await page.locator('.detail summary').click();
+  assert.ok((await page.locator('.detail').innerText()).includes('event_hash'));
   checks.push('tab_round_trip_and_details');
 
   // Regression: a slow refresh started before a user selection must not replace it.
@@ -157,14 +169,17 @@ try {
     return [true,false].map(enforced=>nodePresentation({label:'防护判定',event_type:'protection.input',offset_ms:0,state:enforced?'blocked':'risk',payload:{decision:'BLOCK',enforced}}).title);
   });
   assert.match(titles[0],/BLOCK.*已阻断/); assert.match(titles[1],/BLOCK.*仅观察/); checks.push('block_observe_and_enforce_distinguished');
-  await page.setViewportSize({width:680,height:900}); await assertGraph(page,expected); checks.push('narrow_viewport_nonzero_scroll');
+  await page.setViewportSize({width:680,height:900}); await assertGraph(page,expected);
+  assert.ok(await page.locator('.canvas-wrap').evaluate(e=>e.scrollWidth>e.clientWidth));
+  assert.ok(await page.locator('main').evaluate(e=>e.scrollWidth<=680));
+  checks.push('narrow_viewport_lane_scroll_is_contained');
 
   let live = null;
   if (flags.includes('--live')) {
     const config=JSON.parse(readFileSync(process.env.USERPROFILE+'/.openclaw/openclaw.json','utf8'));
     await page.setViewportSize({width:1600,height:1000});
     await page.goto(`http://127.0.0.1:${config.gateway?.port ?? 18789}/plugin?plugin=protect-agent&id=govagentsec&section=audit#token=`+encodeURIComponent(config.gateway.auth.token));
-    const row=page.locator('.trace-row button').filter({hasText:traceId}); await row.waitFor({timeout:30000}); await row.click();
+    const row=page.locator('.trace-row button[data-trace-id="'+traceId+'"]'); await row.waitFor({timeout:30000}); await row.click();
     const detail=await page.locator('openclaw-app-shell').evaluate((e,id)=>e.context.gateway.snapshot.client.request('govagentsec.trace.detail',{trace_id:id}),traceId);
     const liveGraph=traceGraph(detail); await assertGraph(page,liveGraph);
     assert.equal(detail.integrity.valid,true);

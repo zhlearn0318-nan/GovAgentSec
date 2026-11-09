@@ -36,17 +36,21 @@ try{
  await benign.getByText('参与轨迹 6',{exact:false}).waitFor();
  assert(await benign.getByRole('button',{name:'人工确认，仅提交复核'}).isDisabled());
  assert(await poison.getByRole('button',{name:'人工确认，仅提交复核'}).isDisabled());
- assert.match(await benign.innerText(),/安全通过 4 · 隔离 2/);assert.match(await benign.innerText(),/admitted_allow/);assert.match(await poison.innerText(),/admitted_block/);
+ assert.match(await benign.innerText(),/安全通过 4 · 隔离 2/);assert.match(await benign.innerText(),/准入通过/);assert.match(await poison.innerText(),/准入阻断/);
  await page.screenshot({path:path.join(out,'gate-disabled.png'),fullPage:true});
  // Trusted handler-context simulation, explicitly not a production identity integration.
  client={isDeviceTokenAuth:true,connect:{role:'operator',scopes:['operator.admin'],device:{id:'a'.repeat(64)}}};
  await page.reload();await benign.getByText('参与轨迹 6',{exact:false}).waitFor();
  assert(await poison.getByRole('button',{name:'人工确认，仅提交复核'}).isDisabled());
- await benign.getByRole('button',{name:'人工确认，仅提交复核'}).click();await benign.getByText('复核回执：',{exact:false}).waitFor();
- assert.match(await benign.innerText(),/ready_for_review/);assert.equal(readdirSync(loader).length,0);
+ // Real historical candidate is test_only. A verified administrator still cannot turn it into production evidence.
+ assert(await benign.getByRole('button',{name:'人工确认，仅提交复核'}).isDisabled());
+ let confirmation;
+ await methods.get('govagentsec.trace.confirmReview').f({params:{candidate_id:source.candidate.id,artifact_hash:source.candidate.artifact_hash},client,
+   respond:ok=>{confirmation=ok;}});
+ assert.equal(confirmation,false);assert.equal(await benign.getByText('复核回执：',{exact:false}).count(),0);assert.equal(readdirSync(loader).length,0);
  assert.equal(JSON.parse(readFileSync(path.join(out,'skill-workshop',source.candidate.id,'candidate.json'))).status,'admission_passed');
  assert(!calls.some(m=>/install|publish/i.test(m)));assert.deepEqual(errors,[]);
- await page.screenshot({path:path.join(out,'gate-confirmed-no-install.png'),fullPage:true});
- report.passed=true;report.checks=['identity_disabled','six_scores_topk_quarantine','allow_block','block_not_confirmable','receipt_only','workshop_state_preserved','no_install_api','loader_empty'];report.calls=[...new Set(calls)];
+ await page.screenshot({path:path.join(out,'gate-test-only-no-confirm.png'),fullPage:true});
+ report.passed=true;report.checks=['identity_disabled','six_scores_topk_quarantine','allow_block','block_not_confirmable','test_only_not_confirmable_even_by_admin','workshop_state_preserved','no_install_api','loader_empty'];report.calls=[...new Set(calls)];
 }catch(e){report.error=e.message;process.exitCode=1;}
 finally{await browser.close();await new Promise(r=>server.close(r));writeFileSync(path.join(out,'report.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({...report,report:path.join(out,'report.json')}));}

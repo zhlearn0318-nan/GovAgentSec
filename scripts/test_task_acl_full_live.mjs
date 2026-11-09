@@ -1,3 +1,4 @@
+import {goWorkspace,loginDemo} from './lib/identity-ui.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
@@ -16,7 +17,9 @@ try{
   browser=await chromium.launch({channel:'msedge',headless:true});
   const page=await browser.newPage({viewport:{width:1500,height:1100}}),base='http://127.0.0.1:'+(config.gateway.port??18789);
   await page.route('**/*',r=>new URL(r.request().url()).origin===base?r.continue():r.abort());
-  await page.goto(base+'/plugin?plugin=protect-agent&id=govagentsec&section=settings#token='+encodeURIComponent(config.gateway.auth.token));
+  await page.goto(base+'/chat?session=agent%3Amain%3Au11-ui#token='+encodeURIComponent(config.gateway.auth.token));
+  await page.waitForFunction(()=>document.querySelector('openclaw-app-shell')?.context?.gateway?.snapshot?.client,null,{timeout:60000});
+  await goWorkspace(page,'settings');
   rpc=(method,params={})=>page.locator('openclaw-app-shell').evaluate((e,{method,params})=>
     e.context.gateway.snapshot.client.request('govagentsec.demoIdentity.'+method,params),{method,params});
   const card=page.locator('govagentsec-workspace').getByRole('region',{name:'演示身份源',exact:true});
@@ -25,24 +28,23 @@ try{
   assert.equal((await rpc('bind_session',{session_key:'agent:main:u11-ui'})).reason_code,'DEMO_IDENTITY_DISABLED');
   report.checks.push({id:'disabled-binding-deny',passed:true});
   await card.getByRole('button',{name:'开启演示身份源',exact:true}).click();enabledHere=true;
-  await card.getByRole('combobox',{name:'选择演示用户'}).selectOption('office-test');
-  await card.getByRole('button',{name:'建立演示会话',exact:true}).click();
-  await card.getByText(/当前已验证：office-test/).waitFor();
-  await card.getByRole('textbox',{name:'绑定聊天会话'}).fill('agent:main:u11-ui');
-  await card.getByRole('button',{name:'绑定聊天身份',exact:true}).click();
-  await card.getByRole('status').filter({hasText:'任务已绑定'}).waitFor();
-  assert.match(await card.innerText(),/聊天任务.*绑定业务身份/s);
+  await loginDemo(page,'office-test',{returnToSettings:false});
+  await page.locator('govagentsec-workspace').getByRole('button',{name:'以当前身份开始任务',exact:true}).click();
+  await page.locator('govagentsec-workspace').getByRole('button',{name:'确认绑定当前任务',exact:true}).click();
+  await page.locator('govagentsec-workspace').getByRole('status').filter({hasText:'当前任务身份已绑定'}).waitFor();
+  assert.equal(await page.locator('govagentsec-workspace').getByRole('textbox',{name:'绑定聊天会话'}).count(),0);
   for(const name of ['chat_start','chat_tool']){
     await assert.rejects(()=>rpc(name,{}));
   }
   report.checks.push({id:'real-ui-session-bind',passed:true},{id:'internal-hooks-not-rpc',passed:true});
   await page.screenshot({path:path.join(out,'u11-chat-binding.png'),fullPage:true});report.screenshots.push('u11-chat-binding.png');
+  await goWorkspace(page,'settings');
   await card.getByRole('button',{name:'关闭演示身份源',exact:true}).click();enabledHere=false;
   await card.getByRole('button',{name:'开启演示身份源',exact:true}).waitFor();
   assert.equal((await rpc('status')).enabled,false);
   await page.screenshot({path:path.join(out,'u11-default-closed.png'),fullPage:true});report.screenshots.push('u11-default-closed.png');
   report.checks.push({id:'closed-after-test',passed:true});report.passed=true;
-}catch(e){report.error=e.stack;process.exitCode=1;}
+}catch(e){report.error=String(e.stack).replaceAll(config.gateway.auth.token,'[REDACTED]');process.exitCode=1;}
 finally{
   if(enabledHere)await rpc?.('disable').catch(()=>{});
   await browser?.close();

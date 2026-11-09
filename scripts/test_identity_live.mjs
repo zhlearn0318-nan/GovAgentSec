@@ -1,3 +1,4 @@
+import {identityView} from './lib/identity-ui.mjs';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -21,12 +22,10 @@ try {
   const workspace=page.locator('govagentsec-workspace');
   for(const section of ['home','approvals','settings']) {
     if(section!=='home')await page.locator('.gov-nav [data-route='+section+']').click();
-    const banner=workspace.getByRole('region',{name:'业务身份状态'});
-    await banner.waitFor({timeout:60000});
-    const label=await banner.locator('.chip').innerText();
-    assert.match(label,/^(未配置组织身份（OIDC）|演示身份（非生产）|组织身份已启用|组织身份未就绪（OIDC）)$/);
-    assert.match(await banner.innerText(),/执行与审批已禁用/);
-    report.pages.push({section,label});
+    await page.locator('govagentsec-shell').getByRole('button',{name:'登录业务身份',exact:true}).waitFor({timeout:60000});
+    const identity=await identityView(page);
+    assert.equal(identity.user,null);assert.equal(identity.execution_enabled,false);
+    report.pages.push({section,label:'尚未登录业务身份'});
     await page.screenshot({path:path.join(out,section+'.png'),fullPage:true});
   }
   await workspace.getByRole('button',{name:'运行防护与审批记录',exact:true}).click();

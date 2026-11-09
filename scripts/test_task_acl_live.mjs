@@ -1,3 +1,4 @@
+import {identityView,loginDemo} from './lib/identity-ui.mjs';
 // Real browser -> existing authenticated OpenClaw RPC -> U4b verifier/U7/OPA/adapters.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -36,36 +37,33 @@ try{
   report.checks.push({name:'default_disabled',passed:true});await shot('01-default-disabled');
   await card.getByRole('button',{name:'开启演示身份源',exact:true}).click();enabledHere=true;
   const select=card.getByRole('combobox',{name:'选择演示用户'});
-  const login=async user=>{
-    await select.selectOption(user);await card.getByRole('button',{name:'建立演示会话',exact:true}).click();
-    await card.getByText(new RegExp('当前已验证：'+user)).waitFor();
-  };
+  const login=user=>loginDemo(page,user);
   await login('office-test');
   assert.equal(await select.locator('option').count(),4);
-  const banner=work.getByRole('region',{name:'业务身份状态'});
-  assert.match(await banner.innerText(),/演示身份源（非生产）/);
+  const banner=page.locator('govagentsec-shell').locator('.identity-bar');
+  assert.match(await banner.innerText(),/演示（非生产）/);
   assert.doesNotMatch(await banner.innerText(),/组织身份已启用/);
   await shot('02-office-identity');
   await card.getByRole('combobox',{name:'任务绑定目录'}).selectOption('A');
   await card.getByRole('button',{name:'创建只读任务',exact:true}).click();
   const task=card.locator('article[data-task-id]');await task.waitFor();
   report.task_id=await task.getAttribute('data-task-id');
-  const available=task.getByLabel('任务可用文档');
-  assert.equal(await available.getByRole('button').count(),1);
+  const available=task;
+  assert.equal(await available.getByRole('button',{name:'读取 emergency_plan',exact:true}).count(),1);
   assert.match(await available.innerText(),/emergency_plan/);
-  assert.doesNotMatch(await available.innerText(),/material_inventory/);
+  assert.equal(await available.getByRole('button',{name:'读取 material_inventory',exact:true}).count(),0);
   await shot('03-task-a-only');
   await task.getByRole('button',{name:'读取 emergency_plan',exact:true}).click();
-  await card.getByText('受控文档 emergency_plan · 已执行（合成）',{exact:true}).waitFor();
+  await card.getByText('材料读取申请 · 已执行（合成）',{exact:true}).waitFor();
   await task.getByRole('button',{name:'尝试读取目录 B（未授权演示）',exact:true}).click();
-  await card.getByText('受控文档 material_inventory · 已阻断',{exact:true}).waitFor();
-  const denied=(await rpc('status')).requests.find(r=>r.document_id==='material_inventory');
+  await card.getByText('材料读取申请 · 已阻断',{exact:true}).waitFor();
+  const denied=(await identityView(page)).requests.find(r=>r.document_id==='material_inventory');
   assert.equal(denied.reason_code,'P014_RESOURCE_OUTSIDE_TASK');report.denied=denied;
   await shot('04-directory-b-denied');
   const record=card.locator('article[data-request-id="'+denied.request_id+'"]');
   await record.getByRole('button',{name:'申请一次性扩权',exact:true}).click();
-  await record.getByText('受控文档 material_inventory · 待人工审批',{exact:true}).waitFor();
-  assert(await record.getByRole('button',{name:'人工确认并执行',exact:true}).isDisabled());
+  await record.getByText('材料读取申请 · 需审批',{exact:true}).waitFor();
+  assert(await record.getByRole('button',{name:'批准并执行一次',exact:true}).isDisabled());
   // Tokens remain inside browser memory; only sanitized receipts cross to the report.
   report.negatives=await page.locator('openclaw-app-shell').evaluate(async(e,{id,gatewayToken})=>{
     const c=(m,p={})=>e.context.gateway.snapshot.client.request('govagentsec.demoIdentity.'+m,p);
@@ -80,8 +78,8 @@ try{
   report.checks.push({name:'A_visible_B_hard_deny_no_read_self_forgery_gateway_rejected',passed:true});
   await shot('05-explicit-approval-pending');
   await login('approver-test');
-  await record.getByRole('button',{name:'人工确认并执行',exact:true}).click();
-  await record.getByText('受控文档 material_inventory · 已执行（合成）',{exact:true}).waitFor();
+  await record.getByRole('button',{name:'批准并执行一次',exact:true}).click();
+  await record.getByText('材料读取申请 · 已执行（合成）',{exact:true}).waitFor();
   await shot('06-approved-once');
   report.replay=await page.locator('openclaw-app-shell').evaluate(async(e,id)=>{
     const c=(m,p={})=>e.context.gateway.snapshot.client.request('govagentsec.demoIdentity.'+m,p);
@@ -93,16 +91,16 @@ try{
   report.checks.push({name:'one_approval_one_B_read_replay_blocked',passed:true});
   await login('auditor-test');
   assert(await card.getByRole('button',{name:'创建只读任务',exact:true}).isDisabled());
-  assert.match(await banner.innerText(),/仅可查看台账/);
-  await card.getByText('过程台账（脱敏 / 本地）',{exact:true}).click();
+  assert.equal((await identityView(page)).user.id,'auditor-test');
+  assert((await identityView(page)).audit.length>0);
   await shot('07-auditor-readonly-ledger');
   report.checks.push({name:'auditor_identity_retained_readonly_ledger',passed:true});
-  const active=await rpc('status');report.evidence_id=active.evidence_id;
+  const active=await identityView(page);report.evidence_id=active.evidence_id;
   await card.getByRole('button',{name:'关闭演示身份源',exact:true}).click();
   await card.getByRole('button',{name:'开启演示身份源',exact:true}).waitFor();
   assert.equal((await rpc('status')).enabled,false);
   assert.equal((await rpc('task_read',{})).reason_code,'DEMO_IDENTITY_DISABLED');
-  assert.match(await banner.innerText(),/执行与审批已禁用/);await shot('08-disabled-restored');
+  assert.equal((await identityView(page)).execution_enabled,false);await shot('08-disabled-restored');
   report.checks.push({name:'disable_restores_fail_closed',passed:true});
   const audit=fs.readFileSync(path.join(root,'.runtime/identity-demo',active.evidence_id,'identity-audit.jsonl'),'utf8');
   for(const expected of ['P014_RESOURCE_OUTSIDE_TASK','D105_SELF_APPROVAL','A409_ALREADY_RESOLVED','demo_identity.disabled'])assert(audit.includes(expected));

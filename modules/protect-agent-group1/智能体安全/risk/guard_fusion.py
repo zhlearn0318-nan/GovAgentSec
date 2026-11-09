@@ -10,6 +10,13 @@ from .output_guard import OutputBehaviorAssessment
 
 
 _EXTERNAL_SOURCES = frozenset({SourceType.WEB, SourceType.RAG})
+# A complete provenance sentence, not a substring whitelist for document bodies.
+# The optional reference is an identifier; no imperative/action text can follow it.
+_SYNTHETIC_PROVENANCE = re.compile(
+    r"(?:合成|示例|测试)数据[：:]\s*(?:[A-Za-z][A-Za-z0-9_-]{0,31}\s+)?"
+    r"(?:受控读取|演示材料|测试材料|公开样例)[，,]\s*"
+    r"(?:不是|不属于)(?:政企|政务|业务)?真实文件[。.]?"
+)
 _ATTACK_EVIDENCE = tuple(
     re.compile(pattern, re.IGNORECASE | re.DOTALL)
     for pattern in (
@@ -335,6 +342,20 @@ class GuardFusion:
             item.available
             for item in (injection, content, alignment, privilege, multi_turn)
         )
+        if (
+            all_context_available
+            and source in {SourceType.USER, SourceType.TOOL, SourceType.RAG}
+            and content.categories == ("politically_sensitive_topics",)
+            and _SYNTHETIC_PROVENANCE.fullmatch(text.strip()) is not None
+            and max(injection.score, alignment.score, privilege.score, multi_turn.score) < 0.30
+            and not _has_explicit_attack_evidence(text)
+        ):
+            content = GuardSignal(
+                detector=content.detector, score=min(content.score, 0.20),
+                categories=content.categories,
+                reasons=content.reasons + ("fusion=synthetic_provenance_only",),
+                available=content.available,
+            )
         primary_task = _trusted_primary_task(text)
         task_aligned_passive_pii = (
             all_context_available

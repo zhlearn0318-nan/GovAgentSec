@@ -11,10 +11,10 @@ function response(){return {writeHead(status,headers){this.status=status;this.he
 test('business badge distinguishes config, optional healthy probe, demo and ready OIDC',()=>{
   const ready={ok:true,payload:{ready:true,dependencies:{identity:{healthy:true}}}};
   const version={ok:true,payload:{oidc_enabled:true}};
-  assert.equal(identityStatus('oidc',null,ready).label,'未配置组织身份（OIDC）');
+  assert.equal(identityStatus('oidc',null,ready).label,'组织身份未接入');
   assert.equal(identityStatus('oidc',{ok:true,payload:{oidc_enabled:false}},ready).state,'unconfigured');
   assert.equal(identityStatus('oidc',version,{ok:false}).state,'oidc_unavailable');
-  assert.equal(identityStatus('oidc',version,ready).label,'组织身份已启用');
+  assert.equal(identityStatus('oidc',version,ready).label,'身份服务可用');
   assert.equal(identityStatus('loopback_static_dev',version,ready).label,'演示身份（非生产）');
   assert.equal(identityStatus('oidc',{ok:true,payload:{oidc_enabled:true,demo_identity:true}},ready).label,'演示身份源（非生产）');
   for(const mode of ['disabled','oidc','loopback_static_dev'])assert.equal(identityStatus(mode,version,ready).executionEnabled,false);
@@ -42,7 +42,7 @@ test('linked task approval also refuses developer identity without user delegati
   const id='mcp-req-'+'a'.repeat(32);
   links.trace=()=>({events:[{event_type:'tool.ended',tool_call_id:'c',request_id:id,payload:{correlation_verified:true,tool:'agentguard-notices__read_gov_document'}}]});
   links.request=async()=>({});
-  await assert.rejects(links.resolve({control_request_id:id,resolution:'approve'}),/逐用户 OIDC/);
+  await assert.rejects(links.resolve({control_request_id:id,resolution:'approve'}),/未登录业务身份，执行与审批已禁用/);
 });
 test('management page grant RPC requires administrator scope',()=>{
   const calls=[];

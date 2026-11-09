@@ -24,7 +24,18 @@ Windows 集成发行版。已在原生 Windows、OpenClaw `2026.7.1-2` 上完成
 
 会话执行隔离支持 **Docker / sandbox-runtime (srt)**，可在工作台或防护设置切换，默认 Docker。两者实际范围、Windows 限制和验收命令见 [会话沙箱演示](docs/SESSION_SANDBOX_DEMO.md)。它与 Aegis 安装前准入沙箱分别运行。
 
-当前版本将安全功能直接放入 OpenClaw 工作区：左侧固定 **工作台、能力接入、待审批、任务轨迹**；顶栏常驻 **任务与轨迹**，切换页面或折叠侧栏后仍可打开。首页展示真实待办、最近对话任务和防护覆盖；能力接入直接使用紧凑的 Skill/MCP 表单。详见 [原生工作区使用与部署](docs/openclaw-workspace.md)。
+当前工作区左侧为 **任务、能力库、待审批、审计与改进**，防护设置单独放在下方；顶栏保留一个 **查看过程**。任务页按“登录身份→绑定当前会话→选择登记材料→复制任务指令并发送”操作；过程面板默认宽幅显示原横向分栏调用图，保留全部事件，并可切换时间线或收窄面板。材料选择限定上层任务范围，下游 MCP 仍须独立授权，以实际执行回执为准。
+
+已运行的本机系统可通过中文欢迎入口打开：
+
+```powershell
+Set-Location 'F:\揭榜挂帅\GovAgentSec'
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/open_govagentsec.ps1
+```
+
+入口为 `http://127.0.0.1:18789/plugins/govagentsec/welcome`。脚本只在本机浏览器片段中传入已有网关令牌，不打印或改写配置；网关认证与业务身份授权保持分开。演示身份源由管理员在防护设置开启，默认关闭。
+
+审计页可选择同任务运行进行本地评审、预览 TopK、生成隔离候选并运行联合准入；历史真实运行包可只读查看和定位步骤来源。本轮界面过程评审标记为 `test_only`，不能直接生产复核或安装。实施与验证见 [U24 工作区改版](docs/U24_PRODUCT_FLOW_IMPLEMENTATION.md)、[演示手册](docs/PRODUCT_DEMO_RUNBOOK.md)和[能力边界](docs/ACCEPTANCE_BOUNDARIES.md)。
 
 | 模块 | 功能 | 源码 |
 | --- | --- | --- |

@@ -187,11 +187,11 @@ def handle(request: dict[str, Any]) -> Any:
         return _rules_payload()
     if operation == "rule_changes":
         return _read_rule_changes(min(max(int(request.get("limit") or 30), 1), 100))
-    if operation == "admit_mcp":
+    if operation in {"preview_mcp", "admit_mcp"}:
         payload = request.get("request")
         if not isinstance(payload, dict):
             raise CustomRuleError("MCP admission request must be an object")
-        return admit_mcp_server(payload, commit=True)
+        return admit_mcp_server(payload, commit=operation == "admit_mcp")
     raise CustomRuleError("unsupported administrator operation")
 
 

@@ -1,3 +1,4 @@
+import {loginDemo} from './lib/identity-ui.mjs';
 import fs from 'node:fs';import path from 'node:path';import http from 'node:http';import net from 'node:net';
 import assert from 'node:assert/strict';import {spawn,spawnSync} from 'node:child_process';import {randomUUID} from 'node:crypto';import {pathToFileURL} from 'node:url';
 import {configPath,sha,version} from './lib/config-recovery.mjs';
@@ -60,7 +61,7 @@ try{
  assert.equal((await identity('bind_session',{session_key:session,bearer:credentials['office-test']})).status,'ok');
  const settings=await context.newPage();await settings.goto(base+'/plugin?plugin=protect-agent&id=govagentsec&section=settings');
  const card=settings.locator('govagentsec-workspace').getByRole('region',{name:'演示身份源',exact:true});await card.waitFor({timeout:60000});
- assert.match(await card.innerText(),/演示身份源（非生产）/);assert.doesNotMatch(await card.innerText(),/组织身份已启用/);
+ assert.match(await card.innerText(),/演示（非生产）/);assert.doesNotMatch(await card.innerText(),/组织身份已启用/);
  await settings.screenshot({path:path.join(out,'01-honest-badge.png'),fullPage:true});report.screenshots.push('01-honest-badge.png');check('honest-badge');
  const run=async(message)=>{const id=randomUUID();await rpc('chat.send',{sessionKey:session,agentId:'main',message,thinking:'off',deliver:false,idempotencyKey:id,timeoutMs:360000});
   const deadline=Date.now()+360000;while(Date.now()<deadline){const c=await rpc('u14.counter');report.last_counter=c;if(c.ends.some(e=>e.run_id===id)){assert.equal(c.ends.find(e=>e.run_id===id).success,true);await delay(400);return c;}await delay(1000);}throw Error('CHAT_AGENT_END_TIMEOUT');};
@@ -71,12 +72,11 @@ try{
  assert(task.task_id&&/^[a-f0-9]{64}$/.test(task.scope_digest));check('chat-scope',{task_id:task.task_id,scope_digest:task.scope_digest});
  assert.equal(denied.reason_code,'P014_RESOURCE_OUTSIDE_TASK');assert.equal(counter.reads,0);check('deny-out-of-scope',{read_count:counter.reads});await shot('02-chat-denied.png');
  assert.equal((await identity('task_escalate',{request_id:denied.request_id,bearer:credentials['office-test']})).status,'pending_approval');
- await card.getByRole('combobox',{name:'选择演示用户'}).selectOption('approver-test');
- await card.getByRole('button',{name:'建立演示会话',exact:true}).click();await card.getByText(/当前已验证：approver-test/).waitFor();
+ await loginDemo(settings,'approver-test');
  await settings.screenshot({path:path.join(out,'03-approval-queue.png'),fullPage:true});report.screenshots.push('03-approval-queue.png');
  assert.equal((await identity('resolve',{request_id:denied.request_id,resolution:'approve',bearer:credentials['office-test']})).reason_code,'D105_SELF_APPROVAL');check('self-approve-deny');
- await card.getByRole('button',{name:'批准原动作单次重试',exact:true}).click();
- await card.getByRole('status').filter({hasText:'已批准，等待原会话单次重试'}).waitFor();
+ await card.getByRole('button',{name:'批准本次重试',exact:true}).click();
+ await card.getByRole('status').filter({hasText:'已批准，等待原任务重试'}).waitFor();
  assert.equal((await rpc('u14.counter')).reads,0);check('approve-does-not-read');
  counter=await run('重试刚批准的原动作，报告真实工具回执。');assert(counter.reads>0);assert.equal(counter.completed,counter.reads);
  const successfulReads=counter.tool_results.filter(t=>t.tool==='read'&&t.success).length;assert.equal(successfulReads,1);
@@ -86,7 +86,7 @@ try{
  state=await identity('status',{bearer:credentials['office-test']});const replay=state.audit.findLast(x=>x.event==='chat.tool_gate');
  assert.equal(replay.status,'blocked');assert.match(replay.reason_code,/^G20[46]_/);check('replay-reject',{read_count:counter.reads,reason_code:replay.reason_code,expiry_precedes_ledger_check:replay.reason_code==='G204_TICKET_EXPIRED'});await shot('05-chat-replay.png');
  report.passed=true;
-}catch(e){report.error=e.message;process.exitCode=1;if(browser){const p=browser.contexts()[0]?.pages().at(-1);await p?.screenshot({path:path.join(out,'FAILED-page.png'),fullPage:true}).catch(()=>{});}}finally{
+}catch(e){report.error=String(e.message).replaceAll(live.gateway.auth.token,'[REDACTED]').replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g,'[REDACTED]');process.exitCode=1;if(browser){const p=browser.contexts()[0]?.pages().at(-1);await p?.screenshot({path:path.join(out,'FAILED-page.png'),fullPage:true}).catch(()=>{});}}finally{
  if(identity)try{await identity('disable');}catch{report.cleanup_error='demo-disable-failed';report.passed=false;process.exitCode=1;}
  await browser?.close();if(gateway?.pid)spawnSync('taskkill',['/PID',String(gateway.pid),'/T','/F'],{windowsHide:true,stdio:'ignore'});if(provider){provider.closeAllConnections();await new Promise(r=>provider.close(r));}
  report.config_unchanged=sha(baseline)===sha(fs.readFileSync(configPath()));if(!report.config_unchanged){report.passed=false;process.exitCode=1;}

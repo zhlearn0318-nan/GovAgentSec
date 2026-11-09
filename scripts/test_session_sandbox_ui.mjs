@@ -21,7 +21,8 @@ try{
   await card.getByText('当前：Docker',{exact:true}).waitFor({timeout:60000});
   rpc=(method,params={})=>page.locator('openclaw-app-shell').evaluate((e,{method,params})=>e.context.gateway.snapshot.client.request(method,params),{method,params});
   for(const engine of ['srt','docker']){
-    await card.locator('input[value="'+engine+'"]').check();
+    await card.locator('input[value="'+engine+'"]').click();
+    if(engine==='srt')await card.getByRole('button',{name:'确认切换 srt',exact:true}).click();
     await card.getByText(engine==='docker'?'当前：Docker':'当前：sandbox-runtime (srt)',{exact:true}).waitFor({timeout:30000});
     const status=await rpc('govagentsec.sandbox.status');assert.equal(status.current,engine);assert.equal(status.mode,'all');assert.equal(status.elevated_disabled,true);
     const saved=JSON.parse(readFileSync(file));assert.equal(saved.agents.defaults.sandbox.backend,engine);assert.equal(saved.tools.exec.host,'sandbox');

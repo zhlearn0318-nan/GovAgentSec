@@ -1,5 +1,37 @@
 # 调用关系图空白修复与验收
 
+## 2026-11-09：恢复原横向分栏图
+
+用户确认需要原来的横向分栏调用图。U24 将默认投影换成 `keyTraceGraph`，合并模型/工具起止并按一列或两列卡片排列，忽略了原来的 lane，导致阶段与调用关系难以辨认。本次撤回这一展示改动：
+
+- 默认图重新使用全部 `traceGraph` 节点及边，按原有 LLM、Skill、MCP / 工具、结果、防护 / 审批分栏；不合并起止、不补造阶段。
+- 保留时间顺序虚线、明确调用关联实线、毫秒时间线、真实 BLOCK/ALLOW 状态、节点详情和自动刷新。取消重复的“完整事件图”标签。
+- 栏头固定，长链在图内双轴滚动；修复窄屏 grid 子元素最小宽度导致整页撑宽的问题。刷新保留选中事件、展开详情和横纵滚动位置。
+- “查看过程”默认宽幅打开，桌面可以同时看全各栏；“收窄面板 / 展开查看”仅改变显示宽度，不重新请求或替换轨迹。
+
+验证目录：`local-validation/trace-lanes-restore/2026-11-09/`。
+
+| 报告 | 结果 |
+|---|---|
+| `real-evidence/result.json` | 13组检查通过；真实 `4af42d89-727a-45cb-b1b0-5f6406699928` 保存证据22节点/26边，当前宿主26节点/30边；原始哈希前缀一致，UI与SVG/PNG节点、边、标签一致 |
+| `ui-regression/report.json` | 14项通过；默认全事件、分栏几何、时间线、延迟审批刷新、双轴滚动保持、来源定位、跟随最新、历史选择和本地候选流程 |
+| `live-workspace/report.json` | 11项只读检查通过；默认宽幅看全5栏，收窄与再展开保留同一轨迹；无脚本错误、无外部请求、网关配置哈希不变 |
+| `local-validation/trace-ui/result.json` | 原审计UI回归通过，包含对比、候选来源及准入状态展示 |
+
+以上命令退出码均为0。此次只调整前端及验证脚本，未改采集、安全判定、OpenClaw内核或网关配置；仍使用2026.7.1-2。当前已打开的页面需完整刷新以加载新ES模块。
+
+```powershell
+node scripts/test_real_call_graph.mjs local-validation/trace-live-smoke/2026-11-06T14-57-21-569Z-64281652/evidence 4af42d89-727a-45cb-b1b0-5f6406699928 --live --output=local-validation/trace-lanes-restore/2026-11-09/real-evidence
+node scripts/test_u24_trace_ui.mjs local-validation/trace-lanes-restore/2026-11-09/ui-regression
+$env:GOV_U24_LIVE_EVIDENCE='local-validation/trace-lanes-restore/2026-11-09/live-workspace'
+node scripts/verify_u24_workspace_live.mjs
+node scripts/test_trace_audit_ui.mjs
+```
+
+截图：`real-evidence/openclaw-graph.png` 为完整审计页；`live-workspace/06-current-real-call-graph.png` 为宽幅过程面板；`real-evidence/export/` 保留同一真实证据的PNG/SVG/JSON。
+
+## 2026-11-07：选择与加载问题修复记录
+
 验证日期：2026-11-07。OpenClaw **2026.7.1-2**，没有升级、git push、修改安全模块或宿主配置。验证只读取本地既有轨迹，没有发起模型请求，没有向外部服务发送轨迹。
 
 ## 根因与修改

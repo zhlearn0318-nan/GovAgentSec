@@ -1,4 +1,4 @@
-# Codex 提示词目录（政安纵深升级）
+﻿# Codex 提示词目录（政安纵深升级）
 
 总方案：[`../UPGRADE_PLAN_政安纵深.md`](../UPGRADE_PLAN_政安纵深.md)
 
@@ -26,6 +26,9 @@
 | [U18-openclaw-config-recovery-drill.md](U18-openclaw-config-recovery-drill.md) | **openclaw.json 备份/哈希/一键恢复演练（项7）** | P0 |
 | [U19-per-call-token-usage.md](U19-per-call-token-usage.md) | **轨迹图逐步 token（per-call usage；先设计后实现）** | P1 |
 | [U20-api-usage-wrapper.md](U20-api-usage-wrapper.md) | **自建 API 包装层采逐步 token（不改内核；先设计后实现）** | P0 |
+| [U21-judge-user-full-critique.md](U21-judge-user-full-critique.md) | **评委+用户全面体验批判 / 发布会演示流 / 登录与 IA 设计（默认只文档）** | P0 |
+| [U22-login-task-bind-approval-path.md](U22-login-task-bind-approval-path.md) | **独立登录页＋当前任务绑定＋审批主路径＋清理 UI 工程话术（先设计后开发）** | P0 |
+| [U23-approval-graph-sandbox-fp.md](U23-approval-graph-sandbox-fp.md) | **审批进图/同屏关联＋Docker 默认稳演示＋输入防护误报（先设计后开发）** | P0 |
 | [POST-U11-BACKLOG.md](POST-U11-BACKLOG.md) | **U12–U18 总索引与推荐顺序** | 索引 |
 | [U1-U9-ACCEPTANCE.md](U1-U9-ACCEPTANCE.md) | **U1–U9 总验收（证据型，默认不改代码）** | 验收 |
 
@@ -42,3 +45,29 @@
 ### U20
 
 自建本地 HTTP usage wrapper 截获 openai-completions 回包 usage，写入轨迹逐步 token（不改内核）：见 [U20-api-usage-wrapper.md](U20-api-usage-wrapper.md)。先写 docs/U20_API_USAGE_WRAPPER.md；改 baseUrl 前按 U18 备份哈希；默认可关、loopback-only；禁止伪造 usage。
+
+### U21
+
+评委 + 政务一线用户双角色全面体验与批判（发布会级演示流、完整使用逻辑、登录页/IA 设计、验收边界剥离到独立文档）：见 [U21-judge-user-full-critique.md](U21-judge-user-full-critique.md)。
+
+- **本轮默认只交付文档**：`docs/JUDGE_USER_FULL_CRITIQUE.md`、`docs/PRODUCT_UX_LOGIN_AND_DEMO_FLOW.md`、`docs/ACCEPTANCE_BOUNDARIES.md` + `local-validation/u21-judge-critique/<timestamp>/`。
+- **禁止改产品代码**；登录页与前端 IA 实现列入 backlog，由 **U22** 实现。
+- 用户四模块（风险识别—行为约束—组件准入—评测审计）须与政安纵深四层做映射表，勿混名；Aegis 准入沙箱 ≠ U9 会话 Docker/srt。
+
+### U22
+
+按 U21 结论实现发布会主路径（**Codex 先设计后开发**）：见 [U22-login-task-bind-approval-path.md](U22-login-task-bind-approval-path.md)。
+
+- 先写 `docs/U22_LOGIN_TASK_BIND_APPROVAL.md`（基于 `PRODUCT_UX_LOGIN_AND_DEMO_FLOW.md` 细化），自检通过再编码。
+- 范围：独立登录页（演示身份源）→ 当前任务绑定（免手填 session key）→ 审批主路径（对治 T04）→ 清理 UI 工程话术；边界只留 `ACCEPTANCE_BOUNDARIES.md`。
+- 复用 U4b/U10/U13；不接真组织 OIDC；不重做 U9；U20 wrapper 默认关；改 `openclaw.json`（如演示默认 Docker）前按 U18 备份哈希。
+- 证据：`local-validation/u22-login-approval-path/<timestamp>/`；对照 U21 Top 阻碍 T01/T04 必须改善，T09 进图或诚实降级。
+
+### U23
+
+承接 U22 剩余边界与 U21 T02/T03/T09（**Codex 先设计后开发**）：见 [U23-approval-graph-sandbox-fp.md](U23-approval-graph-sandbox-fp.md)。
+
+- 先写 `docs/U23_APPROVAL_GRAPH_SANDBOX_FP.md`，自检通过再编码。
+- 范围：原生审批尽量进轨迹/调用图（或同屏强关联，禁止假闭环）；演示默认 Docker，srt 可切但须冷启动/耗时提示；降低演示主路径输入误报，真注入仍可拦。
+- 真组织 OIDC 非目标（仅 runbook 指针）；不 patch 内核；U20 默认关；改 `openclaw.json` 前按 U18 备份哈希。
+- 证据：`local-validation/u23-approval-graph-sandbox-fp/<timestamp>/`。

@@ -1,3 +1,4 @@
+import {identityView,loginDemo} from './lib/identity-ui.mjs';
 // Real Control UI + authenticated RPC + local OPA. Synthetic business actions only.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -37,18 +38,16 @@ try{
   const select=card.getByRole('combobox',{name:'选择演示用户'});
   await select.waitFor();
   assert.equal(await select.locator('option').count(),4);
-  await select.selectOption('office-test');
-  await card.getByRole('button',{name:'建立演示会话',exact:true}).click();
-  await card.getByText(/当前已验证：office-test/).waitFor();
-  const banner=work.getByRole('region',{name:'业务身份状态'});
-  assert.match(await banner.innerText(),/演示身份源（非生产）/);
+  await loginDemo(page,'office-test');
+  const banner=page.locator('govagentsec-shell').locator('.identity-bar');
+  assert.match(await banner.innerText(),/演示（非生产）/);
   assert.doesNotMatch(await banner.innerText(),/组织身份已启用/);
   await shot('02-office-session');
   await card.getByRole('button',{name:'发起台风通知送审（合成）',exact:true}).click();
-  await card.getByText('台风通知送审 · 待人工审批',{exact:true}).waitFor();
-  const pending=(await rpc('status')).requests.find(r=>r.scenario==='notice');assert(pending);
+  await card.getByText('通知送审 · 需审批',{exact:true}).waitFor();
+  const pending=(await identityView(page)).requests.find(r=>r.scenario==='notice');assert(pending);
   report.request_id=pending.request_id;
-  assert.equal(await card.getByRole('button',{name:'人工确认并执行',exact:true}).isDisabled(),true);
+  assert.equal(await card.getByRole('button',{name:'批准并执行一次',exact:true}).isDisabled(),true);
   await shot('03-office-pending');
 
   // Keep access tokens inside this browser evaluation. Return only public receipts.
@@ -72,17 +71,15 @@ try{
   report.negative_cases=negatives;
   report.checks.push({name:'self_body_roles_gateway_token_tamper_rejected_zero_effects',passed:true});
 
-  await select.selectOption('finance-test');await card.getByRole('button',{name:'建立演示会话',exact:true}).click();
-  await card.getByText(/当前已验证：finance-test/).waitFor();
+  await loginDemo(page,'finance-test');
   await card.getByRole('button',{name:'发起测试付款 600 元（合成）',exact:true}).click();
-  await card.getByText('测试付款 · 待人工审批',{exact:true}).waitFor();await shot('04-finance-pending');
-  await select.selectOption('approver-test');await card.getByRole('button',{name:'建立演示会话',exact:true}).click();
-  await card.getByText(/当前已验证：approver-test/).waitFor();await shot('05-approver-session');
+  await card.getByText('测试付款 · 需审批',{exact:true}).waitFor();await shot('04-finance-pending');
+  await loginDemo(page,'approver-test');await shot('05-approver-session');
   const notice=card.locator('article[data-request-id="'+pending.request_id+'"]');
-  await notice.getByRole('button',{name:'人工确认并执行',exact:true}).click();
-  await notice.getByText('台风通知送审 · 已执行（合成）',{exact:true}).waitFor();
-  const payment=(await rpc('status')).requests.find(r=>r.scenario==='payment');assert(payment);
-  await card.locator('article[data-request-id="'+payment.request_id+'"]').getByRole('button',{name:'人工确认并执行',exact:true}).click();
+  await notice.getByRole('button',{name:'批准并执行一次',exact:true}).click();
+  await notice.getByText('通知送审 · 已执行（合成）',{exact:true}).waitFor();
+  const payment=(await identityView(page)).requests.find(r=>r.scenario==='payment');assert(payment);
+  await card.locator('article[data-request-id="'+payment.request_id+'"]').getByRole('button',{name:'批准并执行一次',exact:true}).click();
   await card.getByText('测试付款 · 已执行（合成）',{exact:true}).waitFor();await shot('06-approved-once');
   const replay=await page.locator('openclaw-app-shell').evaluate(async(e,id)=>{
     const c=e.context.gateway.snapshot.client;
@@ -92,12 +89,12 @@ try{
   assert.equal(replay.reason_code,'A409_ALREADY_RESOLVED');assert.equal(replay.status,'blocked');assert.equal(replay.executed,false);
   assert.deepEqual(replay.counts,{notices:1,payments:1});report.replay=replay;
   report.checks.push({name:'two_user_approval_and_once_only_isolated_execution',passed:true});
-  const active=await rpc('status');report.evidence_id=active.evidence_id;
+  const active=await identityView(page);report.evidence_id=active.evidence_id;
   await card.getByRole('button',{name:'关闭演示身份源',exact:true}).click();
   await card.getByRole('button',{name:'开启演示身份源',exact:true}).waitFor();
   assert.equal((await rpc('status')).enabled,false);
   assert.equal((await rpc('invoke',{scenario:'notice'})).reason_code,'DEMO_IDENTITY_DISABLED');
-  assert.match(await banner.innerText(),/执行与审批已禁用/);await shot('07-disabled-restored');
+  assert.equal((await identityView(page)).execution_enabled,false);await shot('07-disabled-restored');
   await page.reload();await card.getByRole('button',{name:'开启演示身份源',exact:true}).waitFor({timeout:60000});
   assert.equal((await rpc('status')).enabled,false);
   report.checks.push({name:'disable_revokes_and_reload_stays_off',passed:true});

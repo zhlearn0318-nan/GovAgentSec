@@ -4,10 +4,17 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { TaskLinks } from './task-links.mjs';
 import { renderTrajectoryPanel } from './panel.mjs';
 import { LegacyReader } from '../govagentsec-trace/legacy-reader.mjs';
+import { renderWelcomePage } from '../govagentsec-ui/welcome.mjs';
 
 export function registerTrajectory(api) {
   const config = api.pluginConfig ?? {};
   if (!config.dataDir) throw new Error('trajectory dataDir is required');
+  api.registerHttpRoute({path:'/plugins/govagentsec/welcome',auth:'plugin',match:'exact',handler:async(req,res)=>{
+    if(req.method!=='GET'){res.writeHead(405,{Allow:'GET'});res.end();return true;}
+    res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Referrer-Policy':'no-referrer',
+      'Content-Security-Policy':"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"});
+    res.end(renderWelcomePage());return true;
+  }});
   const legacyStore = new TraceStore(path.join(config.dataDir, 'traces'));
   const traceConfig = api.config?.plugins?.entries?.['govagentsec-trace'];
   const store = traceConfig?.enabled && traceConfig.config?.dataDir
@@ -18,7 +25,7 @@ export function registerTrajectory(api) {
     group: 'control', order: 21, requiredScopes: ['operator.read'],
     path: '/plugins/govagentsec/trajectory-panel',
   });
-  for (const [url, file] of [['trajectory-ui.mjs', 'ui.mjs'], ['graph.mjs', 'graph.mjs'], ['trajectory-native.mjs', 'native-view.mjs'], ['workbench.mjs', 'workbench.mjs'], ['workspace.mjs', '../govagentsec-ui/workspace.mjs'], ['demo-identity.mjs', '../govagentsec-ui/demo-identity.mjs'], ['shell.mjs', '../govagentsec-ui/shell.mjs'], ['workspace-style.mjs', '../govagentsec-ui/workspace-style.mjs']]) {
+  for (const [url, file] of [['trajectory-ui.mjs', 'ui.mjs'], ['graph.mjs', 'graph.mjs'], ['trajectory-native.mjs', 'native-view.mjs'], ['workbench.mjs', 'workbench.mjs'], ['workspace.mjs', '../govagentsec-ui/workspace.mjs'], ['demo-identity.mjs', '../govagentsec-ui/demo-identity.mjs'], ['identity-session.mjs', '../govagentsec-ui/identity-session.mjs'], ['task-context.mjs', '../govagentsec-ui/task-context.mjs'], ['shell.mjs', '../govagentsec-ui/shell.mjs'], ['workspace-style.mjs', '../govagentsec-ui/workspace-style.mjs']]) {
     api.registerHttpRoute({ path: '/plugins/govagentsec/' + url, auth: 'plugin', match: 'exact', handler: async (req, res) => {
       if (req.method !== 'GET') { res.writeHead(405); res.end(); return true; }
       res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store' });

@@ -1,3 +1,4 @@
+import {identityView,loginDemo} from './lib/identity-ui.mjs';
 import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';import {pathToFileURL} from 'node:url';
 import {configPath,sha,version} from './lib/config-recovery.mjs';
 const out=path.resolve(process.env.GOV_DELEGATE_EVIDENCE??'local-validation/u13-per-user-delegate/'+new Date().toISOString().replace(/[:.]/g,'-'));
@@ -12,16 +13,17 @@ try{
  const card=page.locator('govagentsec-workspace').getByRole('region',{name:'演示身份源',exact:true});
  await card.waitFor({timeout:60000});
  r.initial_enabled=(await rpc('status')).enabled;
+ assert.equal(r.initial_enabled,false,'Existing demo is active; leave it untouched');
  if(!r.initial_enabled){
    await card.getByRole('button',{name:'开启演示身份源',exact:true}).waitFor({timeout:60000});
    enabled=true;await card.getByRole('button',{name:'开启演示身份源',exact:true}).click();
  }
- await card.getByRole('combobox',{name:'选择演示用户'}).selectOption('office-test');await card.getByRole('button',{name:'建立演示会话',exact:true}).click();
- await card.getByText(/当前委托：office-test.*DEMO_DELEGATION_ACTIVE/).waitFor();
+ await loginDemo(page,'office-test');
+ assert.equal((await identityView(page)).user.id,'office-test');
  assert(!await card.getByRole('button',{name:'发起台风通知送审（合成）',exact:true}).isDisabled());
  await page.screenshot({path:path.join(out,'delegate-active.png'),fullPage:true});r.screenshots.push('delegate-active.png');
  await card.getByRole('button',{name:'关闭当前委托',exact:true}).click();
- await card.getByText(/当前委托：无.*DEMO_DELEGATION_REQUIRED/).waitFor();
+ assert.equal((await identityView(page)).user,null);
  assert(await card.getByRole('button',{name:'发起台风通知送审（合成）',exact:true}).isDisabled());
  await page.screenshot({path:path.join(out,'delegate-revoked.png'),fullPage:true});r.screenshots.push('delegate-revoked.png');
  r.rpc=await page.locator('openclaw-app-shell').evaluate(async el=>{

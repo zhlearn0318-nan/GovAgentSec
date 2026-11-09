@@ -1,6 +1,6 @@
-import {allowPage, deny} from '../../../govagentsec-ui/access.mjs';
+import {allowPage, deny, authorizePageGrant} from '../../../govagentsec-ui/access.mjs';
 import {identityStatus, requireBusinessDelegation} from '../../../govagentsec-ui/identity-status.mjs';
-import {registerDemoIdentity} from './demo-identity.mjs';
+import {registerDemoIdentity, requireBusinessPermission} from './demo-identity.mjs';
 import {registerChatAcl} from './chat-acl.mjs';
 import { brandPage } from "../../../govagentsec-ui/design.mjs";
 import { randomBytes, randomUUID } from "node:crypto";
@@ -74,22 +74,22 @@ function redact(value, key = "") {
   return value;
 }
 
-function issuePageToken() {
+function issuePageToken(grant) {
   const now = Date.now();
-  for (const [token, expiresAt] of pageTokens) if (expiresAt <= now) pageTokens.delete(token);
+  for (const [token, value] of pageTokens) if (value.expires <= now) pageTokens.delete(token);
   const token = randomBytes(32).toString("hex");
-  pageTokens.set(token, now + PAGE_TOKEN_TTL_MS);
+  pageTokens.set(token, {expires:now + PAGE_TOKEN_TTL_MS,grant});
   return token;
 }
 
-function validatePageToken(candidate) {
+async function validatePageToken(candidate,permission='admission.read') {
   const token = safeString(candidate);
-  const expiresAt = pageTokens.get(token);
+  const expiresAt = pageTokens.get(token)?.expires;
   if (!expiresAt || expiresAt <= Date.now()) {
     if (token) pageTokens.delete(token);
     return false;
   }
-  return true;
+  try {await authorizePageGrant(pageTokens.get(token).grant,permission);return true;}catch{return false;}
 }
 
 async function readJsonBody(req) {
@@ -362,6 +362,22 @@ function clampInteger(value, minimum, maximum, fallback) {
   return Number.isInteger(parsed) ? Math.min(maximum, Math.max(minimum, parsed)) : fallback;
 }
 
+// The workspace overview uses the same audit snapshot as the original panel.
+// Only aggregate values cross this read-only interface; request bodies stay local.
+export async function buildOverview(config) {
+  const snapshot = await buildSnapshot(config);
+  return {
+    generated_at: snapshot.generated_at,
+    counts: snapshot.counts,
+    evidence: snapshot.evidence,
+    services: {
+      agentguard: { available: snapshot.services.agentguard.ok === true },
+      dependencies: { available: snapshot.services.dependencies.ok === true && snapshot.services.dependencies.payload?.ready === true },
+      openclaw_mcp: { records: snapshot.services.openclaw_mcp.records },
+    },
+  };
+}
+
 function buildCandidateAction(kind, input = {}) {
   const id = randomUUID().replaceAll("-", "");
   const common = {
@@ -521,19 +537,19 @@ async function handler(req, res, config) {
     return true;
   }
   if (method === "GET" && (requestUrl.pathname === `${ROUTE_ROOT}/panel` || requestUrl.pathname === `${ROUTE_ROOT}/`)) {
-    if(!allowPage(req,res)) return true;
-    let html = brandPage(await readFile(PANEL_PATH, "utf8"), "runtime", {compact:requestUrl.searchParams.has("workspace")}).replaceAll("__AGENTGUARD_PAGE_TOKEN__", issuePageToken());
+    if(!await allowPage(req,res)) return true;
+    let html = brandPage(await readFile(PANEL_PATH, "utf8"), "runtime", {compact:requestUrl.searchParams.has("workspace")}).replaceAll("__AGENTGUARD_PAGE_TOKEN__", issuePageToken(req.govPageGrant));
     if(requestUrl.searchParams.get("section")==="approvals") html=html.replace("</body>",'<script>switchPage("approvals");</script></body>');
     writeResponse(res, 200, "text/html; charset=utf-8", html, {
       "Content-Security-Policy": "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; font-src 'self' data:; base-uri 'none'; form-action 'none'; frame-ancestors 'self'",
     });
     return true;
   }
-  if (method === "GET" && requestUrl.pathname.startsWith(`${ROUTE_ROOT}/api/`) && !validatePageToken(req.headers?.["x-agentguard-page-token"])) { deny(res); return true; }
+  if (method === "GET" && requestUrl.pathname.startsWith(`${ROUTE_ROOT}/api/`) && !await validatePageToken(req.headers?.["x-agentguard-page-token"])) { deny(res); return true; }
   if (method === "GET" && requestUrl.pathname === `${ROUTE_ROOT}/api/bootstrap`) {
     sendJson(res, 200, {
       ok: true,
-      page_token: issuePageToken(),
+      page_token: issuePageToken(pageTokens.get(req.headers?.["x-agentguard-page-token"])?.grant),
       expires_in_seconds: Math.floor(PAGE_TOKEN_TTL_MS / 1000),
     }, SANDBOX_CORS_HEADERS);
     return true;
@@ -547,14 +563,14 @@ async function handler(req, res, config) {
     return true;
   }
   if (method === 'POST' && ['/api/evaluate', '/api/approvals/resolve', '/api/demo/gov-documents'].some(p => requestUrl.pathname === ROUTE_ROOT + p)) {
-    if (!validatePageToken(req.headers?.['x-agentguard-page-token'])) { deny(res); return true; }
+    if (!await validatePageToken(req.headers?.['x-agentguard-page-token'])) { deny(res); return true; }
     try { requireBusinessDelegation(); } catch (error) {
       sendJson(res, 403, {ok:false,error:{code:'BUSINESS_IDENTITY_REQUIRED',message:error.message}}, SANDBOX_CORS_HEADERS);
     }
     return true;
   }
   if (method === "POST" && requestUrl.pathname === `${ROUTE_ROOT}/api/approvals/notify`) {
-    if (!validatePageToken(req.headers?.["x-agentguard-page-token"])) {
+    if (!await validatePageToken(req.headers?.["x-agentguard-page-token"],"settings.manage")) {
       sendJson(res, 403, { ok: false, error: { code: "PAGE_TOKEN_INVALID", message: "页面令牌无效或已过期，请刷新页面" } }, SANDBOX_CORS_HEADERS);
       return true;
     }
@@ -571,6 +587,16 @@ const plugin = {
   register(api) {
     const config = api.pluginConfig && typeof api.pluginConfig === "object" ? api.pluginConfig : {};
     registerChatAcl(api, registerDemoIdentity(api));
+    api.registerGatewayMethod?.('govagentsec.runtime.overview', async ({params, respond}) => {
+      try {
+        if (!params || typeof params !== 'object' || Array.isArray(params) || Object.keys(params).some(key=>key!=='bearer')) throw Error('INVALID_REQUEST');
+        await requireBusinessPermission(params.bearer, 'audit.read');
+        respond(true, await buildOverview(config));
+      } catch (error) {
+        const code = ['BUSINESS_IDENTITY_REQUIRED','BUSINESS_PERMISSION_DENIED','INVALID_REQUEST'].includes(error.message) ? error.message : 'UNAVAILABLE';
+        respond(false, undefined, {code, message:'安全总览暂不可用，请登录后刷新。'});
+      }
+    }, {scope:'operator.read'});
     api.registerHttpRoute({ path: ROUTE_ROOT, match: "prefix", auth: "plugin", handler: (req, res) => handler(req, res, config) });
   },
 };

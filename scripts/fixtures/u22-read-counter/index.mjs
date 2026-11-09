@@ -56,7 +56,9 @@ export default {id:'u22-read-counter',register(api){
   const state=installCounter(api.pluginConfig?.targetFile);
   api.on('agent_end',(event,ctx)=>state.ends.push({run_id:ctx.runId??event.runId,success:event.success}));
   api.on('after_tool_call',(event,ctx)=>state.tool_results.push({run_id:ctx.runId??event.runId,
-    tool:event.toolName,tool_call_id:ctx.toolCallId,success:!event.error&&!event.result?.isError}));
+    tool:event.toolName,tool_call_id:ctx.toolCallId,success:!event.error&&!event.result?.isError,
+    control_status:event.result?.details?.structuredContent?.status,
+    control_reason:event.result?.details?.structuredContent?.reason_code}));
   // Retain the existing isolated E2E's RPC name; this plugin replaces U14's
   // SRT counter and must not be loaded alongside it.
   api.registerGatewayMethod('u14.counter',({respond})=>respond(true,state),{scope:'operator.read'});

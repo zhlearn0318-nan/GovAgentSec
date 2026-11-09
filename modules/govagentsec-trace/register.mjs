@@ -10,6 +10,7 @@ import { Workshop } from '../trajectory-governance/workshop.mjs';
 import {releaseGate,reviewerIdentity,readReviewReceipt,confirmReview} from './release-gate.mjs';
 import {AssessmentJobs,selectionPreview} from './assessment-jobs.mjs';
 import {historyPacks,openEvidencePack} from './evidence-packs.mjs';
+import {requireBusinessPermission} from '../agentguard-group2/integrations/openclaw_runtime_security_plugin/demo-identity.mjs';
 
 export const OBSERVERS = Symbol.for('govagentsec.trace.observers');
 export function registerTrace(api) {
@@ -145,10 +146,14 @@ export function registerTrace(api) {
       return workshop().admit(p.candidate_id, { command: policy.command, script: policy.args[0], env: policy.env, openclawVersion: '2026.7.1-2' }); } };
   for (const [name, fn] of Object.entries(methods)) api.registerGatewayMethod?.('govagentsec.trace.' + name, async ({ params, respond, client }) => {
     try {
-      const p=params??{};
+      const {bearer,...p}=params??{};
+      if(name!=='health')await requireBusinessPermission(bearer,
+        ['admit','confirmReview'].includes(name)?'admission.manage':
+        ['assign','generate','assessmentStart','assessmentCancel'].includes(name)?'audit.assess':'audit.read');
       if(['assign','generate','admit','confirmReview','assessmentStart','assessmentCancel'].includes(name) && p.pack_id!==undefined)throw Error('HISTORY_READ_ONLY');
       respond(true,await fn(p,client));
     } catch(error) {
+      if(error.message.startsWith('BUSINESS_'))return respond(false,undefined,{code:error.message,message:'请先到动态权限登录，并确认当前账号有此操作权限。'});
       const messages={ASSESSMENT_BUSY:'本地评估正在进行，请等待完成。',SELECTION_CHANGED:'来源记录已变化，请重新预览筛选结果。',
         NEED_TWO_SELECTED_TRACES:'保留后不足两条合格来源，请补充同任务运行。',CONFIRMED_SAME_TASK_REQUIRED:'请先确认所选运行属于同一任务。',
         HISTORY_READ_ONLY:'历史证据包只读，请回到当前任务操作。',JOB_NOT_FOUND:'评估记录不存在，请检查作业编号。'};

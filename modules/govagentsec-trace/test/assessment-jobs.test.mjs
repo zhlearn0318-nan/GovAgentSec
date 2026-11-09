@@ -69,10 +69,16 @@ test('judge exceptions are recorded and a restart exposes interrupted jobs',asyn
  assert.equal(JSON.stringify(after).includes('secret'),false);
 });
 
-test('RPC scopes, strict local arguments, explicit generation snapshot, and read-only pack',async()=>{
+test('RPC scopes, strict local arguments, explicit generation snapshot, and read-only pack',async t=>{
+ const key=Symbol.for('govagentsec.demoIdentity.bridge'),before=globalThis[key];
+ globalThis[key]={request:async(operation,params,bearer)=>{
+   assert.equal(operation,'authorize');assert.equal(bearer,'Bearer isolated-rpc-fixture');
+   return {status:'ok',user:{id:'unit-fixture'},permission_summary:{capabilities:[params.permission]}};
+ }};
+ t.after(()=>{if(before===undefined)delete globalThis[key];else globalThis[key]=before;});
  const {root,ids}=setup(),methods=new Map(),scopes=new Map();
  const store=registerTrace({pluginConfig:{dataDir:root},config:{},logger:{warn(){}},on(){},registerHttpRoute(){},registerGatewayMethod(n,fn,options){methods.set(n,fn);scopes.set(n,options.scope);}});
- const rpc=async(method,params={})=>{let response;await methods.get('govagentsec.trace.'+method)({params,respond:(ok,data,error)=>response={ok,data,error}});return response;};
+ const rpc=async(method,params={})=>{let response;await methods.get('govagentsec.trace.'+method)({params:{...params,bearer:'Bearer isolated-rpc-fixture'},respond:(ok,data,error)=>response={ok,data,error}});return response;};
  assert.equal(scopes.get('govagentsec.trace.assessmentStart'),'operator.write');assert.equal(scopes.get('govagentsec.trace.assessmentStatus'),'operator.read');
  for(const extra of [{endpoint:'https://example.org'},{calibrated:true},{allowSynthetic:false},{t_star:0},{test_only:false},{pack_id:'typhoon-real-20261107'}])assert.equal((await rpc('assessmentStart',{...args(ids),...extra})).ok,false);
  assert.equal((await rpc('assessmentStart',{...args(ids),judge:'fixture'})).ok,false);

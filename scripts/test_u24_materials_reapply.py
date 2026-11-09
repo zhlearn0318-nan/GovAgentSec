@@ -18,7 +18,7 @@ class MaterialsAndReapply(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.d=DemoIdentity(self.temp.name);self.addCleanup(self.d.disable)
         self.d.handle('enable')
-        self.officer=self.login('office-test');self.approver=self.login('approver-test')
+        self.officer=self.login('approver-test');self.approver=self.login('maintenance-test')
         self.session='agent:main:u24-materials'
         self.d.handle('bind_session',{'session_key':self.session},self.officer)
     def login(self,user):
@@ -61,7 +61,7 @@ class MaterialsAndReapply(unittest.TestCase):
             self.assertEqual(self.d.chat.material_selections[self.session],['emergency_plan'])
         r=self.d.handle('select_materials',{'session_key':self.session,'material_ids':['emergency_plan'],'clearance':3},self.officer)
         self.assertEqual(r['reason_code'],'DEMO_UNTRUSTED_FIELD')
-        other=self.login('office-test')
+        other=self.login('approver-test')
         self.assertEqual(self.d.handle('materials',{'session_key':self.session},other)['status'],'blocked')
         self.start();self.assertEqual(self.select(['material_inventory'])['reason_code'],'P004_TASK_RUNNING')
     def test_catalogue_has_no_paths_and_denies_secret(self):
@@ -137,7 +137,7 @@ class MaterialsAndReapply(unittest.TestCase):
     def test_rebinding_invalidates_old_signed_ticket(self):
         rid=self.pending();old=copy.deepcopy(next(iter(self.d.chat.permits.values())))
         self.d.chat.handle('chat_end',{'run_id':'r1'})
-        fresh=self.login('office-test')
+        fresh=self.login('approver-test')
         self.assertEqual(self.d.handle('bind_session',{'session_key':self.session},fresh)['status'],'ok')
         self.assertEqual(self.d.service.gateway.dispatch(old['request'],old['ticket'])['status'],'blocked')
         self.assertTrue(self.d.requests[rid]['scope_invalidated'])

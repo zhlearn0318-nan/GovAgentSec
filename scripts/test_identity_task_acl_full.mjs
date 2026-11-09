@@ -41,8 +41,8 @@ try{
   assert((await call('read',{path:'/workspace/A/test.txt'})).block);assert.equal(reads,0);
   check('no-scope-fail-closed');
   await bridge.request('enable');
-  const office='Bearer '+(await bridge.request('login',{user:'office-test'})).access_token;
-  const approver='Bearer '+(await bridge.request('login',{user:'approver-test'})).access_token;
+  const office='Bearer '+(await bridge.request('login',{user:'approver-test'})).access_token;
+  const approver='Bearer '+(await bridge.request('login',{user:'maintenance-test'})).access_token;
   requestBearer=approver;
   assert.deepEqual((await bridge.request('status')).requests,[]);
   assert.equal((await bridge.request('bind_session',{session_key:ctx.sessionKey},office)).status,'ok');

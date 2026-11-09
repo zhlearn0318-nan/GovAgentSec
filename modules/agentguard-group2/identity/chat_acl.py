@@ -15,6 +15,7 @@ from enforcement.documents import REGISTRY, document_action
 from enforcement.notifications import notice_action
 from enforcement.task_policy import value_hash
 from integrations.openclaw_mcp.agentguard_client import AgentGuardClient
+from identity.oidc import OidcIdentityError
 
 
 class _ActionBuilder(AgentGuardClient):
@@ -34,8 +35,10 @@ class ChatAcl:
         # Display correlation only; permits and the one-use ticket remain the authority.
         self.host_calls = {}
         self.material_selections = {}
+        self.automatic_sessions = set()
         self.scope_generations = {}
         self.retired_permits = []
+        self.document_calls = {}
 
     def bind(self, session, bearer, subject):
         if not isinstance(session, str) or not re.fullmatch(r'agent:[a-zA-Z0-9_-]+:[^\s]{1,180}', session):
@@ -53,11 +56,32 @@ class ChatAcl:
         for session in sessions:
             self.revoke_session_scope(session, 'delegation_revoked')
 
+    def activate(self, session, bearer, subject):
+        """Called by the logged-in chat client before send, never by model input."""
+        owner = self.sessions.get(session) if isinstance(session, str) else None
+        if owner == bearer and session in self.automatic_sessions:
+            return {'status':'ok', 'material_policy':'identity_registry'}
+        if owner and owner != bearer:
+            try:
+                self.demo.subject(owner)
+            except OidcIdentityError as exc:
+                if exc.code not in {'I005_TOKEN_EXPIRED','DEMO_DELEGATION_REVOKED','DEMO_USER_DISABLED'}:
+                    return self.demo.blocked('P012_TASK_POLICY_UNAVAILABLE')
+            else:
+                return self.demo.blocked('P027_CONVERSATION_IDENTITY_CONFLICT')
+        result = self.bind(session, bearer, subject)
+        if result.get('status') == 'ok':
+            self.automatic_sessions.add(session)
+            result['material_policy'] = 'identity_registry'
+        return result
+
     def revoke_session_scope(self, session, reason):
         # This private path only removes authority. The old bearer can already
         # be revoked; owners and task IDs come from stored server-side records.
         self.sessions.pop(session, None)
         self.material_selections.pop(session, None)
+        self.automatic_sessions.discard(session)
+        self.document_calls = {k:v for k,v in self.document_calls.items() if k[0]!=session}
         self.runs = {k:v for k,v in self.runs.items() if v['session'] != session}
         self.clear_host_calls(session=session)
         self.scope_generations[session] = self.scope_generations.get(session,0)+1
@@ -100,12 +124,14 @@ class ChatAcl:
                 return self.demo.blocked('P012_TASK_POLICY_UNAVAILABLE')
             rows.append(dict(document_id=document_id, label=labels[document_id],
                 data_level=action['data_level'], selectable=decision.get('effect') in {'allow','require_approval'},
-                approval_required=decision.get('effect') == 'require_approval'))
+                approval_required=decision.get('effect') == 'require_approval' and not self.demo.service.gateway.native_approval_only({'subject':subject})))
         return dict(status='ok', materials=rows, selected=self.material_selections.get(session, []),
                     explicitly_selected=session in self.material_selections,
                     running=any(r['session']==session for r in self.runs.values()))
 
     def select_materials(self, session, ids, bearer, subject):
+        if session in self.automatic_sessions:
+            return self.demo.blocked('P028_AUTOMATIC_MATERIAL_POLICY')
         if not isinstance(ids, list) or not ids or len(ids)>len(REGISTRY) or any(not isinstance(i,str) or i not in REGISTRY for i in ids) or len(set(ids))!=len(ids):
             return self.demo.blocked('P003_INVALID_GRANT')
         catalogue = self.materials(session, bearer, subject)
@@ -166,8 +192,14 @@ class ChatAcl:
             # original scope; later prompt changes never expand it.
             contract = self.demo.service.gateway.task_policies.summary(existing['task'])
             return {'status':'ok','task_id':existing['task'],'scope_digest':contract['scope_digest']}
+        automatic = session in self.automatic_sessions
         explicit = self.material_selections.get(session)
-        paths = [] if explicit is not None else payload.get('paths', [])
+        if automatic:
+            catalog = self.materials(session, bearer, subject)
+            if catalog.get('status') != 'ok':
+                return catalog
+            explicit = [m['document_id'] for m in catalog['materials'] if m['selectable']]
+        paths = payload.get('paths', []) if automatic or explicit is None else []
         # Exact path comes only from current user turn, through trusted hook.
         prefixes = sorted({p.rsplit('/', 1)[0]+'/' for p in paths})
         grants = {'native.read': {'path':paths[0]}} if len(paths) == 1 else {}
@@ -188,9 +220,18 @@ class ChatAcl:
             for document_id in explicit:
                 action = document_action(document_id)
                 material_task = 'chat-material-'+uuid.uuid4().hex
-                created = self.demo.service.task_contract_authenticated(dict(operation='create', task_id=material_task,
-                    tools=['file.read'],resource_prefixes=[action['resource'].rsplit('/',1)[0]+'/'],
-                    user_values={'file.read':{'document_id':document_id}}),bearer)
+                if automatic:
+                    # Subject and IDs came from the verified bearer and OPA registry preview.
+                    contract = self.demo.service.gateway.task_policies.create(material_task, subject['id'],
+                        tools=['file.read'], prefixes=[action['resource'].rsplit('/',1)[0]+'/'],
+                        user_values={'file.read':{'document_id':document_id}}, grant_source='registry_policy')
+                    self.demo.audit('chat.registry_scope_created', run_id=run, task_id=material_task,
+                        subject=subject['id'], document_id=document_id, scope_digest=contract['scope_digest'])
+                    created = {'status':'ok'}
+                else:
+                    created = self.demo.service.task_contract_authenticated(dict(operation='create', task_id=material_task,
+                        tools=['file.read'],resource_prefixes=[action['resource'].rsplit('/',1)[0]+'/'],
+                        user_values={'file.read':{'document_id':document_id}}),bearer)
                 if created.get('status') != 'ok':
                     self.runs.pop(run,None)
                     return created
@@ -244,6 +285,11 @@ class ChatAcl:
         subject = demo.subject(bearer)
         if subject['id'] != run['subject']:
             return demo.blocked('P002_SUBJECT_MISMATCH')
+        denied = demo.tool_catalog.check(payload.get('tool_name'), subject) if demo.tool_catalog else 'P026_TOOL_ADMISSION_REQUIRED'
+        if denied:
+            demo.audit('chat.tool_gate', run_id=payload['run_id'], task_id=run['task'],
+                tool=payload.get('tool_name'), reason_code=denied, status='blocked')
+            return demo.blocked(denied)
         try:
             action = self.action(payload)
         except (ValueError, KeyError, TypeError):
@@ -254,14 +300,22 @@ class ChatAcl:
             if saved.get('scope_generation',0) != run.get('scope_generation',0):
                 return demo.blocked('P023_TASK_SCOPE_CHANGED')
             request, ticket = saved['request'], saved['ticket']
+            if payload.get('_document_adapter'):
+                return self.document_ready(request,ticket,payload)
             result = demo.service.gateway.dispatch(request, ticket)
             # Keep consumed ticket as tombstone: a repeated call cannot obtain
             # another authorization by changing toolCallId or starting a turn.
             return self.safe(result, request, payload)
-        task = run.get('material_tasks',{}).get(action.get('parameters',{}).get('document_id'),run['task'])
+        # Native file actions may carry a document correlation ID too. Their
+        # authority remains the native-path contract, never a registry grant.
+        task = run['task']
+        if action['tool'] == 'file.read':
+            task = run.get('material_tasks',{}).get(action.get('parameters',{}).get('document_id'),task)
         request = demo.task_request(task, action)
         request['context'].update(host_acl=True,run_id=payload['run_id'],
                                   session_key_hash=value_hash(run['session']))
+        if payload.get('_document_adapter'):
+            request['context']['host_document_adapter'] = True
         request['subject'] = subject
         rid = request['request_id']
         demo.snapshots[rid] = copy.deepcopy(request)
@@ -272,16 +326,53 @@ class ChatAcl:
             origin_tool_call_id=payload.get('tool_call_id'),
             scenario='chat', host_tool=payload['tool_name'], tool=action['tool'],
             target_resource=action['resource'], parameters_hash=value_hash(action['parameters']),
+            document_id=action['parameters'].get('document_id') if action['tool']=='file.read' else None,
             data_level=action['data_level'],risk_level=action['risk_level'],
             status=result['status'],reason_code=result.get('reason_code'),
+            approval_mode=result.get('approval_mode','business_approval'),
             policy_reason_codes=result.get('policy_reason_codes', []),
             scope_digest=contract['scope_digest'], resource_prefixes=contract['resource_prefixes'],
             scope_generation=run.get('scope_generation',0),
             ticket_ttl_seconds=30,approval_ttl_seconds=60)
+        if result['status']=='pending_approval':
+            demo.requests[rid]['confirmation_expires_at']=time.time()+60
+        if result['status']=='authorized' and payload.get('_document_adapter'):
+            self.authorization_display(request,result)
+            return self.document_ready(request,result['ticket'],payload)
         if result['status'] == 'authorized':
             self.authorization_display(request, result)
             result = demo.service.gateway.dispatch(request, result['ticket'])
         return self.safe(result, request, payload)
+
+    def document_ready(self, request, ticket, payload):
+        key=(payload['session_key'],payload.get('tool_call_id'))
+        if not isinstance(key[1],str) or not key[1] or key in self.document_calls:
+            return self.demo.blocked('DOCUMENT_CALL_REPLAY')
+        self.document_calls[key]={'request':copy.deepcopy(request),'ticket':ticket,'run_id':payload['run_id']}
+        return {'status':'document_prepared','request_id':request['request_id']}
+
+    def document_execute(self,payload):
+        key=(payload.get('session_key'),payload.get('tool_call_id'))
+        pending=self.document_calls.get(key)
+        if not pending or pending.get('used'):
+            return self.demo.blocked('DOCUMENT_CALL_REPLAY')
+        pending['used']=True
+        request=pending['request']
+        subject=self.demo.subject(self.sessions.get(key[0]))
+        if subject['id']!=request['subject']['id'] or pending['run_id'] not in self.runs:
+            return self.demo.blocked('P002_SUBJECT_MISMATCH')
+        if payload.get('params')!={'document_id':request['action']['parameters']['document_id']}:
+            return self.demo.blocked('DOCUMENT_ACTION_CHANGED')
+        result=self.demo.service.gateway.dispatch(request,pending['ticket'])
+        business=(result.get('receipt') or {}).get('business_result') or {}
+        ok=(result.get('status')=='executed_isolated' and business.get('adapter')=='isolated_synthetic_document'
+            and business.get('document_id')==payload['params']['document_id'] and business.get('side_effect') is False)
+        record=self.demo.requests[request['request_id']]
+        record.update(execution_status='succeeded' if ok else 'failed',status=result['status'],authorization_consumed_at=datetime.now(timezone.utc).isoformat())
+        self.demo.audit('chat.document_result',request_id=request['request_id'],run_id=pending['run_id'],subject=subject['id'],status=result['status'])
+        safe={'status':'executed_isolated' if ok else 'blocked','document_id':payload['params']['document_id'],'executed':ok,'reason_code':result.get('reason_code')}
+        if ok: safe['content']=business['document_content']
+        return safe
 
     def reapply(self, request_id, bearer, subject):
         if not isinstance(request_id,str):
@@ -348,6 +439,7 @@ class ChatAcl:
         self.demo.audit('chat.tool_gate', run_id=payload.get('run_id'),task_id=request['task_id'],
             request_id=request['request_id'],
             scope_digest=contract['scope_digest'],tool=payload['tool_name'],
+            approval_mode=(record or {}).get('approval_mode','business_approval'),
             reason_code=result.get('reason_code'),status=result['status'])
         return {k:result[k] for k in ('status','reason_code','http_status') if k in result} | {
             'request_id':request['request_id'],'task_id':request['task_id'],
@@ -429,6 +521,18 @@ class ChatAcl:
                 return self.start(payload)
             if operation == 'chat_tool':
                 return self.tool(payload)
+            if operation == 'chat_document_prepare':
+                return self.tool({**payload,'tool_name':'agentguard-notices__read_gov_document','_document_adapter':True})
+            if operation == 'chat_document_execute':
+                return self.document_execute(payload)
+            if operation == 'chat_confirmation_status':
+                record=self.demo.requests.get(payload.get('request_id'),{})
+                run=self.runs.get(payload.get('run_id'))
+                if not run or record.get('session_key')!=run['session']:
+                    return self.demo.blocked('P002_SUBJECT_MISMATCH')
+                if record.get('status')=='pending_approval' and time.time()>=record.get('confirmation_expires_at',0):
+                    record.update(status='rejected',reason_code='PERSONAL_CONFIRMATION_EXPIRED')
+                return {'status':record.get('status','blocked')}
             if operation == 'chat_end':
                 run_id = payload.get('run_id')
                 self.runs.pop(run_id, None)

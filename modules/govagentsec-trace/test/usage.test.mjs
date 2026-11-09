@@ -24,11 +24,12 @@ test('usage preserves real zero and partial counters, rejects invalid values and
 test('legacy, partial and aggregate presentations never infer individual counts', () => {
   assert.equal(tokenPresentation('model.ended', { usage: { input: 0, output: 0 } }), 'token 0/0（单次调用）');
   assert.equal(tokenPresentation('model.ended', { usage: { input: 7 } }), 'token 7/缺失（单次调用）');
-  assert.match(tokenPresentation('model.ended', { tokens: null }), /宿主钩子未暴露/);
-  assert.match(tokenPresentation('model.started', {}), /调用开始时无用量/);
-  assert.match(tokenPresentation('model.ended', { usage: { output: -3 } }), /用量字段无效/);
+  assert.equal(tokenPresentation('model.ended', { tokens: null }), '');
+  assert.equal(tokenPresentation('model.started', {}), '');
+  assert.equal(tokenPresentation('model.ended', { usage: { output: -3 } }), '');
   assert.equal(tokenPresentation('model.output', { usage: { input: 10, output: 4 } }), '运行汇总 token 10/4');
-  assert.match(tokenPresentation('model.output', {}), /运行汇总 token 未提供/);
+  assert.equal(tokenPresentation('model.output', {}), '');
+  assert.equal(tokenPresentation('model.ended', { token_missing_reason: 'usage_wrapper_unavailable' }), '');
   assert.match(tokenPresentation('model.ended', { token_scope: 'last_call_of_turn', usage: { output: 5 } }), /本轮最后调用/);
   assert.equal(tokenPresentation('tool.ended', { usage: { input: 1 } }), '');
 });
@@ -72,7 +73,8 @@ test('synthetic fixture graph has per-call and historical missing nodes while ru
   assert.equal(trace.summary.source, 'synthetic-fixture');
   const labels = traceGraph(trace).nodes.map(nodePresentation).map(n => n.tokens);
   assert.ok(labels.includes('token 120/20（单次调用）'));
-  assert.ok(labels.includes('token 未提供（宿主钩子未暴露）'));
+  assert.ok(labels.includes(''));
+  assert.ok(labels.every(label => !label.includes('token 未提供')));
   assert.ok(labels.includes('运行汇总 token 300/80'));
   assert.equal(trace.summary.metrics.input_tokens, 300);
   assert.equal(trace.summary.metrics.output_tokens, 80);

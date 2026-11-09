@@ -38,7 +38,7 @@ test('HTTP usage joins exact concurrent hooks append-only; offline/UI agree, wro
   const [a, b, missing] = await Promise.all([run('synthetic-a', 'normal'), run('synthetic-b', 'other'), run('synthetic-missing', 'no-usage')]);
   assert.equal(nodePresentation(a.projected).tokens, 'token 12/8（单次调用）');
   assert.equal(nodePresentation(b.projected).tokens, 'token 23/9（单次调用）');
-  assert.match(nodePresentation(missing.projected).tokens, /上游未提供/);
+  assert.equal(nodePresentation(missing.projected).tokens, '');
   assert.equal(a.result.summary.metrics.input_tokens, null, 'no run aggregate invented');
   const tampered = structuredClone(a.result); tampered.events.at(-1).model_call_id = 'other-call';
   assert.equal(traceGraph(tampered).nodes.find(n => n.event_type === 'model.ended').payload.usage, null);

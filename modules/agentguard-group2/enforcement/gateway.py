@@ -70,6 +70,15 @@ class EnforcementGateway:
         # Enabled only by the private OpenClaw identity worker. Public services
         # cannot choose host execution through request parameters.
         self.host_dispatch_enabled = False
+        # Private demonstration worker only; never populated from request fields.
+        self.demo_native_approval_subjects = frozenset()
+
+    def native_approval_only(self, request):
+        subject = request.get('subject', {})
+        return (subject.get('id') in self.demo_native_approval_subjects
+                and subject.get('identity_source') == 'demo_idp_verified_jwt'
+                and subject.get('clearance') == 3
+                and {'security_admin', 'workspace_maintainer'}.issubset(subject.get('roles', [])))
 
     def governed(self, request):
         return (self.require_task_policy or request.get('context', {}).get('source') == 'mcp'
@@ -88,6 +97,8 @@ class EnforcementGateway:
             except TaskPolicyError as exc:
                 if exc.code != 'P005_CONTRACT_EXISTS':
                     raise
+        if self.native_approval_only(request):
+            return self.task_policies.evaluate(request, native_approval_only=True)
         return self.task_policies.evaluate(request)
 
     def authorize(self, request: Mapping[str, Any], ttl_seconds: int = 30) -> dict[str, Any]:
@@ -131,7 +142,8 @@ class EnforcementGateway:
         except Exception as exc:
             return self._block(safe_request, getattr(exc, 'code', 'P012_TASK_POLICY_UNAVAILABLE'),
                                '任务权限校验未通过', policy_effect='task_policy')
-        if effect == "require_approval" or (governance and governance['pending']):
+        native_only = self.native_approval_only(safe_request)
+        if (effect == "require_approval" and not native_only) or (governance and governance['pending']):
             result = {
                 "status": "pending_approval",
                 "http_status": 202,
@@ -144,7 +156,7 @@ class EnforcementGateway:
             }
             self._audit(safe_request, result)
             return result
-        if effect != "allow":
+        if effect != "allow" and not (effect == "require_approval" and native_only):
             return self._block(
                 safe_request,
                 "G002_POLICY_DENY",
@@ -227,6 +239,8 @@ class EnforcementGateway:
             "ticket": token,
             "receipt": None,
             "governance": governance,
+            "approval_mode": "personal_confirmation" if getattr(self,'personal_confirmation_digest',None)==current_digest else "openclaw_native_only" if native_only else "business_approval",
+            "policy_reason_codes": list(decision.get("reason_codes", [])),
         }
         self._audit(safe_request, {**result, "ticket": "***REDACTED***"})
         return result
@@ -265,7 +279,10 @@ class EnforcementGateway:
         except Exception:
             return self._block(safe_request, 'P012_TASK_POLICY_UNAVAILABLE', '任务权限校验不可用', policy_effect='task_policy')
 
-        if self.host_dispatch_enabled and safe_request.get('context', {}).get('host_acl') is True:
+        if (self.host_dispatch_enabled and safe_request.get('context', {}).get('host_acl') is True
+                and not (getattr(self, 'host_document_dispatch_enabled', False)
+                         and safe_request.get('context', {}).get('host_document_adapter') is True
+                         and action.get('tool') == 'file.read')):
             result = {'status': 'host_authorized', 'http_status': 200,
                       'reason_code': 'G000_HOST_AUTHORIZED', 'receipt': None}
             self._audit(safe_request, result)
@@ -365,6 +382,8 @@ class EnforcementGateway:
             return authorization  # Kept in private worker memory until the host retry.
         result = self.dispatch(request, authorization["ticket"])
         result['governance'] = authorization.get('governance')
+        result['approval_mode'] = authorization.get('approval_mode', 'business_approval')
+        result['policy_reason_codes'] = authorization.get('policy_reason_codes', [])
         return result
 
     def invoke_authenticated(

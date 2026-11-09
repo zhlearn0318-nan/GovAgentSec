@@ -92,7 +92,9 @@ class TaskPolicies:
         with self.connection() as db:
             return db.execute('SELECT 1 FROM task_contracts WHERE task_id=?', (task_id,)).fetchone() is not None
 
-    def create(self, task_id, subject_id, tools=None, user_values=None, prefixes=None):
+    def create(self, task_id, subject_id, tools=None, user_values=None, prefixes=None, *, grant_source='user'):
+        if grant_source not in {'user', 'registry_policy'}:
+            raise TaskPolicyError('P003_INVALID_GRANT', '参数授权来源无效')
         tools = set({'file.read', 'database.query'} if tools is None else tools)
         if not task_id or not subject_id or not tools <= READ_ONLY:
             raise TaskPolicyError('P004_EXPANSION_REQUIRES_APPROVAL', '初始契约只允许只读模板内工具')
@@ -106,7 +108,7 @@ class TaskPolicies:
             if db.execute('SELECT 1 FROM task_contracts WHERE task_id=?', (task_id,)).fetchone():
                 raise TaskPolicyError('P005_CONTRACT_EXISTS', '任务契约不可覆盖；请收紧或发起新任务')
             body = dict(task_id=task_id, subject_id=subject_id, revision=1, allowed_tools=sorted(tools),
-                        grants=grants, observed={}, pending={}, approvals={}, expires_at=time.time()+3600,
+                        grants=grants, grant_source=grant_source, observed={}, pending={}, approvals={}, expires_at=time.time()+3600,
                         resource_prefixes=prefixes, requested_expansions={})
             self._save(db, body)
         return self.summary(task_id)
@@ -160,7 +162,7 @@ class TaskPolicies:
         if body['expires_at'] <= time.time():
             raise TaskPolicyError('P008_CONTRACT_EXPIRED', '任务契约已过期')
 
-    def evaluate(self, request):
+    def evaluate(self, request, *, native_approval_only=False):
         task = str(request.get('task_id',''))
         digest = compute_action_digest(request)
         action = request.get('action', {})
@@ -174,7 +176,7 @@ class TaskPolicies:
             diff = [] if action['tool'] in body['allowed_tools'] else [action['tool']]
             requested = body.get('requested_expansions', {}).get(digest) == body['revision']
             # Scoped tasks require an explicit user request before an approval can exist.
-            if body.get('resource_prefixes') is not None and not approved and not requested:
+            if body.get('resource_prefixes') is not None and not approved and not requested and not native_approval_only:
                 if outside:
                     raise TaskPolicyError('P014_RESOURCE_OUTSIDE_TASK', '目录不属于本任务；请显式申请一次性扩权')
                 if diff:
@@ -183,17 +185,22 @@ class TaskPolicies:
             for field, value in sensitive_values(action).items():
                 hashed = value_hash(value)
                 provenance[field] = {'source': 'approved_snapshot' if approved else
-                    'user' if value is not None and body['grants'].get(action['tool'],{}).get(field)==hashed else
+                    body.get('grant_source','user') if value is not None and body['grants'].get(action['tool'],{}).get(field)==hashed else
                     'tool_untrusted' if body['observed'].get(action['tool'],{}).get(field)==hashed else 'unknown',
                     'value_hash':hashed}
             tainted = any(v['source'] in ('unknown','tool_untrusted') for v in provenance.values())
             reason = ('P004_EXPANSION_REQUIRES_APPROVAL' if outside and not approved else
                       'P006_PARAMETER_SOURCE_UNTRUSTED' if tainted else
                       'P004_EXPANSION_REQUIRES_APPROVAL' if diff and not approved else None)
+            # Preserve the real diff/provenance for audit. This is the verified
+            # demo administrator's authority, not fabricated user consent.
+            if native_approval_only:
+                reason = None
             summary = dict(task_id=task,revision=body['revision'],allowed_tools=body['allowed_tools'],
                            resource_prefixes=body.get('resource_prefixes'), scope_digest=scope_digest(body),
                            resource_outside_task=outside, explicit_expansion_requested=requested,
-                           provenance=provenance,contract_diff=diff,ticket_ttl_seconds=30,one_time_expansion=bool(approved))
+                           provenance=provenance,contract_diff=diff,ticket_ttl_seconds=30,one_time_expansion=bool(approved),
+                           approval_mode='openclaw_native_only' if native_approval_only else 'business_approval')
             if reason:
                 body['pending'][digest] = {'revision':body['revision'], 'summary':summary}
                 self._save(db,body)

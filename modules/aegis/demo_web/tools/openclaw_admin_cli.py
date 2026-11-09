@@ -28,6 +28,7 @@ from backend.install_policy_audit import (  # noqa: E402
     verify_install_policy_audit,
 )
 from backend.mcp_server_admission import admit_mcp_server  # noqa: E402
+from backend.manual_reviews import list_reviews, resolve_review  # noqa: E402
 
 
 MAX_STDIN_BYTES = 128 * 1024
@@ -133,6 +134,10 @@ def _rules_payload() -> dict[str, Any]:
 
 def handle(request: dict[str, Any]) -> Any:
     operation = str(request.get("operation") or "").strip().lower()
+    if operation == "list_reviews":
+        return list_reviews()
+    if operation == "resolve_review":
+        return resolve_review(request)
     if operation == "overview":
         audits = read_recent_install_policy_audits(limit=100)
         counts = {"allow": 0, "warn": 0, "block": 0}

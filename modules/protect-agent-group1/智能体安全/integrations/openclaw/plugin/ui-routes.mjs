@@ -178,9 +178,9 @@ export function registerProtectionUiRoutes(api, eventStore) {
     path: "/protect-agent/ui/state",
     auth: "plugin",
     match: "exact",
-    handler(request, response) {
+    async handler(request, response) {
       if (panelCors(request,response)) return true;
-      if(!allowCapability(request,response)) return true;
+      if(!await allowCapability(request,response)) return true;
       return writeResponse(
         request,
         response,
@@ -205,18 +205,18 @@ export function registerProtectionUiRoutes(api, eventStore) {
     path: "/plugins/protect-agent/panel",
     auth: "plugin",
     match: "exact",
-    handler(request, response) {
-      if(!allowPage(request,response)) return true;
-      return writeHtml(request,response,injectCapability(brandPage(renderProtectAgentPanel(), "protect", {compact:new URL(request.url,"http://localhost").searchParams.has("workspace")}),['/protect-agent/ui/state']));
+    async handler(request, response) {
+      if(!await allowPage(request,response)) return true;
+      return writeHtml(request,response,injectCapability(brandPage(renderProtectAgentPanel(), "protect", {compact:new URL(request.url,"http://localhost").searchParams.has("workspace")}),['/protect-agent/ui/state'],request.govPageGrant));
     },
   });
   api.registerHttpRoute({
     path: "/plugins/supply-chain-security/panel",
     auth: "plugin",
     match: "exact",
-    handler(request, response) {
-      if(!allowPage(request,response)) return true;
-      return writeHtml(request,response,injectCapability(renderSupplyChainPanel(),['/plugins/supply-chain-security/api/scan']));
+    async handler(request, response) {
+      if(!await allowPage(request,response)) return true;
+      return writeHtml(request,response,injectCapability(renderSupplyChainPanel(),['/plugins/supply-chain-security/api/scan'],request.govPageGrant));
     },
   });
   api.registerHttpRoute({
@@ -231,7 +231,7 @@ export function registerProtectionUiRoutes(api, eventStore) {
         return true;
       }
       if (panelCors(request,response)) return true;
-      if(!allowCapability(request,response)) return true;
+      if(!await allowCapability(request,response)) return true;
       try {
         const body = await readJsonBody(request);
         const data = await runGroup4Scan(body?.targetPath);

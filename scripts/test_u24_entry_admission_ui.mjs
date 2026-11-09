@@ -13,7 +13,7 @@ const server=createServer(async(req,res)=>{
   res.setHeader('Content-Type','text/html; charset=utf-8');
   const u=new URL(req.url,'http://localhost');
   if(u.pathname==='/welcome'){res.end(renderWelcomePage());return;}
-  if(u.pathname==='/mcp'){res.end(renderMcpPage('fixture-only'));return;}
+  if(u.pathname==='/mcp'){res.end(renderMcpPage('fixture-only',{canManage:true}));return;}
   if(u.pathname==='/plugin'){res.end('<h1>Fixture host destination</h1>');return;}
   if(u.pathname==='/plugins/aegis-admin/api'){
     const chunks=[];for await(const c of req)chunks.push(c);const body=JSON.parse(Buffer.concat(chunks));calls.push(body);

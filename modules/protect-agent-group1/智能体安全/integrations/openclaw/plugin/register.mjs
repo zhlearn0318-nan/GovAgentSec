@@ -149,6 +149,18 @@ export function registerProtectAgent(api, dependencies = {}) {
     conversationAllowed: api.config?.plugins?.entries?.[api.id ?? "protect-agent"]?.hooks?.allowConversationAccess === true,
     probe: dependencies.probe,
     stopRun,
+    reportTaskAccessDenied(ctx, code) {
+      const key = contextKey(ctx);
+      if (!key || !eventStore.has(key)) return;
+      const reasonCode = /^P\d{3}_[A-Z_]+$/.test(code ?? '') ? code : 'P012_TASK_POLICY_UNAVAILABLE';
+      eventStore.completePhase(key, 'tools', {status:'blocked', decision:'BLOCK'});
+      eventStore.incident(key, {kind:'task_denied', phase:'tools', reasonCode,
+        message: reasonCode === 'P001_CONTRACT_REQUIRED'
+          ? '当前会话没有有效的任务权限绑定，本次工具调用已阻断。请在“动态权限”中绑定当前任务后重新发送消息。'
+          : '本次工具调用未通过任务权限检查，未进入 OpenClaw 操作确认。请在“动态权限”中查看权限或审批记录。',
+        toolCallId:ctx.toolCallId, stopConfirmed:false});
+      runtime.record('task_acl', {decision:'BLOCK', reasonCode}, true, ctx);
+    },
     async screenToolResult(prepared, ctx, signal) {
       const key = contextKey(ctx) ?? "unscoped";
       eventStore.beginPhase(key, "tools");
@@ -323,10 +335,13 @@ export function registerProtectAgent(api, dependencies = {}) {
             decision: "REVIEW",
           });
           const waitingAt = performance.now();
-          eventStore.incident(key, {kind:'approval_pending',phase:'tools',reasonCode:'APPROVAL_REQUIRED',message:'此操作需要确认，请在 OpenClaw 审批卡片中选择允许一次或拒绝。等待超过 60 秒将停止任务。',stopConfirmed:false});
+          // Later hooks may veto this call before OpenClaw creates an approval.
+          eventStore.incident(key, {kind:'approval_requested',phase:'tools',reasonCode:'APPROVAL_REQUIRED',
+            toolCallId:ctx.toolCallId, pluginId:api.id ?? 'protect-agent',
+            message:'此操作需要确认，正在核对网关是否已创建审批请求。',stopConfirmed:false});
           return toolApproval(event.toolName, result, resolution => {
             runtime.record('approval', {decision:resolution==='allow-once'?'ALLOW':'REVIEW',reasonCode:'APPROVAL_'+String(resolution).toUpperCase().replaceAll('-','_'),durationMs:Math.round(performance.now()-waitingAt)}, true, ctx);
-            if (resolution === 'allow-once') eventStore.clearIncident(key);
+            if (resolution === 'allow-once') eventStore.clearIncident(key, {kind:'approval_requested',toolCallId:ctx.toolCallId});
             else stopRun(ctx, {kind:'approval_denied',phase:'tools',reasonCode:resolution==='timeout'?'APPROVAL_TIMEOUT':'APPROVAL_DENIED',message:resolution==='timeout'?'操作确认超时，已停止继续尝试。请重新发起并完成操作确认。':'操作未获允许，已请求停止任务。'});
           });
         }
@@ -414,6 +429,7 @@ export function registerProtectAgent(api, dependencies = {}) {
       if (stoppedRuns.has(key)) {
         eventStore.confirmStopped(key);
       }
+      eventStore.endRun(key);
       runContexts.delete(key);
       runSessions.delete(key);
       runIdentities.delete(key);

@@ -117,7 +117,8 @@ export function mountTraceAudit(root, rawRequest, { initialTab = 'graph', sessio
     else if(['partial','invalid','interrupted'].includes(s.trace_status))content.append(el('p','本次记录尚不完整，暂不能用于候选生成。','warning'));
     if(s.source==='synthetic-fixture')content.append(el('p','本地合成测试轨迹 · 不代表真实模型效果','hint'));
     const meta=el('details',undefined,'trace-meta');meta.dataset.stateKey='trace-meta';meta.append(el('summary','用量、评分与采集详情'));
-    meta.append(el('p',`输入 ${fmt(m.input_tokens)} / 输出 ${fmt(m.output_tokens)} token · 过程评分 Q ${fmt(s.assessment?.quality?.Q)} / S ${fmt(s.assessment?.safety?.S)}`));
+    const assessmentLabel = s.assessment ? `过程评分 Q ${fmt(s.assessment.quality?.Q)} / S ${fmt(s.assessment.safety?.S)}` : '尚未评估';
+    meta.append(el('p',`输入 ${fmt(m.input_tokens)} / 输出 ${fmt(m.output_tokens)} token · ${assessmentLabel}`));
     if(s.assessment)meta.append(el('p','评分来源：'+s.assessment.source+' · '+(s.assessment.safety?.reason??'依据缺失')));
     if(s.missing_fields.length)meta.append(el('p','未观测字段：'+s.missing_fields.map(x=>missing[x]??x).join('、')));
     meta.append(el('p','记录编号：'+s.trace_id),el('p',approvals.some(e=>e.payload.source==='identity-audit')?'批准与实际执行分别记录。':'未采集到原生审批事件；存在审批时请结合回执核对。'));content.append(meta);

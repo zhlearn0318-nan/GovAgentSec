@@ -83,7 +83,9 @@ def build(current: dict, state: Path, docker: Path, *, trajectory: bool = False)
             'AGENTGUARD_MCP_IDENTITY_MODE': 'oidc',
             'AGENTGUARD_MCP_STATUS_STORE_FILE': str(runtime / 'mcp-control-statuses.json'),
         }, 'requestTimeoutMs': 20000, 'connectionTimeoutMs': 8000, 'supportsParallelToolCalls': False,
-            'toolFilter': {'include': ['list_notices', 'request_test_payment', 'run_protected_command', 'get_control_request_status', 'read_gov_document', 'submit_emergency_notice']}},
+            'toolFilter': {'include': ['list_notices', 'request_test_payment', 'run_protected_command', 'get_control_request_status', 'submit_emergency_notice']}},
+        'tools.alsoAllow': ['gov_read_document', 'agentguard-notices__list_notices', 'agentguard-notices__request_test_payment', 'agentguard-notices__run_protected_command', 'agentguard-notices__get_control_request_status', 'agentguard-notices__submit_emergency_notice', 'supply-chain-security__security_scan'],
+        'tools.sandbox.tools.alsoAllow': ['gov_read_document', 'agentguard-notices__list_notices', 'agentguard-notices__request_test_payment', 'agentguard-notices__run_protected_command', 'agentguard-notices__get_control_request_status', 'agentguard-notices__submit_emergency_notice', 'supply-chain-security__security_scan'],
         'mcp.servers.supply-chain-security': {'command': py2, 'args': [str(group4 / 'integration' / 'group4_mcp_server.py')], 'cwd': str(group4), 'env': {
             'GROUP4_PIPELINE_SCRIPT': pipeline, 'GROUP4_REPORT_DIR': str(runtime / 'group4-reports'),
             'GROUP4_ALLOWED_ROOTS': os.pathsep.join(map(str, roots)),

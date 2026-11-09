@@ -1,0 +1,42 @@
+{
+  "label": "演示账号（非生产），仅进程内演示源启用后有效",
+  "password_algorithm": "pbkdf2-hmac-sha256",
+  "iterations": 120000,
+  "accounts": [
+    {
+      "account": "jingban",
+      "subject": "office-test",
+      "enabled": true,
+      "salt": "1f1dfbe0076b96948ed678d37840d7c9",
+      "password_hash": "276e3b36378fcfab45ef28d6b9844d26f925197913ba25ca32e7228d42f3c694"
+    },
+    {
+      "account": "shenpi",
+      "subject": "approver-test",
+      "enabled": true,
+      "salt": "d9df7c500e3b9e649c2c30af833707af",
+      "password_hash": "847308d3fd4c89058b592d6e431d50bfb60a84414a5afe41eb4676f7ae6989d5"
+    },
+    {
+      "account": "weihu",
+      "subject": "maintenance-test",
+      "enabled": true,
+      "salt": "98634a56d3888bfc4502a6d722039de3",
+      "password_hash": "c15dadfa534c08d477b884fcb28046c08adaec45bfab90f539c0f9f6eb26d4ec"
+    },
+    {
+      "account": "shenji",
+      "subject": "auditor-test",
+      "enabled": true,
+      "salt": "78449a78ba5f2c19587bf2ef17a761d4",
+      "password_hash": "88971df24b55c88037c89a046c4b49548345647e057a9aa0e9e4f4bea28b74b8"
+    },
+    {
+      "account": "admin",
+      "subject": "superadmin-test",
+      "enabled": true,
+      "salt": "23268fabd3a12185c676e26bef19e538",
+      "password_hash": "1e16259074917ee3855c7d2c8958efe8a511ae43dc949710d441bd47aa217d73"
+    }
+  ]
+}

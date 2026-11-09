@@ -2,6 +2,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import {createHash} from 'node:crypto';
 import {pathToFileURL} from 'node:url';
+import {reportTaskAccessDenied} from '../../../protect-agent-group1/智能体安全/integrations/openclaw/plugin/result-gate.mjs';
 
 const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const inside=(root,target)=>{const r=path.relative(root,target);return r!== '..'&&!r.startsWith('..'+path.sep)&&!path.isAbsolute(r);};
@@ -64,7 +65,22 @@ export function hostExecutionResult(event){
 export function registerChatAcl(api,bridge,{workspaceResolver=ctx=>hostWorkspace(api.config,ctx)}={}){
   // Gateway and pre-warmed Agent registries share the authenticated bridge.
   const runs=bridge.chatRuns??=new Map();
-  const block=code=>({block:true,blockReason:`任务权限阻断：${code}。请先在工作台绑定业务身份；越权动作须由另一人审批。`});
+  api.registerTool?.(ctx=>({name:'gov_read_document',label:'按登录身份读取受管资料',
+    description:'读取合成受管资料，以当前登录账号授权。document_id 可为 emergency_plan、material_inventory、duty_contacts、command_contacts、protected_resource。代替独立 MCP 的 read_gov_document，禁止传入路径或身份。',
+    parameters:{type:'object',additionalProperties:false,properties:{document_id:{type:'string'}},required:['document_id']},
+    async execute(callId,params){
+      const value=await bridge.request('chat_document_execute',{session_key:ctx.sessionKey,tool_call_id:callId,params});
+      // Return business text once. The worker keeps protocol/audit metadata;
+      // every byte of the actual document still passes the existing result guard.
+      if(value.status==='executed_isolated' && value.executed===true && typeof value.content==='string')
+        return {content:[{type:'text',text:value.content}],details:{document_id:value.document_id,executed:true}};
+      return {content:[{type:'text',text:'资料未读取：'+(value.reason_code??'DOCUMENT_UNAVAILABLE')}],isError:true};
+    }}),{names:['gov_read_document']});
+  const block=(code,event,ctx)=>{
+    reportTaskAccessDenied({...ctx,runId:ctx.runId??event.runId,toolCallId:ctx.toolCallId??event.toolCallId},code);
+    const reason={P024_TOOL_NOT_IN_CATALOG:'不在工具库，已阻断',P025_TOOL_PERMISSION_DENIED:'当前身份无权调用此工具，已阻断',P026_TOOL_ADMISSION_REQUIRED:'工具尚未通过准入，已阻断'}[code];
+    return {block:true,blockReason:reason?`${reason}（${code}）`:`任务权限阻断：${code}。请在动态权限核对身份、任务范围与审批状态。`};
+  };
   api.on?.('before_agent_run',async(event,ctx)=>{
     if(!ctx.runId||!ctx.sessionKey||!ctx.workspaceDir)return;
     runs.delete(ctx.runId);
@@ -80,13 +96,25 @@ export function registerChatAcl(api,bridge,{workspaceResolver=ctx=>hostWorkspace
   },{priority:90});
   api.on?.('before_tool_call',async(event,ctx)=>{
     const id=ctx.runId??event.runId,run=runs.get(id);
-    if(!run||run.session!==ctx.sessionKey)return block('P001_CONTRACT_REQUIRED');
+    if(!run||run.session!==ctx.sessionKey)return block('P001_CONTRACT_REQUIRED',event,ctx);
     try{
-      const result=await bridge.request('chat_tool',{run_id:id,session_key:ctx.sessionKey,
+      if(bridge.personalConfirmation && event.toolName==='agentguard-notices__read_gov_document')return {block:true,blockReason:'请改用 gov_read_document(document_id=原文档ID)，它按当前登录账号执行。旧 MCP 静态身份入口未读取资料。'};
+      const operation=event.toolName==='gov_read_document'?'chat_document_prepare':'chat_tool';
+      const payload={run_id:id,session_key:ctx.sessionKey,
         tool_call_id:ctx.toolCallId,
-        tool_name:event.toolName,params:event.params,action:nativeAction(event.toolName,event.params,run.root)});
-      if(result.status!=='host_authorized')return block(result.reason_code??'P012_TASK_POLICY_UNAVAILABLE');
-    }catch(e){return block(e.message==='P018_PATH_REJECTED'?e.message:'P012_TASK_POLICY_UNAVAILABLE');}
+        tool_name:event.toolName,params:event.params,action:nativeAction(event.toolName,event.params,run.root)};
+      let result=await bridge.request(operation,payload);
+      if(result.status==='pending_approval' && bridge.personalConfirmation){
+        const deadline=Date.now()+61000;
+        while(Date.now()<deadline){
+          await new Promise(resolve=>setTimeout(resolve,500));
+          const pending=await bridge.request('chat_confirmation_status',{run_id:id,request_id:result.request_id});
+          if(pending.status==='authorized'){result=await bridge.request(operation,payload);break;}
+          if(pending.status!=='pending_approval')return block('PERSONAL_CONFIRMATION_REJECTED_OR_EXPIRED',event,ctx);
+        }
+      }
+      if(!['host_authorized','document_prepared'].includes(result.status))return block(result.reason_code??'P012_TASK_POLICY_UNAVAILABLE',event,ctx);
+    }catch(e){return block(e.message==='P018_PATH_REJECTED'?e.message:'P012_TASK_POLICY_UNAVAILABLE',event,ctx);}
   },{priority:-10000});
   api.on?.('after_tool_call',async(event,ctx)=>{
     const id=ctx.runId??event.runId;if(!runs.has(id))return;

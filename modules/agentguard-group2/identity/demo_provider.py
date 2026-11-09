@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import hmac
 import json
 import secrets
 import sqlite3
@@ -28,11 +29,14 @@ from enforcement.task_policy import sensitive_values
 from service.app import AgentGuardService
 from service.config import ServiceConfig
 from identity.chat_acl import ChatAcl
+from identity.tool_catalog import ToolCatalog
+from identity.personal_confirmation import confirm as confirm_personal
 
 LABEL = '演示身份源（非生产）'
 ISSUER = 'https://agentguard-demo.invalid/in-process'
 AUDIENCE = 'agentguard-demo-only'
 IDENTITY_SOURCE = 'demo_idp_verified_jwt'
+LOGIN_TTL_SECONDS = 30 * 60
 ROOT = Path(__file__).resolve().parents[1]
 USER_LABELS = {'office-test': '经办', 'finance-test': '财务 / 高风险操作者', 'approver-test': '处长审批', 'auditor-test': '审计（只读）'}
 DIRECTORIES = {'A': 'govdoc://demo/public/', 'B': 'govdoc://demo/internal/'}
@@ -40,10 +44,22 @@ DIRECTORIES = {'A': 'govdoc://demo/public/', 'B': 'govdoc://demo/internal/'}
 
 def demo_users():
     realm = json.loads((ROOT / 'identity/keycloak/agentguard-realm.json').read_text(encoding='utf-8'))
-    return {u['username']: dict(id=u['username'], label=USER_LABELS[u['username']],
+    users = {u['username']: dict(id=u['username'], label=USER_LABELS[u['username']], enabled=u.get('enabled', False),
         department=u['attributes']['department'][0], clearance=int(u['attributes']['clearance'][0]),
         roles=u['realmRoles'], mfa=True, amr=['mfa'], mfa_synthetic=True)
         for u in realm['users'] if u['username'] in USER_LABELS}
+    # The three public demo accounts form a cumulative hierarchy. Existing
+    # internal-only fixtures remain available to isolated security regressions.
+    users['office-test'].update(label='基础经办', tier=1, tier_label='基础经办',
+        clearance=0, roles=['office_user'])
+    users['approver-test'].update(label='中级主管', tier=2, tier_label='中级主管',
+        clearance=1, roles=['office_user', 'business_approver'])
+    users['maintenance-test'] = dict(id='maintenance-test', label='高级管理员', enabled=True,
+        department='演示维护', clearance=3, tier=3, tier_label='高级管理员',
+        roles=['office_user', 'business_approver', 'workspace_maintainer', 'security_admin', 'finance_operator'],
+        mfa=True, amr=['mfa'], mfa_synthetic=True)
+    users['superadmin-test'] = {**users['maintenance-test'], 'id':'superadmin-test', 'label':'最高权限管理员'}
+    return users
 
 
 class _MemoryJwks(jwt.PyJWKClient):
@@ -89,6 +105,8 @@ class _DemoGuard(AgentGuardService):
             oidc_enabled=True, oidc_issuer=ISSUER, oidc_audience=AUDIENCE),
             environ={'AGENTGUARD_TICKET_SECRET_HEX': secrets.token_hex(32)})
         self.gateway.host_dispatch_enabled = True
+        self.gateway.demo_native_approval_subjects = frozenset({'maintenance-test','superadmin-test'})
+        self.gateway.host_document_dispatch_enabled = True
         for tool, operation in [('native.read','read'),('file.write','write'),('shell.execute','execute')]:
             self.gateway.registry[(tool,operation)] = {'module':'database_query.wat','argument':'item_count'}
 
@@ -101,11 +119,17 @@ class _DemoGuard(AgentGuardService):
 
 
 class DemoIdentity:
-    def __init__(self, directory):
+    def __init__(self, directory, *, personal_confirmation=False):
+        self.personal_confirmation = personal_confirmation
         self.directory = Path(directory)
         self.directory.mkdir(parents=True, exist_ok=True)
         self.users = demo_users()
+        self.accounts = json.loads((ROOT / 'identity/demo_accounts.json').read_text(encoding='utf-8'))['accounts']
+        self.permission_policy = json.loads((ROOT / 'data/agent_guard.json').read_text(encoding='utf-8'))['agent_guard']
+        for account in self.accounts:
+            self.users[account['subject']]['account'] = account['account']
         self.service = None
+        self.tool_catalog = None
         self.key = None
         self.expires_at = 0
         self.requests = {}
@@ -141,6 +165,10 @@ class DemoIdentity:
         elif event == 'demo_identity.resolve':
             kind = {'authorized': 'approval.approved', 'rejected': 'approval.rejected',
                     'blocked': 'approval.denied'}.get(status)
+        elif event == 'chat.personal_confirmation' and entry.get('resolution')=='reject':
+            kind,status='approval.rejected','rejected'
+        elif event == 'chat.document_result' and record.get('approver'):
+            kind,status='approval.execution',record.get('execution_status','unknown')
         elif event == 'chat.host_result' and entry.get('result_linked') and entry.get('execution_recorded') and record.get('approver'):
             kind, status = 'approval.execution', record.get('execution_status', 'unknown')
         if not kind:
@@ -182,15 +210,78 @@ class DemoIdentity:
             except OidcIdentityError as exc:
                 reason = exc.code
         return dict(enabled=self.service is not None, label=LABEL, production_oidc=False,
+            personal_confirmation=self.personal_confirmation,
             issuer_transport='in-process-rs256-jwks', default_enabled=False, mfa_synthetic=True,
-            execution_enabled=subject is not None and 'audit_reader' not in subject['roles'], user=subject, expires_at=self.expires_at,
-            users=list(self.users.values()), requests=self.request_summaries(subject),
+            execution_enabled=subject is not None and bool({'office_user','finance_operator','business_approver'}.intersection(subject['roles'])),
+            user=self.public_subject(subject), permission_summary=self.permission_summary(subject), expires_at=self.expires_at,
+            users=[self.public_subject(self.users[a['subject']]) for a in self.accounts
+                   if a.get('enabled') and self.users[a['subject']].get('enabled')],
+            requests=self.request_summaries(subject),
             tasks=self.task_summaries(subject), audit=self.events[-40:] if subject else [],
             chat_session_bindings=(len(self.chat.sessions) if subject else 0),
             bound_sessions=[s for s,t in self.chat.sessions.items() if bearer and t==bearer],
             material_selections={s:ids for s,ids in self.chat.material_selections.items() if bearer and self.chat.sessions.get(s)==bearer},
             delegation_reason=reason,
             gateway_login_is_business_identity=False)
+
+    def public_subject(self, subject):
+        if not subject:
+            return None
+        user = self.users[subject['id']]
+        return {**subject, 'label':user['label'], 'account':user.get('account'),
+                'tier':user.get('tier'), 'tier_label':user.get('tier_label')}
+
+    def permission_summary(self, subject):
+        """Policy-derived upper bounds; actual actions still need OPA and task ACL."""
+        if not subject:
+            return None
+        roles = set(subject['roles'])
+        maintenance = 'workspace_maintainer' in roles
+        assess = maintenance or bool({'business_approver', 'audit_reader'}.intersection(roles))
+        capabilities = ['workspace.read', 'audit.read', 'admission.read']
+        if assess:
+            capabilities.append('audit.assess')
+        if maintenance:
+            capabilities.extend(['admission.manage', 'settings.manage'])
+        policy = self.permission_policy
+        catalog = self.tool_catalog.summary(subject) if self.tool_catalog else []
+        tools = sorted({row['tool'] for row in catalog if row['available']})
+        can_read = any(p['role'] in roles and p['tool']=='file.read' and 'read' in p['operations']
+                       for p in policy['permissions']) and 'file.read' in tools
+        materials = [document_id for document_id, (_,resource,level,_) in REGISTRY.items()
+                     if can_read and policy['data_levels'][level] <= subject['clearance']
+                     and ('security_admin' in roles or not any(resource.lower().startswith(p.lower())
+                          for p in policy['protected_resource_prefixes']))]
+        user = self.users[subject['id']]
+        return dict(source='server-policy-summary', capabilities=capabilities,
+            tier=user.get('tier'), tier_label=user.get('tier_label'),
+            clearance=subject['clearance'], clearance_label=['公开','内部','机密','秘密'][subject['clearance']],
+            material_ids=materials, tool_families=tools, can_approve='business_approver' in roles,
+            materials=[dict(document_id=key, data_level=value[2], readable=key in materials)
+                       for key,value in REGISTRY.items()],
+            tool_catalog=catalog,
+            can_edit_rules=maintenance, can_switch_sandbox=maintenance, can_assess=assess,
+            approval_mode='openclaw_native_only' if self.service.gateway.native_approval_only({'subject':subject}) else 'business_approval')
+
+    def authorize(self, bearer, permission):
+        subject = self.subject(bearer)
+        summary = self.permission_summary(subject)
+        if permission not in summary['capabilities']:
+            return self.blocked('BUSINESS_PERMISSION_DENIED')
+        return dict(status='ok',user=self.public_subject(subject),permission_summary=summary,
+                    production_oidc=False,label=LABEL)
+
+    def password_user(self, account_name, password):
+        if not isinstance(account_name,str) or not isinstance(password,str) or len(password)>256:
+            return None
+        account = next((a for a in self.accounts if a['account']==account_name),None)
+        if not account or not account.get('enabled'):
+            return None
+        candidate = hashlib.pbkdf2_hmac('sha256',password.encode(),bytes.fromhex(account['salt']),120000).hex()
+        if not hmac.compare_digest(candidate,account['password_hash']):
+            return None
+        user = self.users[account['subject']]
+        return user if user.get('enabled') else None
 
     def request_summaries(self, subject):
         if not subject:
@@ -201,6 +292,8 @@ class DemoIdentity:
             if record['requester'] != subject['id'] and not review:
                 continue
             row = copy.deepcopy(record)
+            row['can_confirm_self'] = bool(self.personal_confirmation and row.get('scenario')=='chat'
+                and row.get('requester')==subject['id'] and row.get('status')=='pending_approval')
             expiry = row.get('authorization_expires_at')
             row['authorization_expired'] = bool(expiry is not None and time.time() >= expiry
                 and not row.get('authorization_consumed_at'))
@@ -296,6 +389,8 @@ class DemoIdentity:
                 return self.blocked('P010_PENDING_SNAPSHOT_REQUIRED')
             result = self.service.request_task_expansion_authenticated(copy.deepcopy(request), bearer)
             record.update(status=result['status'], reason_code=result.get('reason_code'))
+            if result['status']=='pending_approval':
+                record['confirmation_expires_at']=time.time()+60
         return self.safe_receipt(result, request_id, subject, operation)
 
     def safe_receipt(self, result, request_id, subject, operation):
@@ -316,7 +411,11 @@ class DemoIdentity:
     def subject(self, bearer):
         if not self.service:
             raise OidcIdentityError('DEMO_IDENTITY_DISABLED', '演示身份源未开启，执行与审批已禁用')
-        return self.service.verifier.authenticate_request({}, bearer)['subject']
+        subject = self.service.verifier.authenticate_request({}, bearer)['subject']
+        account = next((a for a in self.accounts if a['subject']==subject['id']),None)
+        if not self.users.get(subject['id'],{}).get('enabled') or account and not account.get('enabled'):
+            raise OidcIdentityError('DEMO_USER_DISABLED','当前演示账号不可用')
+        return subject
 
     @staticmethod
     def blocked(code, status=403):
@@ -336,8 +435,9 @@ class DemoIdentity:
 
     def handle(self, operation, payload=None, bearer=None):
         payload = payload or {}
-        allowed = {'status': set(), 'enable': set(), 'disable': set(), 'login': {'user'},
-                   'invoke': {'scenario'}, 'resolve': {'request_id', 'resolution'},
+        allowed = {'status': set(), 'enable': set(), 'disable': set(), 'login': {'user','account','password'},
+                   'authorize': {'permission'},
+                   'invoke': {'scenario'}, 'resolve': {'request_id', 'resolution'}, 'activate_chat': {'session_key'},
                    'task_create': {'directory'}, 'task_read': {'task_id','document_id'},
                    'task_escalate': {'request_id'}, 'bind_session': {'session_key'}, 'revoke': set(),
                    'materials': {'session_key'}, 'select_materials': {'session_key','material_ids'},
@@ -357,31 +457,40 @@ class DemoIdentity:
                 public = json.loads(jwt.algorithms.RSAAlgorithm.to_jwk(self.key.public_key()))
                 public.update(kid=self.kid, use='sig', alg='RS256')
                 self.service = _DemoGuard(DemoVerifier({'keys': [public]}, self.delegations), self.directory / self.kid)
-                self.expires_at = time.time() + 900
+                self.tool_catalog = ToolCatalog(self.permission_policy, self.directory / 'tool-admission.json')
+                self.expires_at = time.time() + LOGIN_TTL_SECONDS
                 self.audit('demo_identity.enabled', activation_id=self.kid, transport='in-process', mfa_synthetic=True)
             return self.status()
         if not self.service:
             return self.blocked('DEMO_IDENTITY_DISABLED')
         try:
             if operation == 'login':
-                user = self.users.get(payload.get('user'))
-                if not user:
-                    return self.blocked('DEMO_USER_UNKNOWN')
+                # The legacy user path is private stdio/test compatibility only.
+                # Public gateway RPC accepts account+password exclusively.
+                user = (self.password_user(payload.get('account'),payload.get('password')) if 'account' in payload or 'password' in payload
+                        else self.users.get(payload.get('user')))
+                if not user or not user.get('enabled'):
+                    return self.blocked('DEMO_LOGIN_FAILED',401)
                 if bearer:
                     previous = self.subject(bearer)
                     self.revoke(bearer, previous)
                 now = int(time.time())
                 claims = dict(iss=ISSUER, aud=AUDIENCE, sub=user['id'], preferred_username=user['id'],
-                    iat=now, exp=min(now+300, int(self.expires_at)), department=user['department'],
+                    iat=now, exp=now+LOGIN_TTL_SECONDS, department=user['department'],
                     clearance=user['clearance'], realm_access={'roles': user['roles']}, amr=['mfa'],
                     azp='agentguard', scope='agentguard.demo', demo_identity=True, mfa_synthetic=True, jti=uuid.uuid4().hex)
                 token = jwt.encode(claims, self.key, algorithm='RS256', headers={'kid': self.kid})
                 self.delegations[hashlib.sha256(token.encode()).hexdigest()] = user['id']
                 subject = self.subject('Bearer ' + token)  # Never trust even our own unverified claims.
+                # A successful login gets its full lifetime, even near source expiry.
+                # Existing tokens keep their own expiry and are never renewed here.
+                self.expires_at = max(self.expires_at, claims['exp'])
                 self.audit('demo_identity.login', subject=subject['id'])
-                return dict(access_token=token, token_type='Bearer', expires_at=claims['exp'], user=subject,
+                return dict(access_token=token, token_type='Bearer', expires_at=claims['exp'], user=self.public_subject(subject),
                             label=LABEL, production_oidc=False, mfa_synthetic=True)
             subject = self.subject(bearer)
+            if operation == 'authorize':
+                return self.authorize(bearer,payload.get('permission'))
             if operation == 'revoke':
                 return self.revoke(bearer, subject)
             if 'audit_reader' in subject['roles']:
@@ -389,6 +498,8 @@ class DemoIdentity:
                 return self.blocked('DEMO_AUDITOR_READ_ONLY')
             if operation == 'bind_session':
                 return self.chat.bind(payload.get('session_key'), bearer, subject)
+            if operation == 'activate_chat':
+                return self.chat.activate(payload.get('session_key'), bearer, subject)
             if operation == 'materials':
                 return self.chat.materials(payload.get('session_key'),bearer,subject)
             if operation == 'select_materials':
@@ -425,6 +536,8 @@ class DemoIdentity:
                 record = self.requests.get(task_id)
                 if not record:
                     return self.blocked('DEMO_REQUEST_UNKNOWN', 409)
+                if self.personal_confirmation and record.get('scenario')=='chat' and record.get('requester')==subject['id']:
+                    return confirm_personal(self,task_id,payload.get('resolution'),bearer,subject)
                 if record.get('scenario')=='chat' and not self.chat.current_scope(record):
                     return self.blocked('P023_TASK_SCOPE_CHANGED',409)
                 snapshot = self.snapshots.get(task_id)
@@ -450,8 +563,9 @@ class DemoIdentity:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--state-dir', required=True, type=Path)
+    parser.add_argument('--personal-confirmation', action='store_true')
     args = parser.parse_args()
-    demo = DemoIdentity(args.state_dir)
+    demo = DemoIdentity(args.state_dir, personal_confirmation=args.personal_confirmation)
     try:
         for line in sys.stdin:
             envelope = {}

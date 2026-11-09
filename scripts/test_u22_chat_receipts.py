@@ -19,9 +19,9 @@ class ChatReceipts(unittest.TestCase):
         self.demo = DemoIdentity(self.temp.name)
         self.addCleanup(self.demo.disable)
         self.demo.handle('enable')
-        self.office = self.login('office-test')
+        self.office = self.login('approver-test')
         self.finance = self.login('finance-test')
-        self.approver = self.login('approver-test')
+        self.approver = self.login('maintenance-test')
         self.auditor = self.login('auditor-test')
         self.session = 'agent:main:u22-receipt'
         self.demo.handle('bind_session', {'session_key':self.session}, self.office)

@@ -147,7 +147,13 @@ async function probeSidecar(config) {
   return response.ok && (await response.json())?.ready === true;
 }
 
-export function registerProtectionRuntime({ config, conversationAllowed, screenToolResult, recordFailure, stopRun, probe = probeSidecar }) {
+// Trusted ACL hook only: diagnostics must never change the enforcement result.
+export function reportTaskAccessDenied(ctx, reasonCode) {
+  try { runtime().reportTaskAccessDenied?.(ctx, reasonCode); }
+  catch { /* The ACL caller still returns block:true. */ }
+}
+
+export function registerProtectionRuntime({ config, conversationAllowed, screenToolResult, recordFailure, stopRun, reportTaskAccessDenied, probe = probeSidecar }) {
   const state = runtime();
   const hooks = {};
   const lastDecisions = {};
@@ -171,6 +177,7 @@ export function registerProtectionRuntime({ config, conversationAllowed, screenT
   };
   state.recordFailure = (ctx, reason) => { rememberCall(ctx); recordFailure?.(ctx, reason); };
   state.stopRun = stopRun;
+  state.reportTaskAccessDenied = reportTaskAccessDenied;
   state.snapshot = async ({ probe: shouldProbe = true } = {}) => {
     if (shouldProbe && (!serviceCheckedAt || Date.now() - Date.parse(serviceCheckedAt) > 5_000)) {
       pendingProbe ??= Promise.resolve().then(() => probe(config)).then(

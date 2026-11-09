@@ -185,16 +185,24 @@ export function createGuardEventStore(options = {}) {
       const state = current(key);
       if (!state) return;
       state.incident = { ...incident, at: now() };
-      if (incident.kind !== 'tool_error' && incident.kind !== 'approval_pending') {
+      if (!['tool_error', 'approval_pending', 'approval_requested'].includes(incident.kind)) {
         state.status = 'blocked';
         state.decision = incident.kind === 'security_block' ? 'BLOCK' : 'REVIEW';
       }
       return publish(key, state);
     },
-    clearIncident(key) {
+    clearIncident(key, expected) {
       const state = current(key);
       if (!state) return;
+      if (expected && Object.entries(expected).some(([field, value]) => state.incident?.[field] !== value)) return;
       state.incident = null;
+      return publish(key, state);
+    },
+    endRun(key) {
+      const state = current(key);
+      if (!state?.incident) return;
+      if (['approval_requested', 'approval_pending'].includes(state.incident.kind)) state.incident = null;
+      else state.incident.runEnded = true;
       return publish(key, state);
     },
     confirmStopped(key) {

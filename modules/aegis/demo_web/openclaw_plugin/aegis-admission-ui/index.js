@@ -1,4 +1,4 @@
-import {allowPage} from '../../../../govagentsec-ui/access.mjs';
+import {allowPage,authorizePageGrant} from '../../../../govagentsec-ui/access.mjs';
 import { brandPage } from "../../../../govagentsec-ui/design.mjs";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { spawn } from "node:child_process";
@@ -10,6 +10,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import {
   renderMcpPage,
+  renderReviewsPage,
   renderReportHtml,
   renderReportsPage,
   renderRulesPage,
@@ -26,6 +27,7 @@ const REPORTS_PATH = "/plugins/aegis-admin/reports";
 const AUDIT_PATH = "/plugins/aegis-admin/audit";
 const RULES_PATH = "/plugins/aegis-admin/rules";
 const MCP_PATH = "/plugins/aegis-admin/mcp";
+const REVIEWS_PATH = "/plugins/aegis-admin/reviews";
 const ADMIN_API_PATH = "/plugins/aegis-admin/api";
 const REPORT_PDF_PATH = "/plugins/aegis-admin/report.pdf";
 const TOKEN_TTL_MS = 30 * 60 * 1000;
@@ -104,19 +106,19 @@ function escapeHtml(value) {
     .replaceAll("'", "&#39;");
 }
 
-function issueToken() {
+function issueToken(grant) {
   const token = randomBytes(32).toString("hex");
   const now = Date.now();
-  for (const [key, expiresAt] of tokens) {
-    if (expiresAt <= now) tokens.delete(key);
+  for (const [key, value] of tokens) {
+    if (value.expires <= now) tokens.delete(key);
   }
-  tokens.set(token, now + TOKEN_TTL_MS);
+  tokens.set(token, {expires:now + TOKEN_TTL_MS,grant});
   return token;
 }
 
 function consumeToken(candidate) {
   if (typeof candidate !== "string" || candidate.length !== 64) return false;
-  const expiresAt = tokens.get(candidate);
+  const expiresAt = tokens.get(candidate)?.expires;
   if (!expiresAt || expiresAt <= Date.now()) {
     tokens.delete(candidate);
     return false;
@@ -518,14 +520,14 @@ export default definePluginEntry({
     const uploadStore = new UploadSessionStore(uploadsRoot);
     api.registerHttpRoute({ path: CENTER_PATH, auth: "plugin", match: "exact", handler: async (req, res) => {
       if ((req.method ?? "GET").toUpperCase() !== "GET") { res.statusCode = 405; res.end("Method Not Allowed"); return true; }
-      if(!allowPage(req,res)) return true;
-      try { sendHtml(res, renderSecurityCenterPage(issueToken())); } catch (error) { sendJson(res, 500, { error: String(error) }); }
+      if(!await allowPage(req,res)) return true;
+      try { sendHtml(res, renderSecurityCenterPage(issueToken(req.govPageGrant))); } catch (error) { sendJson(res, 500, { error: String(error) }); }
       return true;
     }});
     api.registerHttpRoute({ path: PANEL_PATH, auth: "plugin", match: "exact", handler: async (req, res) => {
       if ((req.method ?? "GET").toUpperCase() !== "GET") { res.statusCode = 405; res.end("Method Not Allowed"); return true; }
-      if(!allowPage(req,res)) return true;
-      try { sendHtml(res, renderAdmissionPage(issueToken()), new URL(req.url,"http://localhost").searchParams.has("workspace")); } catch (error) { sendJson(res, 500, { error: String(error) }); }
+      if(!await allowPage(req,res)) return true;
+      try { sendHtml(res, renderAdmissionPage(issueToken(req.govPageGrant), {canManage:req.govIdentity.permission_summary.can_edit_rules}), new URL(req.url,"http://localhost").searchParams.has("workspace")); } catch (error) { sendJson(res, 500, { error: String(error) }); }
       return true;
     }});
     api.registerHttpRoute({ path: API_PATH, auth: "plugin", match: "exact", handler: async (req, res) => {
@@ -536,6 +538,8 @@ export default definePluginEntry({
       if (method !== "POST") { res.statusCode = 405; res.end("Method Not Allowed"); return true; }
       if (!consumeToken(req.headers["x-aegis-token"])) { sendJson(res, 403, { error: { code: "TOKEN_INVALID", message: "页面令牌无效或已过期，请刷新页面。" } }); return true; }
       const action = String(req.headers["x-aegis-action"] ?? "").toLowerCase();
+      try {await authorizePageGrant(tokens.get(req.headers['x-aegis-token'])?.grant,'admission.manage');}
+      catch {sendJson(res,403,{ok:false,error:{code:'BUSINESS_PERMISSION_DENIED',message:'当前账号不能修改能力准入，请由维护人员处理。'}});return true;}
       let activeSession = null;
       let ownsRunning = false;
       let installContext = null;
@@ -635,11 +639,12 @@ export default definePluginEntry({
       [AUDIT_PATH, "reports", renderReportsPage],
       [RULES_PATH, "rules", renderRulesPage],
       [MCP_PATH, "mcp", renderMcpPage],
+      [REVIEWS_PATH, "reviews", renderReviewsPage],
     ]) {
       api.registerHttpRoute({ path: routePath, auth: "plugin", match: "exact", handler: async (req, res) => {
         if ((req.method ?? "GET").toUpperCase() !== "GET") { res.statusCode = 405; res.end("Method Not Allowed"); return true; }
-        if(!allowPage(req,res)) return true;
-      try { sendHtml(res, renderer(issueToken()), new URL(req.url,"http://localhost").searchParams.has("workspace")); } catch (error) { sendJson(res, 500, { error: String(error) }); }
+        if(!await allowPage(req,res)) return true;
+      try { sendHtml(res, renderer(issueToken(req.govPageGrant), {canManage:req.govIdentity.permission_summary.can_edit_rules}), new URL(req.url,"http://localhost").searchParams.has("workspace")); } catch (error) { sendJson(res, 500, { error: String(error) }); }
         return true;
       }});
     }
@@ -653,6 +658,10 @@ export default definePluginEntry({
       if (!String(req.headers["content-type"] ?? "").toLowerCase().startsWith("application/json")) { sendJson(res, 415, { ok: false, error: { message: "仅接受 JSON 请求。" } }); return true; }
       try {
         const body = await readJsonBody(req, MAX_ADMIN_BODY_BYTES);
+        const readOnly=['overview','list_audits','get_audit','list_rules','rule_changes','list_reviews'].includes(body.operation);
+        let identity;try{identity=await authorizePageGrant(tokens.get(req.headers['x-aegis-demo-token'])?.grant,readOnly?'admission.read':'admission.manage');}
+        catch{sendJson(res,403,{ok:false,error:{code:'BUSINESS_PERMISSION_DENIED',message:'请在动态权限登录具备相应权限的账号。'}});return true;}
+        if(body.operation==='resolve_review')body.actor=identity.user.id;
         const result = await runAdminOperation(projectRoot, body);
         sendJson(res, 200, result);
       } catch (error) {
@@ -670,6 +679,8 @@ export default definePluginEntry({
       if (!String(req.headers["content-type"] ?? "").toLowerCase().startsWith("application/json")) { sendJson(res, 415, { ok: false, error: { message: "仅接受 JSON 请求。" } }); return true; }
       try {
         const body = await readJsonBody(req, MAX_BODY_BYTES);
+        try{await authorizePageGrant(tokens.get(req.headers['x-aegis-demo-token'])?.grant);}
+        catch{sendJson(res,401,{ok:false,error:{message:'业务登录已失效，请到动态权限重新登录。'}});return true;}
         const sequence = Number(body?.sequence);
         if (!Number.isSafeInteger(sequence) || sequence < 1) throw new Error("审计序号无效。");
         const result = await runAdminOperation(projectRoot, { operation: "get_audit", sequence });

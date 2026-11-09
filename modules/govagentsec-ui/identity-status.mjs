@@ -1,6 +1,6 @@
 // Service facts only: gateway login is never a business identity.
 export const IDENTITY_HELP = 'docs/DELIVERY_ACCEPTANCE.md#安全边界与身份接入';
-export const DELEGATION_REQUIRED = '本入口未登录业务身份，执行与审批已禁用。请从业务登录入口进入；管理页面连接不授予业务权限。';
+export const DELEGATION_REQUIRED = '尚未登录业务身份，请先到动态权限登录。';
 export function identityStatus(mode, version, ready) {
   const demoIdp = version?.payload?.demo_identity === true || version?.payload?.identity_source === 'demo_idp_verified_jwt';
   const configured = version?.ok === true && version.payload?.oidc_enabled === true;

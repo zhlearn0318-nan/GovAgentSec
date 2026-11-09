@@ -5,6 +5,7 @@ import { TaskLinks } from './task-links.mjs';
 import { renderTrajectoryPanel } from './panel.mjs';
 import { LegacyReader } from '../govagentsec-trace/legacy-reader.mjs';
 import { renderWelcomePage } from '../govagentsec-ui/welcome.mjs';
+import {requireBusinessPermission} from '../agentguard-group2/integrations/openclaw_runtime_security_plugin/demo-identity.mjs';
 
 export function registerTrajectory(api) {
   const config = api.pluginConfig ?? {};
@@ -25,7 +26,7 @@ export function registerTrajectory(api) {
     group: 'control', order: 21, requiredScopes: ['operator.read'],
     path: '/plugins/govagentsec/trajectory-panel',
   });
-  for (const [url, file] of [['trajectory-ui.mjs', 'ui.mjs'], ['graph.mjs', 'graph.mjs'], ['trajectory-native.mjs', 'native-view.mjs'], ['workbench.mjs', 'workbench.mjs'], ['workspace.mjs', '../govagentsec-ui/workspace.mjs'], ['demo-identity.mjs', '../govagentsec-ui/demo-identity.mjs'], ['identity-session.mjs', '../govagentsec-ui/identity-session.mjs'], ['task-context.mjs', '../govagentsec-ui/task-context.mjs'], ['shell.mjs', '../govagentsec-ui/shell.mjs'], ['workspace-style.mjs', '../govagentsec-ui/workspace-style.mjs']]) {
+  for (const [url, file] of [['trajectory-ui.mjs', 'ui.mjs'], ['graph.mjs', 'graph.mjs'], ['trajectory-native.mjs', 'native-view.mjs'], ['workbench.mjs', 'workbench.mjs'], ['workspace.mjs', '../govagentsec-ui/workspace.mjs'], ['library-summary.mjs', '../govagentsec-ui/library-summary.mjs'], ['demo-identity.mjs', '../govagentsec-ui/demo-identity.mjs'], ['identity-session.mjs', '../govagentsec-ui/identity-session.mjs'], ['task-context.mjs', '../govagentsec-ui/task-context.mjs'], ['shell.mjs', '../govagentsec-ui/shell.mjs'], ['workspace-style.mjs', '../govagentsec-ui/workspace-style.mjs'], ['security-overview.mjs', '../govagentsec-ui/security-overview.mjs']]) {
     api.registerHttpRoute({ path: '/plugins/govagentsec/' + url, auth: 'plugin', match: 'exact', handler: async (req, res) => {
       if (req.method !== 'GET') { res.writeHead(405); res.end(); return true; }
       res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8', 'Cache-Control': 'no-store' });
@@ -79,12 +80,13 @@ export function registerTrajectory(api) {
   api.registerHttpRoute({ path: '/plugins/govagentsec/trajectories', auth: 'gateway', match: 'exact', handler: async (req, res) => {
     if (req.method !== 'GET') { res.writeHead(405, { Allow: 'GET' }); res.end(); return true; }
     try {
+      await requireBusinessPermission(req.headers?.['x-gov-business-bearer'],'audit.read');
       const id = new URL(req.url, 'http://localhost').searchParams.get('trace_id');
       const data = id ? store.read(id) : { traces: store.list() };
       res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify(data));
-    } catch {
-      res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'invalid or unreadable trace' }));
+    } catch(error) {
+      res.writeHead(error.message.startsWith('BUSINESS_')?401:400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: '需要有效业务身份，或记录不可读取' }));
     }
     return true;
   }});
@@ -103,15 +105,24 @@ export function registerTrajectory(api) {
   };
   for (const [name, read] of Object.entries({ list: params => ({ traces: store.list().filter(t => !params.session_key || t.session_key === params.session_key) }), detail: params => store.read(params.trace_id), candidates: listCandidates, task: params => tasks.detail(params), status: () => tasks.status(), workspace: () => tasks.workspace() })) {
     api.registerGatewayMethod?.('govagentsec.trajectory.' + name, async ({ params, respond }) => {
-      try { respond(true, await read(params ?? {})); }
-      catch { respond(false, undefined, { code: 'INVALID_REQUEST', message: '记录不存在或无法读取' }); }
+      try {
+        const {bearer,...p}=params??{};
+        if(name==='workspace'&&!bearer){
+          const data=await tasks.workspace();
+          return respond(true,{coverage:data.coverage,pending:[],traces:[],servers:[],total:0});
+        }
+        await requireBusinessPermission(bearer,name==='workspace'?'workspace.read':'audit.read');
+        respond(true, await read(p));
+      }
+      catch(error) { respond(false, undefined, { code:error.message.startsWith('BUSINESS_')?error.message:'INVALID_REQUEST', message: '请确认业务身份有效且记录可读。' }); }
     }, { scope: 'operator.read' });
   }
   api.registerGatewayMethod?.('govagentsec.trajectory.resolve', async ({params, respond}) => {
-    try { respond(true, await tasks.resolve(params)); } catch (error) { respond(false, undefined, {code:'INVALID_REQUEST',message:error.message}); }
+    try {const {bearer,...p}=params??{};await requireBusinessPermission(bearer,'admission.manage');respond(true, await tasks.resolve(p));} catch (error) { respond(false, undefined, {code:'INVALID_REQUEST',message:'身份或操作权限不足，未处理。'}); }
   }, {scope:'operator.approvals'});
   api.registerHttpRoute({ path: '/plugins/govagentsec/candidates', auth: 'gateway', match: 'exact', handler: async (req, res) => {
     if (req.method !== 'GET') { res.writeHead(405, { Allow: 'GET' }); res.end(); return true; }
+    try{await requireBusinessPermission(req.headers?.['x-gov-business-bearer'],'audit.read');}catch{res.writeHead(401,{'Content-Type':'application/json'});res.end(JSON.stringify({error:'请先到动态权限登录'}));return true;}
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(listCandidates())); return true;
   }});
   // Static shell is public; all audit data remains behind gateway authentication.

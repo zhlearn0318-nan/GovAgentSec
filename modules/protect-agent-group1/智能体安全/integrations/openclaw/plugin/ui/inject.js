@@ -29,6 +29,8 @@
     ["unsupported", "当前结果类型无法检查"],
     ["tool_error", "工具执行遇到错误"],
     ["approval_pending", "等待操作确认"],
+    ["approval_requested", "核对操作确认"],
+    ["task_denied", "任务权限未通过"],
     ["approval_denied", "操作未获批准"],
   ]);
   const PHASE_LABELS = { input: "输入检查", tools: "工具调用", tool_results: "工具返回检查", output: "回复检查" };
@@ -82,7 +84,35 @@
       // Messages come from the guard's fixed incident descriptions, never raw tool output.
       message: typeof value.message === "string" ? value.message.slice(0,240) : "",
       stopConfirmed: value.stopConfirmed === true,
+      runEnded: value.runEnded === true,
+      toolCallId: typeof value.toolCallId === 'string' ? value.toolCallId : null,
+      pluginId: typeof value.pluginId === 'string' ? value.pluginId : 'protect-agent',
     };
+  }
+
+  async function verifyApproval(snapshot, client, sessionKey) {
+    const incident = snapshot.incident;
+    if (!['approval_requested', 'approval_pending'].includes(incident?.kind)) return;
+    // An old persisted warning is not evidence of a live approval request.
+    if (snapshot.status === 'allowed' || incident.runEnded || incident.stopConfirmed) {
+      snapshot.incident = null;
+      return;
+    }
+    incident.kind = 'approval_requested';
+    incident.message = '未找到当前工具的有效确认请求。请查看任务权限状态；本提示不表示正在等待审批。';
+    if (!incident.toolCallId) return;
+    try {
+      const requests = await client.request('plugin.approval.list', {});
+      const pending = Array.isArray(requests) && requests.find(item =>
+        item.request?.sessionKey === sessionKey && item.request?.toolCallId === incident.toolCallId &&
+        item.request?.pluginId === incident.pluginId && item.expiresAtMs > Date.now());
+      if (pending) {
+        incident.kind = 'approval_pending';
+        incident.message = '网关已创建当前操作的确认请求，请在 OpenClaw 确认卡片中选择“允许一次”或“拒绝”。超时后本次工具调用将被拒绝。';
+      }
+    } catch {
+      incident.message = '暂时无法核对网关审批状态，尚未确认有可处理的确认卡片。请检查网关连接。';
+    }
   }
 
   function createStepRow(definition) {
@@ -199,13 +229,19 @@
     lastAlertKey = key;
     const toolError = incident?.kind === "tool_error";
     const approvalPending = incident?.kind === "approval_pending";
+    const approvalRequested = incident?.kind === "approval_requested";
+    const taskDenied = incident?.kind === "task_denied";
     alert.dataset.kind = incident?.kind ?? "unconfirmed";
     alertTitle.textContent = incident?.stopConfirmed ? "当前任务已停止"
+      : taskDenied ? "工具调用已阻断 · 任务权限未通过"
+      : approvalRequested ? "尚未确认审批请求"
       : approvalPending ? "等待操作确认" : toolError ? "工具执行出错" : "防护异常 · 尚未确认任务停止";
     alertMessage.textContent = incident?.message || (incident ? INCIDENT_KINDS.get(incident.kind) : "检测到阻断或异常记录，但没有任务停止确认。");
     alertDetail.textContent = incident ? `${incident.phase} · ${INCIDENT_KINDS.get(incident.kind)}${incident.reasonCode ? ` · 原因代码：${incident.reasonCode}` : ""}` : "请查看当前任务的防护决策和执行记录。";
     alertAction.textContent = incident?.stopConfirmed
       ? "本次运行已结束。可在“当前任务”查看原因，处理后重新发送消息。"
+      : taskDenied ? (incident.runEnded ? '本轮运行已结束。请在“动态权限”中处理后重新发送消息。' : '本次工具没有执行；Agent 仍可能生成说明。请在“动态权限”中检查当前任务绑定。')
+      : approvalRequested ? "此提示不是确认卡片，也不代表操作已获准。"
       : approvalPending ? "请处理 OpenClaw 的操作确认卡片；当前等待时间不属于模型推理。" : toolError ? "这是工具执行错误，不代表已发现安全攻击；任务可能继续处理。"
         : "若仍在生成，请先使用对话的停止按钮。可在“当前任务”查看处理记录。";
     alert.hidden = false;
@@ -222,6 +258,8 @@
           ? "当前任务已停止"
         : snapshot.incident?.kind === "tool_error"
           ? "工具执行出错"
+        : snapshot.incident?.kind === "task_denied"
+          ? "工具调用已阻断"
         : snapshot.status === "blocked"
           ? "检测已阻断 · 停止未确认"
           : activeStep
@@ -267,6 +305,8 @@
       const snapshot=normalizeSnapshot(await gateway.client.request('govagentsec.protection.state',{sessionKey}));
       if (syncSession() !== sessionKey) return;
       if (!snapshot) throw new Error("invalid state");
+      await verifyApproval(snapshot, gateway.client, sessionKey);
+      if (syncSession() !== sessionKey) return;
       connection.lastChild.textContent = "在线";
       panel.dataset.connection = "online";
       render(snapshot);

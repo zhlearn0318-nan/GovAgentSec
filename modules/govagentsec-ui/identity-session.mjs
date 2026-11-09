@@ -5,7 +5,7 @@ const copy = value => structuredClone(value);
 function publicValue(value) {
   if (Array.isArray(value)) return value.map(publicValue);
   if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value)
-    .filter(([key]) => !/^(bearer|access_token|refresh_token|authorization|ticket|private_key)$/i.test(key))
+    .filter(([key]) => !/^(bearer|access_token|refresh_token|authorization|ticket|private_key|password|password_hash)$/i.test(key))
     .map(([key, item]) => [key, publicValue(item)]));
   return value;
 }
@@ -15,7 +15,8 @@ export function getIdentitySession(gateway) {
   if (sessions.has(gateway)) return sessions.get(gateway);
   let bearer = null, delegationExpires = 0, revision = 0, state = empty(), queue = Promise.resolve(), refreshing = null, timer;
   const listeners = new Set();
-  const rpc = (operation, payload = {}) => gateway.request('govagentsec.demoIdentity.' + operation, payload);
+  const transport = gateway.request.bind(gateway);
+  const rpc = (operation, payload = {}) => transport('govagentsec.demoIdentity.' + operation, payload);
   const snapshot = () => {
     const value = copy(state);
     if (value.expires_at && Date.now() / 1000 >= value.expires_at) {
@@ -63,13 +64,17 @@ export function getIdentitySession(gateway) {
       void refresh().catch(() => {});
       return () => { listeners.delete(fn); if (!listeners.size) { clearInterval(timer); timer = null; } };
     },
-    login(user) {
+    login(account, password) {
+      if (typeof account !== 'string' || !account.trim() || typeof password !== 'string' || !password) return Promise.reject(Error('DEMO_CREDENTIALS_REQUIRED'));
       return mutate(async () => {
-        const result = await rpc('login', { user, ...(bearer ? { bearer } : {}) });
+        const result = await rpc('login', { account: account.trim(), password, ...(bearer ? { bearer } : {}) });
         if (!result?.access_token || !Number.isFinite(result.expires_at) || result.expires_at <= Date.now() / 1000) throw Error('LOGIN_FAILED');
         bearer = 'Bearer ' + result.access_token; delegationExpires = result.expires_at; revision++;
         return { user: publicValue(result.user), expires_at: result.expires_at };
-      }, 'DEMO_LOGIN_UNCONFIRMED');
+      }, 'DEMO_LOGIN_UNCONFIRMED').catch(async error => {
+        // A denied login clears the old local authority but preserves the source's actual availability.
+        await refresh().catch(() => {}); throw error;
+      });
     },
     logout() {
       return mutate(async () => {
@@ -77,9 +82,19 @@ export function getIdentitySession(gateway) {
         clear(); return { status: 'ok' };
       }, 'DEMO_LOGOUT_UNCONFIRMED');
     },
-    enable() { return mutate(async () => { const result = await rpc('enable'); if (result?.enabled !== true) throw Error('ENABLE_FAILED'); return result; }); },
+    enable() { return mutate(async () => { const result = await rpc('enable', bearer ? { bearer } : {}); if (result?.enabled !== true) throw Error('ENABLE_FAILED'); return result; }); },
     disable() {
-      return mutate(async () => { const result = await rpc('disable'); if (result?.enabled !== false) throw Error('DISABLE_FAILED'); clear(); return result; }, 'DEMO_DISABLE_UNCONFIRMED');
+      return mutate(async () => { const result = await rpc('disable', bearer ? { bearer } : {}); if (result?.enabled !== false) throw Error('DISABLE_FAILED'); clear(); return result; }, 'DEMO_DISABLE_UNCONFIRMED');
+    },
+    requestGateway(method, payload = {}) {
+      const allowed = typeof method === 'string' && (method.startsWith('govagentsec.trace.') || method.startsWith('govagentsec.trajectory.') || ['govagentsec.ui.open','govagentsec.sandbox.select','govagentsec.runtime.overview'].includes(method));
+      if (!allowed || !payload || typeof payload !== 'object' || Array.isArray(payload) || Object.keys(payload).some(key => /^(bearer|authorization|access_token)$/i.test(key))) return Promise.reject(Error('DEMO_UNTRUSTED_FIELD'));
+      if (!bearer || !snapshot().user) return Promise.reject(Error('DEMO_DELEGATION_REQUIRED'));
+      const expectedRevision = revision;
+      return gateway.request(method, { ...copy(payload), bearer }).then(result => {
+        if (expectedRevision !== revision || !snapshot().user) throw Error('DEMO_DELEGATION_REQUIRED');
+        return publicValue(result);
+      });
     },
     request(operation, payload = {}) {
       if (!businessOperations.has(operation) || !payload || typeof payload !== 'object' || Array.isArray(payload) || Object.keys(payload).some(key => /^(bearer|authorization|access_token)$/i.test(key))) return Promise.reject(Error('DEMO_UNTRUSTED_FIELD'));
@@ -88,6 +103,22 @@ export function getIdentitySession(gateway) {
         if (!bearer || expectedRevision !== revision || !snapshot().user) throw Error('DEMO_DELEGATION_REQUIRED');
       });
     },
+  };
+  // Decorate this browser client's public transport, never the OpenClaw kernel.
+  // Activate on every send so existing and newly created chats use the same login.
+  gateway.request = (method, payload, ...rest) => {
+    if (method !== 'chat.send') return transport(method, payload, ...rest);
+    const expectedRevision = revision, params = copy(payload);
+    return serial(async () => {
+      if (!bearer || expectedRevision !== revision || !snapshot().user)
+        throw Error('请先在会话上方登录业务身份，再发送消息。');
+      const result = await rpc('activate_chat', {session_key: params?.sessionKey, bearer});
+      if (result?.status !== 'ok') throw Error(result?.reason_code === 'P027_CONVERSATION_IDENTITY_CONFLICT'
+        ? '这个对话正在由另一登录窗口使用，请退出原窗口身份后重试，或新建对话。'
+        : '当前身份无法启用此对话，消息尚未发送。请检查身份和连接。');
+      if (!snapshot().user) throw Error('身份已过期，请重新登录后发送。');
+      return transport(method, params, ...rest);
+    });
   };
   sessions.set(gateway, api); return api;
 }

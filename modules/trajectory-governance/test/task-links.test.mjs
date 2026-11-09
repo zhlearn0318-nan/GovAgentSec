@@ -51,7 +51,13 @@ function fixture(session = "session-a", run = "run-a") {
   store.seal(store.traceId(run));
   return { root, store, trace: store.read(store.traceId(run)) };
 }
-test("session identity is persisted; old traces stay unknown and list filtering does not mix sessions", async () => {
+test("session identity is persisted; old traces stay unknown and list filtering does not mix sessions", async (t) => {
+  const key=Symbol.for('govagentsec.demoIdentity.bridge'),before=globalThis[key];
+  globalThis[key]={request:async(operation,params,bearer)=>{
+    assert.equal(operation,'authorize');assert.equal(params.permission,'audit.read');assert.equal(bearer,'Bearer isolated-link-fixture');
+    return {status:'ok',user:{id:'unit-fixture'},permission_summary:{capabilities:['audit.read']}};
+  }};
+  t.after(()=>{if(before===undefined)delete globalThis[key];else globalThis[key]=before;});
   const hooks = {},
     methods = {};
   const store = registerTrajectory({
@@ -77,7 +83,7 @@ test("session identity is persisted; old traces stay unknown and list filtering 
   }
   let data;
   await methods["govagentsec.trajectory.list"]({
-    params: { session_key: "s1" },
+    params: { session_key: "s1", bearer:'Bearer isolated-link-fixture' },
     respond: (_ok, v) => (data = v),
   });
   assert.equal(data.traces.length, 1);

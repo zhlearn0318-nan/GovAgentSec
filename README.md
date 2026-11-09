@@ -1,5 +1,7 @@
 # 政安智枢 GovAgentSec
 
+当前工作区支持会话内「允许一次／拒绝」卡片，也可在动态权限中本人确认同一请求。新增最高演示账号 `admin / Demo#Admin26`，可读取全部登记的合成受管资料；聊天使用当前登录身份的 `gov_read_document`，不再使用旧 MCP 的静态读文档身份。见 [本人确认与资料身份贯通](docs/PERSONAL_CONFIRMATION_AND_DOCUMENT_IDENTITY.md)。
+
 集成版本 **3.0.0** · 分支 `release/3.0` · 宿主固定 OpenClaw `2026.7.1-2`。[3.0 更新说明与验证范围](docs/releases/3.0.0.md)。组件各自的包版本独立维护。
 
 **GovAgentSec（政安智枢）是一套运行在 OpenClaw 中的智能体安全系统**，将输入防护、运行时安全、供应链准入和技能安全测评整合到一个控制台入口。它面向需要安装第三方 Skill、连接 MCP 工具、处理外部内容并执行本地操作的智能体场景，帮助使用者检查风险、控制敏感操作并追溯处理结果。
@@ -24,7 +26,7 @@ Windows 集成发行版。已在原生 Windows、OpenClaw `2026.7.1-2` 上完成
 
 会话执行隔离支持 **Docker / sandbox-runtime (srt)**，可在工作台或防护设置切换，默认 Docker。两者实际范围、Windows 限制和验收命令见 [会话沙箱演示](docs/SESSION_SANDBOX_DEMO.md)。它与 Aegis 安装前准入沙箱分别运行。
 
-当前工作区左侧为 **任务、能力库、待审批、审计与改进**，防护设置单独放在下方；顶栏保留一个 **查看过程**。任务页按“登录身份→绑定当前会话→选择登记材料→复制任务指令并发送”操作；过程面板默认宽幅显示原横向分栏调用图，保留全部事件，并可切换时间线或收窄面板。材料选择限定上层任务范围，下游 MCP 仍须独立授权，以实际执行回执为准。
+当前工作区左侧为 **动态权限、能力准入、审计演进、防护设置**，顶栏保留 **查看过程**。会话顶部提供账号和 **资料权限** 入口：登录后自动应用到当前工作区的所有对话，服务端按身份判断登记资料的读取权限，无需绑定任务或勾选材料。切换账号撤销旧授权；动态权限用于查看权限与处理审批。准入规则及人工复核位于能力准入；系统配置与沙箱选择归防护设置。过程面板保留原横向分栏图。见 [自动会话身份说明](docs/AUTOMATIC_CHAT_IDENTITY.md)。
 
 已运行的本机系统可通过中文欢迎入口打开：
 
@@ -35,7 +37,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/open_govagentsec.ps1
 
 入口为 `http://127.0.0.1:18789/plugins/govagentsec/welcome`。脚本只在本机浏览器片段中传入已有网关令牌，不打印或改写配置；网关认证与业务身份授权保持分开。演示身份源由管理员在防护设置开启，默认关闭。
 
-审计页可选择同任务运行进行本地评审、预览 TopK、生成隔离候选并运行联合准入；历史真实运行包可只读查看和定位步骤来源。本轮界面过程评审标记为 `test_only`，不能直接生产复核或安装。实施与验证见 [U24 工作区改版](docs/U24_PRODUCT_FLOW_IMPLEMENTATION.md)、[演示手册](docs/PRODUCT_DEMO_RUNBOOK.md)和[能力边界](docs/ACCEPTANCE_BOUNDARIES.md)。
+审计页可选择同任务运行进行本地评审、预览 TopK、生成隔离候选并运行联合准入；历史真实运行包可只读查看和定位步骤来源。本轮界面过程评审标记为 `test_only`，不能直接生产复核或安装。演示账号按 `weihu`（高级）、`shenpi`（中级）、`jingban`（基础）递增分级，另有 `shenji` 只读审计岗位（可本地评估、无业务执行与配置权限）；高级账号无需另一人审批，保留 OpenClaw 原生动作确认；中低级仍执行双人审批及禁自批。资料范围为经办公共、主管内部、管理员机密；工具库复用 Aegis 本地声明检查，未知或无权工具在调用前阻断。双库设计见 [U26 设计](docs/U26_DUAL_LIBRARY_RUNTIME_GATE.md)。四入口与演示账号见 [U25 设计](docs/U25_FOUR_ENTRY_WORKSPACE_IA.md)；此前实施与验证见 [U24 工作区改版](docs/U24_PRODUCT_FLOW_IMPLEMENTATION.md)、[演示手册](docs/PRODUCT_DEMO_RUNBOOK.md)和[能力边界](docs/ACCEPTANCE_BOUNDARIES.md)。
 
 | 模块 | 功能 | 源码 |
 | --- | --- | --- |

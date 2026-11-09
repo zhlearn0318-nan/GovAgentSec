@@ -26,8 +26,8 @@ class IdentityTaskAcl(unittest.TestCase):
         for op in ['task_create', 'task_read', 'task_escalate', 'resolve']:
             self.assertEqual(self.demo.handle(op)['reason_code'], 'DEMO_IDENTITY_DISABLED')
         self.demo.handle('enable')
-        self.office = self.login('office-test')
-        self.approver = self.login('approver-test')
+        self.office = self.login('approver-test')
+        self.approver = self.login('maintenance-test')
         self.auditor = self.login('auditor-test')
         self.gate = self.demo.service.gateway
         self.policies = self.gate.task_policies
@@ -109,8 +109,8 @@ class IdentityTaskAcl(unittest.TestCase):
         ticket=self.gate.authorize(req)['ticket']
         for prefixes in [[DIRECTORIES['B']], ['govdoc://demo/']]:
             with self.assertRaises(TaskPolicyError):
-                self.policies.tighten(self.task,'office-test',['file.read'],prefixes)
-        self.policies.tighten(self.task,'office-test',['file.read'],[])
+                self.policies.tighten(self.task,'approver-test',['file.read'],prefixes)
+        self.policies.tighten(self.task,'approver-test',['file.read'],[])
         self.assertEqual(self.gate.dispatch(req,ticket)['reason_code'],'P011_CONTRACT_CHANGED')
         self.assertEqual(self.read('emergency_plan')['reason_code'],'P014_RESOURCE_OUTSIDE_TASK')
         self.assertEqual(self.count(),0)
@@ -119,7 +119,7 @@ class IdentityTaskAcl(unittest.TestCase):
         for prefix in ['C:/private/', '../', 'govdoc://demo/public', 'govdoc://demo/public/../internal/',
                        'govdoc://demo/public/%2e%2e/', 'govdoc://demo/public//', 'govdoc://demo/public/?x=1']:
             with self.assertRaises(TaskPolicyError):
-                self.policies.create('bad-'+prefix, 'office-test', prefixes=[prefix])
+                self.policies.create('bad-'+prefix, 'approver-test', prefixes=[prefix])
         contract=self.policies.summary(self.task)
         self.assertFalse(self.policies.resource_allowed(contract,{'tool':'file.read','resource':'govdoc://demo/publicity/x'}))
         for doc in ['../public.txt','C:\\private.txt','unknown']:
@@ -127,7 +127,7 @@ class IdentityTaskAcl(unittest.TestCase):
         self.assertEqual(self.count(),0)
 
     def test_tool_outside_scope_hard_denied(self):
-        self.policies.tighten(self.task,'office-test',[],[DIRECTORIES['A']])
+        self.policies.tighten(self.task,'approver-test',[],[DIRECTORIES['A']])
         self.assertEqual(self.read('emergency_plan')['reason_code'],'P015_TOOL_OUTSIDE_TASK')
         self.assertEqual(self.count(),0)
 
@@ -171,13 +171,13 @@ class IdentityTaskAcl(unittest.TestCase):
 
     def test_approval_expiry_revision_and_dependency_failure(self):
         pending=self.pending();req=self.request()
-        self.policies.approve(req,'approver-test',['business_approver'])
+        self.policies.approve(req,'maintenance-test',['business_approver'])
         with self.policies.connection() as db:
             body=self.policies._load(db,self.task)
             body['approvals'][compute_action_digest(req)]['expires_at']=0
             self.policies._save(db,body)
         self.assertEqual(self.gate.invoke(req)['reason_code'],'P009_SCOPE_CONSUMED_OR_EXPIRED')
-        self.policies.tighten(self.task,'office-test',['file.read'],[])
+        self.policies.tighten(self.task,'approver-test',['file.read'],[])
         self.assertEqual(self.resolve(pending)['reason_code'],'P014_RESOURCE_OUTSIDE_TASK')
         with patch.object(self.gate.opa,'decide',side_effect=RuntimeError('offline')):
             self.assertEqual(self.read('emergency_plan')['reason_code'],'G001_OPA_UNAVAILABLE_FAIL_CLOSED')

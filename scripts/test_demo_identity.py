@@ -1,5 +1,6 @@
 """U4b: real local RS256 + OidcVerifier + OPA + HMAC + isolated adapters."""
 import copy
+import hashlib
 import json
 import sys
 import tempfile
@@ -27,9 +28,9 @@ class DemoTests(unittest.TestCase):
     def enable(self):
         self.assertFalse(self.demo.status()['enabled'])
         self.assertTrue(self.demo.handle('enable')['enabled'])
-        self.office = self.login('office-test')
+        self.office = self.login('approver-test')
         self.finance = self.login('finance-test')
-        self.approver = self.login('approver-test')
+        self.approver = self.login('maintenance-test')
 
     def login(self, user):
         result = self.demo.handle('login', {'user': user})
@@ -55,6 +56,24 @@ class DemoTests(unittest.TestCase):
         self.demo.handle('enable')
         self.assertEqual(self.submit(old)['http_status'], 401)
         self.assertEqual(self.demo._counts(), {'notices': 0, 'payments': 0})
+
+    def test_login_lasts_thirty_minutes_and_extends_source_only(self):
+        self.demo.handle('enable')
+        self.demo.expires_at = time.time() + 5
+        result = self.demo.handle('login', {'user': 'office-test'})
+        claims = jwt.decode(result['access_token'], options={'verify_signature': False})
+        self.assertEqual(claims['exp'] - claims['iat'], 1800)
+        self.assertEqual(result['expires_at'], claims['exp'])
+        self.assertGreaterEqual(self.demo.expires_at, claims['exp'])
+        self.assertTrue(self.demo.status('Bearer ' + result['access_token'])['execution_enabled'])
+        expiry = self.demo.expires_at
+        denied = self.demo.handle('login', {'account': 'jingban', 'password': 'wrong'})
+        self.assertEqual(denied['reason_code'], 'DEMO_LOGIN_FAILED')
+        self.assertEqual(self.demo.expires_at, expiry)
+        expired_claims = {**claims, 'iat': int(time.time()) - 1801, 'exp': int(time.time()) - 1}
+        expired = jwt.encode(expired_claims, self.demo.key, algorithm='RS256', headers={'kid': self.demo.kid})
+        self.demo.delegations[hashlib.sha256(expired.encode()).hexdigest()] = claims['sub']
+        self.assertFalse(self.demo.status('Bearer ' + expired)['execution_enabled'])
 
     def test_notice_two_users_and_replay(self):
         self.enable()

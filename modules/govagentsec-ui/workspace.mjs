@@ -1,16 +1,20 @@
 import { workspaceStyle, icon } from "/plugins/govagentsec/workspace-style.mjs";
 import { mountDemoIdentity } from "/plugins/govagentsec/demo-identity.mjs";
+import { librarySummary } from "/plugins/govagentsec/library-summary.mjs";
+import { getIdentitySession } from "/plugins/govagentsec/identity-session.mjs";
+import { mountSecurityOverview, overviewStyle } from "/plugins/govagentsec/security-overview.mjs";
 import {
   styles as traceStyles,
   markup as traceMarkup,
   mount as mountTraces,
 } from "/plugins/govagentsec/trajectory-ui.mjs";
 export const titles = {
+  permissions: ["动态权限", "查看当前身份权限，处理权限申请。"],
   login: ["政安纵深 / GovAgentSec", "让每次智能体行动有授权、有记录、可追溯。"],
   home: ["工作台", "确认本次材料与权限，继续处理任务。"],
-  admission: ["能力库", "查看已接入能力，检查新能力。"],
+  admission: ["能力准入", "检查 Skill 与 MCP，核对报告、复核申请和准入规则。"],
   approvals: ["待审批", "先核对具体动作，再决定是否执行。"],
-  audit: ["审计与改进", "查看任务过程，评估同类运行并整理候选技能。"],
+  audit: ["审计演进", "查看任务过程，评估同类运行并整理候选技能。"],
   compare: [
     "运行对照与候选记录",
     "任务轨迹的高级视图，对照两次运行并查看候选证据。",
@@ -18,6 +22,7 @@ export const titles = {
   skills: ["已安装技能", "只读核对已安装能力；新能力从准入流程接入。"],
   settings: ["防护设置", "查看实际覆盖，按需调整运行策略。"],
 };
+export const normalizeSection = value => ['home','login','approvals'].includes(value) ? 'permissions' : titles[value] ? value : 'permissions';
 export function isTestTrace(trace) {
   return (
     trace.source === "synthetic-fixture" ||
@@ -35,24 +40,25 @@ export function friendlySessionTitle(key, traces = []) {
   if (key === "agent:main:main") return "主会话";
   return key.startsWith("agent:") ? "未命名会话" : key;
 }
-export function coverageRows(coverage) {
+export function coverageRows(coverage, {settings = false} = {}) {
   const runtime = coverage.runtime ?? {};
-  const describe = (stage) => {
+  const describe = (stage, kind) => {
     const labels = {
       enforce: ["已启用", ""],
       observe: ["复检 / 观察", "warn"],
       disabled: ["未启用", "warn"],
       unavailable: ["不可用", "bad"],
     };
-    if(runtime.service === "offline" && stage?.mode === "enforce") return ["服务离线 · 默认拒绝", "bad"];
+    if(runtime.service === "offline" && ['enforce','observe'].includes(stage?.mode)) return [stage.mode==='enforce'?"服务离线 · 默认拒绝":"服务离线", "bad"];
+    if(settings && kind === 'output' && stage?.mode === 'observe')return ['已启用',''];
     return labels[stage?.mode] ?? ["待核验", "warn"];
   };
   const input = describe(runtime.input),
-    output = describe(runtime.output),
+    output = describe(runtime.output, 'output'),
     results = describe(runtime.tool_results);
   const identities = {
     oidc_token: ["OIDC 就绪状态待核验", "warn"],
-    loopback_static_dev: ["演示身份（非生产）", "bad"],
+    loopback_static_dev: settings ? ["演示身份", ""] : ["演示身份（非生产）", "bad"],
     disabled: ["已禁用", "warn"],
     unknown: ["待核验", "warn"],
   };
@@ -73,7 +79,7 @@ export function coverageRows(coverage) {
       ...identity,
     ],
     ["输入检查", runtime.input?.reason ?? "等待后端报告检查能力", ...input],
-    ["回复检查", runtime.output?.reason ?? "等待后端报告检查能力", ...output],
+    ["回复检查", settings && ['enforce','observe'].includes(runtime.output?.mode) ? '检查回复内容并记录检测结果' : runtime.output?.reason ?? "等待后端报告检查能力", ...output],
     [
       "工具返回",
       runtime.tool_results?.reason ?? "等待后端报告控制能力",
@@ -134,17 +140,17 @@ export function defineWorkspace() {
     constructor() {
       super();
       this.attachShadow({ mode: "open" });
-      this.current = "home";
+      this.current = "permissions";
       this.generation = 0;
       this.onPopState = () => {
         const search = new URLSearchParams(location.search);
         this.onRouteChange({detail:{section:search.get('section') || 'home',requestId:search.get('request')}});
       };
       this.onApproval = () => {
-        if (["home", "approvals"].includes(this.current)) this.render();
+        if (this.current === 'permissions') this.render();
       };
       this.onRouteChange = (event) => {
-        const section = titles[event.detail.section] ? event.detail.section : 'home';
+        const section = normalizeSection(event.detail.section);
         this.requestId = event.detail.requestId || null;
         if (section === this.current) this.render();
         else this.section = section;
@@ -164,11 +170,17 @@ export function defineWorkspace() {
     }
     set client(value) {
       if (this.gateway === value) return;
+      this.identityCleanup?.();
       this.gateway = value;
+      if(value){
+        this.identity=getIdentitySession(value);
+        let previous=JSON.stringify([this.identity.snapshot().user,this.identity.snapshot().execution_enabled]);
+        this.identityCleanup=this.identity.subscribe(state=>{const next=JSON.stringify([state.user,state.execution_enabled]);if(next!==previous){previous=next;this.render();}});
+      }
       this.render();
     }
     set section(value) {
-      value = titles[value] ? value : "home";
+      value = normalizeSection(value);
       if (value === this.current) return;
       this.current = value;
       this.render();
@@ -187,15 +199,17 @@ export function defineWorkspace() {
       window.removeEventListener("gov-route-change", this.onRouteChange);
       this.generation++;
       this.cleanup?.();
+      this.identityCleanup?.();
     }
     async render() {
       if (!this.isConnected) return;
       const version = ++this.generation;
       this.cleanup?.();
       this.cleanup = null;
-      const style = node("style", workspaceStyle),
+      const style = node("style", workspaceStyle + overviewStyle),
         main = node("main", undefined, "workspace");
       main.setAttribute("aria-label", titles[this.current][0]);
+      main.dataset.page=this.current;
       const head = node("header", undefined, "heading row spread");
       const intro = node("div");
       intro.append(
@@ -222,32 +236,28 @@ export function defineWorkspace() {
         body.replaceChildren(node("p", "网关尚未连接，连接后刷新。", "empty"));
         return;
       }
-      if (this.current === 'login') {
+      if (this.current === 'permissions') {
         body.replaceChildren();
-        this.cleanup=mountDemoIdentity(body,this.gateway,()=>{},{mode:'login',requestId:this.requestId ?? new URLSearchParams(location.search).get('request')});
+        this.cleanup=mountDemoIdentity(body,this.gateway,()=>{},{mode:'permissions',requestId:this.requestId ?? new URLSearchParams(location.search).get('request')});
         return;
       }
+      if(this.current!=='settings'&&!this.identity?.snapshot().user){
+        body.replaceChildren(node('p','先到动态权限登录，再查看此页面。','empty'),button('前往动态权限',()=>go('permissions'),'primary'));return;
+      }
       try {
-        const data = await this.gateway.request(
-          "govagentsec.trajectory.workspace",
-          {},
-        );
+        const data = this.identity?.snapshot().user
+          ? await this.identity.requestGateway('govagentsec.trajectory.workspace',{})
+          : await this.gateway.request('govagentsec.trajectory.workspace',{});
         if (version !== this.generation) return;
         body.replaceChildren();
         this.data = data;
         this[this.current](body, data);
-        if(this.current==='settings')this.sessionSandbox(body);
-        if(['home','approvals','settings'].includes(this.current)){
-          const cleanup=mountDemoIdentity(body,this.gateway,()=>{},
-            {mode:this.current,requestId:this.requestId ?? new URLSearchParams(location.search).get('request'),routing:data.coverage?.model_routing});
-          const previous=this.cleanup;this.cleanup=()=>{cleanup();previous?.();};
-        }
         footer.lastChild.textContent =
           "更新于 " + new Date().toLocaleTimeString("zh-CN");
       } catch (e) {
         if (version === this.generation)
           body.replaceChildren(
-            node("p", "工作台数据读取失败：" + e.message, "error"),
+            node("p", "页面暂不可用，请检查身份与服务状态后重试。", "error"),button('前往动态权限',()=>go('permissions')),
           );
       }
     }
@@ -373,7 +383,7 @@ export function defineWorkspace() {
     coverage(data) {
       const c = section("实际防护状态"),
         list = node("div", undefined, "coverage");
-      for (const [label, desc, state, level] of coverageRows(data.coverage)) {
+      for (const [label, desc, state, level] of coverageRows(data.coverage, {settings:this.current==='settings'})) {
         const r = node("div", undefined, "coverage-row"),
           t = node("div");
         t.append(node("span", label), node("small", desc));
@@ -381,13 +391,20 @@ export function defineWorkspace() {
         list.append(r);
       }
       c.append(list);
-      const warning = node('p', '受管适配器与任务权限分别检查。聊天绑定业务身份后，原生工具还须通过任务权限检查；未识别工具默认拒绝。', 'notice');
-      warning.style.color = '#b42318';
+      const warning = node('p', '受管适配器与任务权限分别检查。聊天自动应用当前业务身份，原生工具仍须通过任务权限检查；未识别工具默认拒绝。', 'notice');
       c.append(warning);
-      for (const tool of data.tool_coverage ?? []) {
+      const tools=data.tool_coverage ?? [];
+      let toolList=c;
+      if(this.current==='settings'&&tools.length){
+        const details=node('details',undefined,'tool-coverage-details'),missing=tools.filter(tool=>!tool.managed).length;
+        const summary=node('summary',`工具接入详情 · ${tools.length} 项${missing?' · '+missing+' 项未接入':''}`);
+        if(missing)summary.style.color='#b42318';
+        details.append(summary);c.append(details);toolList=details;
+      }
+      for (const tool of tools) {
         const item = node('p', `${tool.name} · ${tool.managed ? '已接入受管适配器' : '未接入受管适配器'}`);
         if (!tool.managed) item.style.color = '#b42318';
-        c.append(item);
+        toolList.append(item);
       }
       if (this.current !== "settings")
         c.append(button("检查与配置", () => go("settings"), "quiet"));
@@ -398,7 +415,7 @@ export function defineWorkspace() {
       waiting.setAttribute("role", "status");
       parent.append(waiting);
       try {
-        const access = await this.gateway.request("govagentsec.ui.open", {
+        const access = await this.identity.requestGateway("govagentsec.ui.open", {
           path: url,
         });
         if (!parent.isConnected || !waiting.isConnected) return;
@@ -442,7 +459,7 @@ export function defineWorkspace() {
     admission(body, data) {
       const layout = node("div", undefined, "split"),
         inventory = node("aside", undefined, "section capabilities");
-      inventory.append(node("h2", "已接入服务"));
+      inventory.append(librarySummary(this.identity.snapshot().permission_summary,{toolsOnly:true}),node("h2", "已接入服务"));
       for (const server of data.servers) {
         const r = node("div", undefined, "cap-row"),
           line = node("div", undefined, "row");
@@ -473,6 +490,8 @@ export function defineWorkspace() {
         ],
         ["MCP 接入", "/plugins/aegis-admin/mcp?embed=1&workspace=1"],
         ["检查报告", "/plugins/aegis-admin/reports?embed=1&workspace=1"],
+        ["人工复核", "/plugins/aegis-admin/reviews?embed=1&workspace=1"],
+        ["准入规则", "/plugins/aegis-admin/rules?embed=1&workspace=1"],
       ];
       for (const [label, url] of choices) {
         const b = button(label, () => {
@@ -630,7 +649,7 @@ export function defineWorkspace() {
         const toggle = button('查看旧版历史记录', () => { legacy.hidden = !legacy.hidden; container.hidden = !legacy.hidden;
           toggle.textContent = legacy.hidden ? '查看旧版历史记录' : '返回轨迹审计'; }, 'quiet');
         body.append(toggle, container, legacy);
-        this.cleanup = mountTraceAudit(root, (method, params = {}) => this.gateway.request('govagentsec.trace.' + method, params), {initialTab, traceId:new URLSearchParams(location.search).get('trace')||undefined, initialTask:new URLSearchParams(location.search).get('task_key')||'', initialSelected:new URLSearchParams(location.search).getAll('trace_id'), onTabChange:(tab,ids)=>{const u=new URL(location.href);u.searchParams.set('section',tab==='compare'?'compare':'audit');u.searchParams.set('tab',tab);u.searchParams.delete('trace_id');for(const id of ids)u.searchParams.append('trace_id',id);history.replaceState({},'',u);}});
+        this.cleanup = mountTraceAudit(root, (method, params = {}) => this.identity.requestGateway('govagentsec.trace.' + method, params), {initialTab, traceId:new URLSearchParams(location.search).get('trace')||undefined, initialTask:new URLSearchParams(location.search).get('task_key')||'', initialSelected:new URLSearchParams(location.search).getAll('trace_id'), onTabChange:(tab,ids)=>{const u=new URL(location.href);u.searchParams.set('section',tab==='compare'?'compare':'audit');u.searchParams.set('tab',tab);u.searchParams.delete('trace_id');for(const id of ids)u.searchParams.append('trace_id',id);history.replaceState({},'',u);}});
       } catch { /* Older installations retain their existing audit view. */ }
     }
     compare(body) {
@@ -660,7 +679,7 @@ export function defineWorkspace() {
         root.append(style, template.content.cloneNode(true));
         root.querySelector(".lower").open = true;
         this.cleanup = mountTraces(root, async (method, params) => {
-          const value = await this.gateway.request(
+          const value = await this.identity.requestGateway(
             "govagentsec.trajectory." + method,
             params,
           );
@@ -708,11 +727,13 @@ export function defineWorkspace() {
           const status=await this.gateway.request('govagentsec.sandbox.status',{});
           if(!card.isConnected)return;
           content.replaceChildren(chip(`当前：${status.current==='docker'?'Docker':status.current==='srt'?'sandbox-runtime (srt)':'未启用'}`,status.mode==='all'?'':'warn'));
+          const summary=this.shadowRoot.querySelector('[data-runtime-summary]');
+          if(summary)summary.textContent=`会话沙箱：${status.current==='docker'?'Docker':status.current==='srt'?'srt':'未启用'} · 演示身份源：${this.identity?.snapshot().enabled?'已启用':'未启用'}`;
           content.append(node('p',status.elevated_disabled?'宿主机提权旁路已关闭':'宿主机提权旁路未关闭','muted'));
           const field=node('fieldset');field.style.cssText='display:flex;gap:18px;border:0;padding:8px 0;flex-wrap:wrap';field.append(node('legend','选择下一次运行使用的引擎'));
           for(const engine of ['docker','srt']){
             const label=node('label'),input=document.createElement('input');input.type='radio';input.name='session-sandbox-engine';input.value=engine;input.checked=status.current===engine;
-            input.disabled=!status.engines[engine].ready;
+            input.disabled=!status.engines[engine].ready||!this.identity?.snapshot().permission_summary?.can_switch_sandbox;
             input.addEventListener('change',async()=>{
               if(engine==='srt'){
                 field.querySelectorAll('input').forEach(e=>{e.disabled=true;e.checked=e.value===status.current;});
@@ -727,7 +748,7 @@ export function defineWorkspace() {
                 if(!accepted){field.querySelectorAll('input').forEach(e=>{e.disabled=!status.engines[e.value].ready;});input.focus();return;}
               }
               field.querySelectorAll('input').forEach(e=>e.disabled=true);result.textContent='正在保存…';
-              try {const saved=await this.gateway.request('govagentsec.sandbox.select',{engine});result.textContent='已保存。'+saved.effective;await load();}
+              try {const saved=await this.identity.requestGateway('govagentsec.sandbox.select',{engine});result.textContent='已保存。'+saved.effective;await load();}
               catch(e){result.textContent='切换未完成：'+e.message;field.querySelectorAll('input').forEach(e=>{e.disabled=!status.engines[e.value].ready;e.checked=e.value===status.current;});}
             });
             label.append(input,document.createTextNode(' '+status.engines[engine].label+(status.engines[engine].ready?' · 可用':' · 未就绪')));field.append(label);
@@ -742,38 +763,24 @@ export function defineWorkspace() {
       content.append(node('p','执行环境准备中，请稍候。','muted'));void load();
     }
     settings(body, data) {
-      const grid = node("div", undefined, "overview");
-      grid.append(this.coverage(data));
-      const models = section('模型分工');
-      const modelDetails = node('div');
-      modelDetails.style.cssText = 'padding:16px;line-height:1.7;overflow-wrap:anywhere';
-      const routing = data.coverage?.model_routing;
-      modelDetails.append(node('h3', '会话模型（可 API）'),
-        node('p', routing ? `${routing.session.current}` : '等待后端读取实际会话配置'),
-        node('h3', '安全评审（默认本地，轨迹不出域）'),
-        node('p', routing ? `${routing.review.model} · 本机评审` : '本地评审状态尚未核验'),
-        node('p', '会话 API 会接收该会话上下文。含真实公文、敏感输入的任务请显式选择本地模型；历史轨迹不用于 API 冒烟。', 'muted'),
-        node('p', '切换模型后，请在新对话中确认实际使用的模型。', 'muted'));
-      models.append(modelDetails);
-      grid.append(models);
-      const controls = section("配置与维护");
+      const grid = node("div", undefined, "settings-grid");
+      const overview=section('安全总览');overview.dataset.settingsSection='overview';grid.append(overview);
+      const disposeOverview=mountSecurityOverview(overview,this.identity,go);
+      const actual=this.coverage(data),runtimeSummary=node('p','正在读取执行环境…','muted');
+      actual.dataset.settingsSection='status';runtimeSummary.dataset.runtimeSummary='true';actual.append(runtimeSummary);grid.append(actual);
+      const controls = section("配置与维护");controls.classList.add("settings-controls");
+      controls.dataset.settingsSection='maintenance';
       const rows = node("div", undefined, "quick");
-      for (const [label, url] of [
-        ["输入防护策略", "/plugins/protect-agent/panel?embed=1&workspace=1"],
-        [
-          "运行防护与审批记录",
-          "/plugins/agentguard-runtime-security/panel?embed=1&workspace=1",
-        ],
-        ["准入规则", "/plugins/aegis-admin/rules?embed=1&workspace=1"],
-      ])
-        rows.append(
-          button(label, () => {
-            this.subpanel(body, url, label);
-          }),
-        );
-      rows.append(button("OpenClaw 系统设置", () => go("config")));
+      const configButton=button("OpenClaw 系统设置", () => go("config"));
+      configButton.disabled=!this.identity?.snapshot().permission_summary?.can_switch_sandbox;
+      rows.append(configButton);
       controls.append(rows);
-      controls.append(node('p','组织登录尚未配置。当前业务身份与可用权限以任务卡为准。','muted'));
+      if(!this.identity?.snapshot().user)controls.append(button('前往动态权限登录',()=>go('permissions')));
+      const maintenance=node('div',undefined,'settings-maintenance-content');controls.append(maintenance);
+      const sandboxHost=node('div');maintenance.append(sandboxHost);this.sessionSandbox(sandboxHost);
+      const identityHost=node('div');maintenance.append(identityHost);
+      const disposeIdentity=mountDemoIdentity(identityHost,this.gateway,()=>{},{mode:'settings',routing:data.coverage?.model_routing});
+      this.cleanup=()=>{disposeOverview();disposeIdentity();};
       grid.append(controls);
       body.append(grid);
     }
@@ -790,7 +797,7 @@ export function createWorkspaceView(html) {
         .client=${client}
         .sandboxMode=${host.context?.config.current.embedSandboxMode}
         .section=${new URLSearchParams(location.search).get("section") ||
-        "home"}
+        "permissions"}
       ></govagentsec-workspace>`,
   };
 }

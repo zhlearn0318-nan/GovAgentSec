@@ -23,9 +23,9 @@ def build(out):
             parts = pathlib.PurePosixPath(name).parts
             if any(p in {'.git','.runtime','local-validation','node_modules','.venv','models','live-runtime','__pycache__'} for p in parts) or name.endswith(('.env','.token','.sqlite','.db','.log')):
                 raise RuntimeError('Runtime or private file in release: ' + name)
-    bootstrap = out / 'Bootstrap-Windows.ps1'
-    bootstrap.write_bytes(subprocess.check_output(['git','show','HEAD:Bootstrap-Windows.ps1'],cwd=ROOT))
-    checksums = '\n'.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name for p in [archive,bootstrap])+'\n'
+    subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(ROOT/'scripts/build_windows_installer.ps1'),'-OutputDirectory',str(out)],cwd=ROOT,check=True)
+    installer = out / 'GovAgentSec-v1.0-Setup.exe'
+    checksums = '\n'.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name for p in [archive,installer])+'\n'
     (out/'SHA256SUMS.txt').write_text(checksums,encoding='ascii')
     report = dict(version=manifest['version'],tag=manifest['tag'],commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),source='git-archive-committed-source',archive=archive.name,bytes=archive.stat().st_size)
     (out/'package-report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')

@@ -2,7 +2,7 @@
 
 将下面一句发给能操作本机 Windows 的 AI Agent：
 
-> 请阅读并执行 https://github.com/zhlearn0318-nan/GovAgentSec/blob/v1.0/docs/INSTALL_WITH_AGENT.md ，在本机安装政安智枢正式版 v1.0；保留已有外部 API 接口和模型配置，按文档执行安装、验证并报告结果。
+> 请阅读并执行 https://github.com/zhlearn0318-nan/GovAgentSec/blob/main/docs/INSTALL_WITH_AGENT.md，在本机安装政安智枢正式版 v1.0；保留已有外部 API 接口和模型配置，完成安装验证并报告结果。
 
 ## 执行规程
 
@@ -15,8 +15,6 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Setup-Windows.ps1 -Plan
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Setup-Windows.ps1 -NoBrowser
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Verify.ps1
 ```
-
-也可检查发布页 `Bootstrap-Windows.ps1` 后用它下载校验、解压并安装，参数 `-NoBrowser`；它与 ZIP 入口走同一安装器。
 
 4. OpenClaw 固定 2026.7.1-2。已有其他版本、非标准 profile 或冲突配置必须停止并说明，不升级、不抹除配置。允许安装器在备份和哈希记录后接入受管插件。不要绕过安装器的准入、真实推理或健康检查。
 5. 遇到 Windows UAC、Docker/WSL 首次确认、驱动或重启要求，告知用户所需操作，完成后复跑。不能将这类中断记为安装通过。

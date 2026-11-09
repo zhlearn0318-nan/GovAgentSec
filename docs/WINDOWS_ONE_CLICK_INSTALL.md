@@ -2,20 +2,37 @@
 
 宿主固定 OpenClaw **2026.7.1-2**。安装入口把宿主、依赖、真实防护模型、AgentGuard、准入、轨迹插件、Docker 会话沙箱及桌面启动入口串联起来。
 
-## 安装
+## 下载安装
 
-1. 从 [v1.0 发布页](https://github.com/zhlearn0318-nan/GovAgentSec/releases/tag/v1.0) 下载 `GovAgentSec-v1.0-windows-x64.zip` 和 `SHA256SUMS.txt`，用 `Get-FileHash 文件名 -Algorithm SHA256` 核对压缩包摘要。
-2. 解压到长期保留的目录，例如 `C:\GovAgentSec`。双击 **Setup-Windows.cmd**。
-3. 按 Windows 提示完成权限授权、Docker Desktop 首次设置或必要重启；遇到这些前置条件未完成，安装会报错停止。完成后再次运行同一个入口。
-4. 安装成功自动打开工作区，桌面生成 **GovAgentSec v1.0** 快捷方式。以后使用它或 `Start-GovAgentSec.cmd` 启动。
+### 1. Windows 一键安装包（推荐）
 
-也可以下载发布页的 `Bootstrap-Windows.ps1`，检查脚本及摘要后运行：
+下载 **[GovAgentSec-v1.0-Setup.exe](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/v1.0/GovAgentSec-v1.0-Setup.exe)**，双击即可自动下载、校验并安装固定版 OpenClaw 和政安智枢，完成后打开系统并创建桌面快捷方式。无需预先下载源码或手动运行 PowerShell。
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\Bootstrap-Windows.ps1
+### 2. 使用 Agent 一键部署
+
+把下面这段指令发给能操作本机 Windows 的 AI Agent：
+
+```text
+请阅读并执行 https://github.com/zhlearn0318-nan/GovAgentSec/blob/main/docs/INSTALL_WITH_AGENT.md，在本机安装政安智枢正式版 v1.0；保留已有外部 API 接口和模型配置，完成安装验证并报告结果。
 ```
 
-引导器从固定 `v1.0` 下载源码包，核对 SHA-256、拒绝 ZIP 路径穿越和符号链接条目，再安装到 `%LOCALAPPDATA%\GovAgentSec\v1.0`。可用 `-InstallDirectory C:\GovAgentSec` 指定不存在的目录。SHA-256 用于下载完整性检查，不是独立代码签名。
+### 3. 传统手动下载安装
+
+下载 **[Windows ZIP](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/v1.0/GovAgentSec-v1.0-windows-x64.zip)** 和 **[SHA256SUMS.txt](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/v1.0/SHA256SUMS.txt)**，核对摘要后解压到长期保留的目录，在该目录打开 PowerShell，执行：
+
+```powershell
+# 查看安装计划
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Setup-Windows.ps1 -Plan
+# 执行安装并检查
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Setup-Windows.ps1 -NoBrowser
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Verify.ps1
+# 打开系统
+.\Start-GovAgentSec.cmd
+```
+
+安装后使用 `Start-GovAgentSec.cmd` 启动，使用 `Configure-Model.cmd` 配置外部 API 和模型。完整防护需要 NVIDIA CUDA、Docker Linux 引擎；首次系统授权、Docker/WSL 设置或重启按提示完成。EXE 当前未做代码签名，Windows 可能显示发布者提示。
+
+一键安装包内部复用仓库的 `Bootstrap-Windows.ps1`，从固定 v1.0 下载源码，校验 SHA-256 并拒绝路径穿越，默认安装到 `%LOCALAPPDATA%\GovAgentSec\v1.0`。摘要检查不是代码签名。
 
 ## 环境要求与安装动作
 

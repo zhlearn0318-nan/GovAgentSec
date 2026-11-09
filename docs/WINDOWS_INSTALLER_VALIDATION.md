@@ -2,6 +2,8 @@
 
 日期：2026-11-10。实际执行环境：当前 Windows 开发机。未在现网重装系统，未更改现网网关配置。
 
+安装入口更新：已使用 Windows .NET Framework 编译器生成 `GovAgentSec-v1.0-Setup.exe` 并实际执行 `--check`，确认内嵌引导脚本 SHA-256 与源文件一致、未启动安装。证据为 `local-validation/releases/v1.0/exe-verification.json`。构建命令：`powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build_windows_installer.ps1`。EXE 当前未签名；它显示控制台进度并复用既有安装器，未新增第二套部署逻辑。此自检不代表全新机器完整安装通过。
+
 | 检查 | 结果 | 证据 |
 | --- | --- | --- |
 | 新配置与固定宿主 schema、已有配置/外部 API 保留、只读 Plan、宿主适配安装及恢复 | PASS，5 项 Node 测试 | `node --test scripts/test_windows_installer.mjs scripts/test_delivery_installer.mjs` |

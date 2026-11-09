@@ -137,39 +137,37 @@ flowchart TD
 
 Windows、已有 OpenClaw `2026.7.1-2`、Python 3.12、Miniconda、Git、Docker Desktop Linux 引擎、Ollama 与 NVIDIA CUDA 显卡。验收硬件为 32 GB 内存、RTX 3070 Ti Laptop 8 GB 显存；这不是最低配置承诺。安装包含多个隔离 Python 环境、约 3 GB 防护权重、4.7 GB Ollama 模型及 CUDA 安装缓存，请预留充足磁盘空间。宿主模型提供商由用户自行配置。
 
-尚未安装 OpenClaw？先按 [独立 Windows 部署说明](docs/OPENCLAW_WINDOWS.md) 操作。
+## 下载安装
 
-## 一键安装
+### 1. Windows 一键安装包（推荐）
 
-从 [v1.0 发布页](https://github.com/zhlearn0318-nan/GovAgentSec/releases/tag/v1.0) 下载 Windows ZIP 与 SHA256SUMS.txt，核对摘要，解压到长期保留的目录，双击 **Setup-Windows.cmd**。它安装固定 OpenClaw、依赖、模型和完整系统，并生成桌面启动快捷方式。
+下载 **[GovAgentSec-v1.0-Setup.exe](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/v1.0/GovAgentSec-v1.0-Setup.exe)**，双击即可自动下载、校验并安装固定版 OpenClaw 和政安智枢，完成后打开系统并创建桌面快捷方式。无需预先下载源码或手动运行 PowerShell。
+
+### 2. 使用 Agent 一键部署
+
+把下面这段指令发给能操作本机 Windows 的 AI Agent：
+
+```text
+请阅读并执行 https://github.com/zhlearn0318-nan/GovAgentSec/blob/main/docs/INSTALL_WITH_AGENT.md，在本机安装政安智枢正式版 v1.0；保留已有外部 API 接口和模型配置，完成安装验证并报告结果。
+```
+
+### 3. 传统手动下载安装
+
+下载 **[Windows ZIP](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/v1.0/GovAgentSec-v1.0-windows-x64.zip)** 和 **[SHA256SUMS.txt](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/v1.0/SHA256SUMS.txt)**，核对摘要后解压到长期保留的目录，在该目录打开 PowerShell，执行：
 
 ```powershell
-# 仅查看计划
+# 查看安装计划
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Setup-Windows.ps1 -Plan
-# 安装并验证
-.\Setup-Windows.cmd
-# 后续启动 / 配置外部模型 API
+# 执行安装并检查
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Setup-Windows.ps1 -NoBrowser
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Verify.ps1
+# 打开系统
 .\Start-GovAgentSec.cmd
-.\Configure-Model.cmd
 ```
 
-完整防护要求 NVIDIA CUDA 和 Docker Linux 引擎；Windows 授权、Docker/WSL 首次初始化及重启按系统提示完成后复跑。新装可先用本地 Ollama；**保留外部 API 接口与现有模型配置**。轨迹评审仅本地。详见 [安装说明](docs/WINDOWS_ONE_CLICK_INSTALL.md)、[验证范围](docs/WINDOWS_INSTALLER_VALIDATION.md)。已有固定宿主的组件维护仍可使用 `Install.cmd`。
+安装后使用 `Start-GovAgentSec.cmd` 启动，使用 `Configure-Model.cmd` 配置外部 API 和模型。完整防护需要 NVIDIA CUDA、Docker Linux 引擎；首次系统授权、Docker/WSL 设置或重启按提示完成。EXE 当前未做代码签名，Windows 可能显示发布者提示。
 
-权重保存在本地 `models/`，不放进 Git 仓库。下载支持重试及权重断点续传；复装复用校验通过的文件和已有固定摘要镜像。
-
-也可以先生成配置供检查：
-
-```powershell
-.\Install.ps1 -PrepareOnly
-```
-
-安装器保留无关插件、MCP 和模型配置，在 OpenClaw 状态目录的 `govagentsec/` 下备份配置与控制台入口。发现不属于 Aegis 的现有安装策略时停止。它注册当前用户登录时启动的 AgentGuard 任务，防护服务由网关管理；安装后不要移动仓库目录。安装完成后刷新 OpenClaw 控制台，选择“政安智枢 GovAgentSec”。也可直接打开 `http://127.0.0.1:18789/plugins/govagentsec/panel`（若修改了网关端口，请替换端口）。
-
-```powershell
-.\Verify.ps1
-```
-
-首次启动会等待模型预热。安装失败会尝试恢复配置、控制台入口和原 AgentGuard 服务，报错中给出备份位置；修复原因后重新运行。详细组件结构与维护入口见 [维护说明](docs/MAINTENANCE.md)。
+安装详情及故障处理见 [Windows 安装说明](docs/WINDOWS_ONE_CLICK_INSTALL.md)，验证范围见 [安装验证记录](docs/WINDOWS_INSTALLER_VALIDATION.md)。
 
 ## 官方模型来源
 

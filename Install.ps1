@@ -72,8 +72,12 @@ if (-not $SkipDependencies) {
         }
     }
     $modelsPresent = & $ollama list
-    if ($LASTEXITCODE -ne 0 -or "$modelsPresent" -notmatch 'qwen2\.5:7b-instruct-q4_K_M') {
-        Invoke-Checked $ollama @('pull','qwen2.5:7b-instruct-q4_K_M')
+    if ($LASTEXITCODE -ne 0) { throw 'Local Ollama is unavailable.' }
+    $release = Get-Content (Join-Path $root 'release-manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+    foreach ($model in @($release.local_model, $release.review_model)) {
+        if ("$modelsPresent" -notmatch [regex]::Escape($model)) {
+            Invoke-Checked $ollama @('pull',$model)
+        }
     }
 }
 $servingThisRelease = $false
@@ -163,6 +167,8 @@ try {
     Invoke-Checked 'powershell.exe' @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $modules 'protect-agent-group1\智能体安全\integrations\openclaw\plugin\install-control-ui.ps1'),'-ControlUiRoot',$controlUiRoot)
     Invoke-Checked 'node.exe' @((Join-Path $root 'scripts\install_delivery.mjs'),$openclawRoot,$hostBackup)
     Invoke-Checked $protectPython @((Join-Path $root 'scripts\harden_openclaw.py'),'--state',$OpenClawState,'--openclaw-root',$openclawRoot,'--apply')
+    # The latest workspace requires session isolation as well as admission scanning.
+    Invoke-Checked 'node.exe' @((Join-Path $root 'scripts\setup_session_sandbox.mjs'))
     Invoke-Checked $openclaw @('gateway','restart')
     Invoke-Checked 'powershell.exe' @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $root 'Verify.ps1'),'-OpenClawState',$OpenClawState)
     Invoke-Checked 'powershell.exe' @('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $group2 'register_agentguard_task.ps1'))

@@ -14,13 +14,14 @@ export const titles = {
   home: ["工作台", "确认本次材料与权限，继续处理任务。"],
   admission: ["能力准入", "检查 Skill 与 MCP，核对报告、复核申请和准入规则。"],
   approvals: ["待审批", "先核对具体动作，再决定是否执行。"],
-  audit: ["审计演进", "查看任务过程，评估同类运行并整理候选技能。"],
+  audit: ["演进审计", "查看任务过程，评估同类运行并整理候选技能。"],
+  overview: ["安全总览", "查看安全运行指标与实际防护状态。"],
   compare: [
     "运行对照与候选记录",
     "任务轨迹的高级视图，对照两次运行并查看候选证据。",
   ],
   skills: ["已安装技能", "只读核对已安装能力；新能力从准入流程接入。"],
-  settings: ["防护设置", "查看实际覆盖，按需调整运行策略。"],
+  settings: ["防护设置", "配置执行环境，维护演示身份源。"],
 };
 export const normalizeSection = value => ['home','login','approvals'].includes(value) ? 'permissions' : titles[value] ? value : 'permissions';
 export function isTestTrace(trace) {
@@ -241,7 +242,7 @@ export function defineWorkspace() {
         this.cleanup=mountDemoIdentity(body,this.gateway,()=>{},{mode:'permissions',requestId:this.requestId ?? new URLSearchParams(location.search).get('request')});
         return;
       }
-      if(this.current!=='settings'&&!this.identity?.snapshot().user){
+      if(!['settings','overview'].includes(this.current)&&!this.identity?.snapshot().user){
         body.replaceChildren(node('p','先到动态权限登录，再查看此页面。','empty'),button('前往动态权限',()=>go('permissions'),'primary'));return;
       }
       try {
@@ -367,7 +368,7 @@ export function defineWorkspace() {
       for (const [name, label, target] of [
         ["chat", "继续对话", "chat"],
         ["admission", "接入 Skill / MCP", "admission"],
-        ["settings", "检查防护覆盖", "settings"],
+        ["overview", "检查防护覆盖", "home"],
       ]) {
         const b = button(label, () => go(target));
         b.prepend(symbol(name));
@@ -383,7 +384,7 @@ export function defineWorkspace() {
     coverage(data) {
       const c = section("实际防护状态"),
         list = node("div", undefined, "coverage");
-      for (const [label, desc, state, level] of coverageRows(data.coverage, {settings:this.current==='settings'})) {
+      for (const [label, desc, state, level] of coverageRows(data.coverage, {settings:this.current==='overview'})) {
         const r = node("div", undefined, "coverage-row"),
           t = node("div");
         t.append(node("span", label), node("small", desc));
@@ -393,19 +394,6 @@ export function defineWorkspace() {
       c.append(list);
       const warning = node('p', '受管适配器与任务权限分别检查。聊天自动应用当前业务身份，原生工具仍须通过任务权限检查；未识别工具默认拒绝。', 'notice');
       c.append(warning);
-      const tools=data.tool_coverage ?? [];
-      let toolList=c;
-      if(this.current==='settings'&&tools.length){
-        const details=node('details',undefined,'tool-coverage-details'),missing=tools.filter(tool=>!tool.managed).length;
-        const summary=node('summary',`工具接入详情 · ${tools.length} 项${missing?' · '+missing+' 项未接入':''}`);
-        if(missing)summary.style.color='#b42318';
-        details.append(summary);c.append(details);toolList=details;
-      }
-      for (const tool of tools) {
-        const item = node('p', `${tool.name} · ${tool.managed ? '已接入受管适配器' : '未接入受管适配器'}`);
-        if (!tool.managed) item.style.color = '#b42318';
-        toolList.append(item);
-      }
       if (this.current !== "settings")
         c.append(button("检查与配置", () => go("settings"), "quiet"));
       return c;
@@ -727,8 +715,6 @@ export function defineWorkspace() {
           const status=await this.gateway.request('govagentsec.sandbox.status',{});
           if(!card.isConnected)return;
           content.replaceChildren(chip(`当前：${status.current==='docker'?'Docker':status.current==='srt'?'sandbox-runtime (srt)':'未启用'}`,status.mode==='all'?'':'warn'));
-          const summary=this.shadowRoot.querySelector('[data-runtime-summary]');
-          if(summary)summary.textContent=`会话沙箱：${status.current==='docker'?'Docker':status.current==='srt'?'srt':'未启用'} · 演示身份源：${this.identity?.snapshot().enabled?'已启用':'未启用'}`;
           content.append(node('p',status.elevated_disabled?'宿主机提权旁路已关闭':'宿主机提权旁路未关闭','muted'));
           const field=node('fieldset');field.style.cssText='display:flex;gap:18px;border:0;padding:8px 0;flex-wrap:wrap';field.append(node('legend','选择下一次运行使用的引擎'));
           for(const engine of ['docker','srt']){
@@ -754,7 +740,25 @@ export function defineWorkspace() {
             label.append(input,document.createTextNode(' '+status.engines[engine].label+(status.engines[engine].ready?' · 可用':' · 未就绪')));field.append(label);
           }
           content.append(field,node('p',status.effective,'muted'));
-          const technical=node('details');technical.append(node('summary','查看执行环境说明'),node('p',status.scope,'muted'),node('p',status.engines.srt.limitation,'muted'));content.append(technical);
+          const technical=node('details');technical.append(node('summary','Docker 与 srt：优缺点与适用场景'));
+          const comparison=node('div');comparison.style.cssText='display:grid;gap:14px;padding:10px 0';
+          for(const [title,advantages,limitations,suitable] of [
+            ['Docker · 默认引擎',
+              '容器环境独立、依赖统一，便于重复执行；当前配置禁用网络、限制资源，并隔离宿主工作区。',
+              '需要 Docker 服务和专用镜像，占用额外内存与磁盘；使用 Linux 环境，不能直接运行依赖 Windows 的命令和程序。',
+              '日常脚本、文档处理和需要隔离执行环境的任务。'],
+            ['srt · Windows 原生引擎',
+              '保留 Windows / PowerShell 执行环境，不依赖 Docker 容器；通过权限策略限制文件写入、指定路径读取和网络访问。',
+              '当前 Windows 版本处于 Alpha 阶段，启动和权限自检可能较慢；文件读取隔离不如独立容器完整，网络限制也存在已知边界，不适合运行主动攻击隔离机制的代码。',
+              '必须使用 Windows 命令或本机运行时的受控任务；不能将其视为更快或隔离能力等同于 Docker 的替代品。'],
+          ]){
+            const engineInfo=node('section');engineInfo.append(node('h3',title));
+            for(const [label,text] of [['优点',advantages],['不足',limitations],['适用',suitable]]){
+              const line=node('p',undefined,'muted');line.append(node('strong',label+'：'),document.createTextNode(text));engineInfo.append(line);
+            }
+            comparison.append(engineInfo);
+          }
+          technical.append(comparison,node('p',status.scope,'muted'));content.append(technical);
           if(status.current==='srt')content.append(node('p','srt 首次/冷启动可能数十秒至数分钟，可能超过业务委托期限。请等待执行环境就绪；到期需重新申请。','notice'));
           for(const engine of ['docker','srt'])if(!status.engines[engine].ready)content.append(node('p','执行环境尚未就绪，请等待准备完成或联系管理员检查。'+status.engines[engine].detail,'error'));
           const result=node('p','切换仅影响新运行。','muted');result.setAttribute('role','status');content.append(result);
@@ -762,25 +766,26 @@ export function defineWorkspace() {
       };
       content.append(node('p','执行环境准备中，请稍候。','muted'));void load();
     }
-    settings(body, data) {
+    overview(body, data) {
       const grid = node("div", undefined, "settings-grid");
       const overview=section('安全总览');overview.dataset.settingsSection='overview';grid.append(overview);
-      const disposeOverview=mountSecurityOverview(overview,this.identity,go);
+      this.cleanup=mountSecurityOverview(overview,this.identity,go);
       const actual=this.coverage(data),runtimeSummary=node('p','正在读取执行环境…','muted');
       actual.dataset.settingsSection='status';runtimeSummary.dataset.runtimeSummary='true';actual.append(runtimeSummary);grid.append(actual);
+      body.append(grid);
+      this.gateway.request('govagentsec.sandbox.status',{}).then(status=>{
+        if(runtimeSummary.isConnected)runtimeSummary.textContent=`会话沙箱：${status.current==='docker'?'Docker':status.current==='srt'?'srt':'未启用'} · 演示身份源：${this.identity?.snapshot().enabled?'已启用':'未启用'}`;
+      }).catch(()=>{if(runtimeSummary.isConnected)runtimeSummary.textContent='执行环境状态暂不可用，请刷新重试。';});
+    }
+    settings(body, data) {
+      const grid = node("div", undefined, "settings-grid");
       const controls = section("配置与维护");controls.classList.add("settings-controls");
       controls.dataset.settingsSection='maintenance';
-      const rows = node("div", undefined, "quick");
-      const configButton=button("OpenClaw 系统设置", () => go("config"));
-      configButton.disabled=!this.identity?.snapshot().permission_summary?.can_switch_sandbox;
-      rows.append(configButton);
-      controls.append(rows);
       if(!this.identity?.snapshot().user)controls.append(button('前往动态权限登录',()=>go('permissions')));
       const maintenance=node('div',undefined,'settings-maintenance-content');controls.append(maintenance);
       const sandboxHost=node('div');maintenance.append(sandboxHost);this.sessionSandbox(sandboxHost);
       const identityHost=node('div');maintenance.append(identityHost);
-      const disposeIdentity=mountDemoIdentity(identityHost,this.gateway,()=>{},{mode:'settings',routing:data.coverage?.model_routing});
-      this.cleanup=()=>{disposeOverview();disposeIdentity();};
+      this.cleanup=mountDemoIdentity(identityHost,this.gateway,()=>{},{mode:'settings',routing:data.coverage?.model_routing});
       grid.append(controls);
       body.append(grid);
     }

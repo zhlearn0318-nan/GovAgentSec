@@ -11,7 +11,8 @@ import {
 const routes = [
   ["permissions", "动态权限"],
   ["admission", "能力准入"],
-  ["audit", "审计演进"],
+  ["audit", "演进审计"],
+  ["overview", "安全总览"],
   ["settings", "防护设置"],
 ];
 const hostStyle = `
@@ -240,7 +241,7 @@ export function defineShell() {
           b.dataset.route = key;
           if(key === "settings") b.classList.add("management-link");
           b.title = label;
-          b.innerHTML = icon(key==='permissions'?'approvals':key) + `<span>${label}</span>`;
+          b.innerHTML = icon(key==='permissions'?'approvals':key==='overview'?'home':key) + `<span>${label}</span>`;
           b.onclick = () => this.navigate(key);
           this.nav.append(b);
         }

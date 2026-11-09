@@ -9,7 +9,11 @@
 | 文档 | 用途 |
 | --- | --- |
 | [../README.md](../README.md) | 产品总览、安装与模块说明 |
-| [releases/3.0.0.md](releases/3.0.0.md) | 3.0 集成版本相对主分支的更新、验证范围与限制 |
+| [releases/v1.0.md](releases/v1.0.md) | 正式版 v1.0 更新说明 |
+| [WINDOWS_ONE_CLICK_INSTALL.md](WINDOWS_ONE_CLICK_INSTALL.md) | Windows 一键安装与外部 API 接入 |
+| [INSTALL_WITH_AGENT.md](INSTALL_WITH_AGENT.md) | 给其他 AI Agent 的自动安装入口 |
+| [WINDOWS_INSTALLER_VALIDATION.md](WINDOWS_INSTALLER_VALIDATION.md) | 安装器验证范围和复跑命令 |
+| [releases/3.0.0.md](releases/3.0.0.md) | 历史开发版 3.0 更新记录 |
 | [OPENCLAW_WINDOWS.md](OPENCLAW_WINDOWS.md) | 独立部署 OpenClaw（Windows） |
 | [MAINTENANCE.md](MAINTENANCE.md) | 组件结构与维护入口 |
 | [VALIDATION.md](VALIDATION.md) | 已验证功能与验收边界 |

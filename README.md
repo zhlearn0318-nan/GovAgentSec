@@ -2,7 +2,7 @@
 
 当前工作区支持会话内「允许一次／拒绝」卡片，也可在动态权限中本人确认同一请求。新增最高演示账号 `admin / Demo#Admin26`，可读取全部登记的合成受管资料；聊天使用当前登录身份的 `gov_read_document`，不再使用旧 MCP 的静态读文档身份。见 [本人确认与资料身份贯通](docs/PERSONAL_CONFIRMATION_AND_DOCUMENT_IDENTITY.md)。
 
-集成版本 **3.0.0** · 分支 `release/3.0` · 宿主固定 OpenClaw `2026.7.1-2`。[3.0 更新说明与验证范围](docs/releases/3.0.0.md)。组件各自的包版本独立维护。
+**正式版 v1.0** · 集成版本 `1.0.0` · 宿主固定 OpenClaw `2026.7.1-2`。[发布与下载](https://github.com/zhlearn0318-nan/GovAgentSec/releases/tag/v1.0) · [更新说明](docs/releases/v1.0.md) · [Windows 一键安装](docs/WINDOWS_ONE_CLICK_INSTALL.md) · [AI Agent 自动安装指令](docs/INSTALL_WITH_AGENT.md)。此前 3.0 为开发编号，历史标签不覆盖。
 
 **GovAgentSec（政安智枢）是一套运行在 OpenClaw 中的智能体安全系统**，将输入防护、运行时安全、供应链准入和技能安全测评整合到一个控制台入口。它面向需要安装第三方 Skill、连接 MCP 工具、处理外部内容并执行本地操作的智能体场景，帮助使用者检查风险、控制敏感操作并追溯处理结果。
 
@@ -26,7 +26,7 @@ Windows 集成发行版。已在原生 Windows、OpenClaw `2026.7.1-2` 上完成
 
 会话执行隔离支持 **Docker / sandbox-runtime (srt)**，可在工作台或防护设置切换，默认 Docker。两者实际范围、Windows 限制和验收命令见 [会话沙箱演示](docs/SESSION_SANDBOX_DEMO.md)。它与 Aegis 安装前准入沙箱分别运行。
 
-当前工作区左侧为 **动态权限、能力准入、审计演进、防护设置**，顶栏保留 **查看过程**。会话顶部提供账号和 **资料权限** 入口：登录后自动应用到当前工作区的所有对话，服务端按身份判断登记资料的读取权限，无需绑定任务或勾选材料。切换账号撤销旧授权；动态权限用于查看权限与处理审批。准入规则及人工复核位于能力准入；系统配置与沙箱选择归防护设置。过程面板保留原横向分栏图。见 [自动会话身份说明](docs/AUTOMATIC_CHAT_IDENTITY.md)。
+当前工作区左侧为 **动态权限、能力准入、演进审计、安全总览、防护设置**，顶栏保留 **查看过程**。会话顶部提供账号和 **资料权限** 入口：登录后自动应用到当前工作区的所有对话，服务端按身份判断登记资料的读取权限，无需绑定任务或勾选材料。切换账号撤销旧授权；动态权限用于查看权限与处理审批。准入规则及人工复核位于能力准入；安全总览集中展示运行指标与实际防护状态；防护设置只保留配置与维护（沙箱选择、演示身份源），不再提供 OpenClaw 系统设置跳转。过程面板保留原横向分栏图。见 [自动会话身份说明](docs/AUTOMATIC_CHAT_IDENTITY.md)。
 
 已运行的本机系统可通过中文欢迎入口打开：
 
@@ -37,7 +37,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/open_govagentsec.ps1
 
 入口为 `http://127.0.0.1:18789/plugins/govagentsec/welcome`。脚本只在本机浏览器片段中传入已有网关令牌，不打印或改写配置；网关认证与业务身份授权保持分开。演示身份源由管理员在防护设置开启，默认关闭。
 
-审计页可选择同任务运行进行本地评审、预览 TopK、生成隔离候选并运行联合准入；历史真实运行包可只读查看和定位步骤来源。本轮界面过程评审标记为 `test_only`，不能直接生产复核或安装。演示账号按 `weihu`（高级）、`shenpi`（中级）、`jingban`（基础）递增分级，另有 `shenji` 只读审计岗位（可本地评估、无业务执行与配置权限）；高级账号无需另一人审批，保留 OpenClaw 原生动作确认；中低级仍执行双人审批及禁自批。资料范围为经办公共、主管内部、管理员机密；工具库复用 Aegis 本地声明检查，未知或无权工具在调用前阻断。双库设计见 [U26 设计](docs/U26_DUAL_LIBRARY_RUNTIME_GATE.md)。四入口与演示账号见 [U25 设计](docs/U25_FOUR_ENTRY_WORKSPACE_IA.md)；此前实施与验证见 [U24 工作区改版](docs/U24_PRODUCT_FLOW_IMPLEMENTATION.md)、[演示手册](docs/PRODUCT_DEMO_RUNBOOK.md)和[能力边界](docs/ACCEPTANCE_BOUNDARIES.md)。
+审计页可选择同任务运行进行本地评审、预览 TopK、生成隔离候选并运行联合准入；历史真实运行包可只读查看和定位步骤来源。候选通过准入不等于生产发布。演示账号权限与本人确认以 [当前身份说明](docs/PERSONAL_CONFIRMATION_AND_DOCUMENT_IDENTITY.md) 为准；最高演示管理员可读全部登记的合成受管资料。普通身份仍受密级与资源权限限制。详见 [演示手册](docs/PRODUCT_DEMO_RUNBOOK.md) 和 [能力边界](docs/ACCEPTANCE_BOUNDARIES.md)。
 
 | 模块 | 功能 | 源码 |
 | --- | --- | --- |
@@ -141,15 +141,19 @@ Windows、已有 OpenClaw `2026.7.1-2`、Python 3.12、Miniconda、Git、Docker 
 
 ## 一键安装
 
-下载本仓库 ZIP 并解压到长期保留的目录，或执行：
+从 [v1.0 发布页](https://github.com/zhlearn0318-nan/GovAgentSec/releases/tag/v1.0) 下载 Windows ZIP 与 SHA256SUMS.txt，核对摘要，解压到长期保留的目录，双击 **Setup-Windows.cmd**。它安装固定 OpenClaw、依赖、模型和完整系统，并生成桌面启动快捷方式。
 
 ```powershell
-git clone https://github.com/zhlearn0318-nan/GovAgentSec.git
-cd GovAgentSec
-.\Install.cmd
+# 仅查看计划
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Setup-Windows.ps1 -Plan
+# 安装并验证
+.\Setup-Windows.cmd
+# 后续启动 / 配置外部模型 API
+.\Start-GovAgentSec.cmd
+.\Configure-Model.cmd
 ```
 
-也可直接双击 `Install.cmd`。安装器检查并通过 winget 补齐缺失的应用，下载固定版本 Python 依赖、官方模型权重、OPA 和沙箱镜像，完成真实推理与准入检查后接入 OpenClaw。当前定制宿主基线为 `2026.7.1-2`，安装时校验适配结构，保留配置和宿主文件备份。首次 Docker/WSL2 初始化、Windows 权限提示或系统重启需按系统提示完成，再重新运行安装器；模型提供商凭据需自行填写。
+完整防护要求 NVIDIA CUDA 和 Docker Linux 引擎；Windows 授权、Docker/WSL 首次初始化及重启按系统提示完成后复跑。新装可先用本地 Ollama；**保留外部 API 接口与现有模型配置**。轨迹评审仅本地。详见 [安装说明](docs/WINDOWS_ONE_CLICK_INSTALL.md)、[验证范围](docs/WINDOWS_INSTALLER_VALIDATION.md)。已有固定宿主的组件维护仍可使用 `Install.cmd`。
 
 权重保存在本地 `models/`，不放进 Git 仓库。下载支持重试及权重断点续传；复装复用校验通过的文件和已有固定摘要镜像。
 
@@ -205,6 +209,10 @@ node modules/govagentsec-trace/demo.mjs
 
 ```text
 GovAgentSec/
+├─ Setup-Windows.cmd / .ps1      # 完整 Windows 安装入口
+├─ Bootstrap-Windows.ps1         # 固定发行包下载、校验与安装
+├─ Start-GovAgentSec.cmd         # 启动系统
+├─ Configure-Model.cmd           # 外部 API / 会话模型配置
 ├─ Install.cmd / Install.ps1     # 安装到已有 OpenClaw
 ├─ Setup-OpenClaw.ps1            # 单独部署 OpenClaw 宿主
 ├─ Verify.ps1                   # 已安装系统验收

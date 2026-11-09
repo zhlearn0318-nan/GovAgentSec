@@ -13,14 +13,14 @@ try{
  await page.goto(base+'/plugins/govagentsec/welcome#token='+encodeURIComponent(config.gateway.auth.token));await page.getByRole('button',{name:'进入工作区',exact:true}).click();
  // HTTP is available before the gateway finishes starting its sidecars.
  await page.locator('govagentsec-shell .inspect').waitFor({timeout:60000});await goWorkspace(page,'permissions');
- assert.deepEqual(await page.locator('.gov-nav button').allTextContents(),['动态权限','能力准入','审计演进','防护设置']);report.checks.push('four-entry-current-gateway');
+ assert.deepEqual(await page.locator('.gov-nav button').allTextContents(),['动态权限','能力准入','演进审计','安全总览','防护设置']);report.checks.push('five-entry-current-gateway');
  const work=page.locator('govagentsec-workspace');await work.getByRole('heading',{name:'登录业务身份',exact:true}).waitFor();await page.screenshot({path:path.join(out,'permissions.png'),fullPage:true});
  const rpc=(method,params={})=>page.locator('openclaw-app-shell').evaluate((el,{method,params})=>el.context.gateway.snapshot.client.request(method,params),{method,params});
  const state=await rpc('govagentsec.demoIdentity.status');assert.equal(state.enabled,false);assert.equal(state.user,null);assert.deepEqual(state.requests,[]);report.checks.push('demo-source-default-off');
  await assert.rejects(()=>rpc('govagentsec.trace.list'));report.checks.push('deployed-business-audit-guard');
  await goWorkspace(page,'audit');await work.getByRole('button',{name:'前往动态权限',exact:true}).waitFor();assert.equal(await work.locator('input[type=password]').count(),0);
- await goWorkspace(page,'settings');for(const name of ['实际防护状态','安全总览','配置与维护'])await work.getByRole('heading',{name,exact:true}).waitFor();await work.locator('input[value=docker]').waitFor();await page.screenshot({path:path.join(out,'settings.png'),fullPage:true});
- assert.deepEqual(await work.locator('[data-settings-section]').evaluateAll(nodes=>nodes.map(n=>n.dataset.settingsSection)),['overview','status','maintenance']);
+ await goWorkspace(page,'overview');await work.getByRole('heading',{name:'安全总览',level:1,exact:true}).waitFor();await work.getByRole('heading',{name:'实际防护状态',exact:true}).waitFor();await page.screenshot({path:path.join(out,'overview.png'),fullPage:true});assert.deepEqual(await work.locator('[data-settings-section]').evaluateAll(nodes=>nodes.map(n=>n.dataset.settingsSection)),['overview','status']);await goWorkspace(page,'settings');await work.getByRole('heading',{name:'配置与维护',exact:true}).waitFor();assert.equal(await work.getByRole('button',{name:'OpenClaw 系统设置',exact:true}).count(),0);await work.locator('input[value=docker]').waitFor();await page.screenshot({path:path.join(out,'settings.png'),fullPage:true});
+ assert.deepEqual(await work.locator('[data-settings-section]').evaluateAll(nodes=>nodes.map(n=>n.dataset.settingsSection)),['maintenance']);
  for(const label of ['输入防护策略','运行防护与审批记录'])assert.equal(await work.getByRole('button',{name:label,exact:true}).count(),0);
  await work.getByRole('heading',{name:'配置与维护',exact:true}).evaluate(e=>e.scrollIntoView({block:'start'}));await page.screenshot({path:path.join(out,'settings-maintenance.png'),fullPage:true});report.checks.push('settings-readonly-and-single-login');
  await assert.rejects(()=>rpc('govagentsec.runtime.overview',{}));report.checks.push('deployed-overview-identity-guard');

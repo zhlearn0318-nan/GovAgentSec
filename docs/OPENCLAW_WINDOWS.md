@@ -1,5 +1,7 @@
 # 单独部署 OpenClaw（Windows）
 
+完整新装优先使用 [Windows 一键安装](WINDOWS_ONE_CLICK_INSTALL.md)。`Setup-OpenClaw.ps1 -NonInteractive` 仅为完整安装器初始化固定宿主，新配置默认本地 Ollama，已有配置保留；交互模式仍调用原生 onboarding。
+
 GovAgentSec 安装器用于已有 OpenClaw 的原生 Windows 环境。本说明单独安装宿主，之后再安装安全套件。
 
 ## 准备环境

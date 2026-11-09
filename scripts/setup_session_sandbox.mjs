@@ -7,11 +7,18 @@ import {command} from '../modules/session-sandbox/service.mjs';
 import {applySandboxPolicy} from '../modules/session-sandbox/policy.mjs';
 assert.equal(JSON.parse(readFileSync(path.join(HOST,'package.json'))).version,'2026.7.1-2');
 let image=await command('docker',['image','inspect',IMAGE]);
-if(!image.ok||process.argv.includes('--build'))image=await command('docker',['build','--network=none','-t',IMAGE,path.join(ROOT,'modules/session-sandbox')],120000);
+if(!image.ok||process.argv.includes('--build')){
+  const base=readFileSync(path.join(ROOT,'modules/session-sandbox/Dockerfile'),'utf8').match(/^FROM (\S+)/m)?.[1];
+  assert(base?.includes('@sha256:'),'Session base image must be pinned');
+  if(!(await command('docker',['image','inspect',base])).ok){
+    if(!(await command('docker',['pull',base],600000)).ok)throw Error('Pinned session base image download failed');
+  }
+  image=await command('docker',['build','--network=none','-t',IMAGE,path.join(ROOT,'modules/session-sandbox')],120000);
+}
 if(!image.ok)throw Error('Session image build failed; check Docker and pinned base image');
 const root=dataRoot();mkdirSync(root,{recursive:true});mkdirSync(path.join(root,'protected'),{recursive:true});
 writeFileSync(path.join(root,'protected','synthetic-secret.txt'),'合成数据 / SYNTHETIC PROTECTED DOCUMENT\n');
-const file=path.join(process.env.USERPROFILE,'.openclaw/openclaw.json'),original=readFileSync(file,'utf8');
+const file=process.env.OPENCLAW_CONFIG_PATH??path.join(process.env.OPENCLAW_STATE_DIR??path.join(process.env.USERPROFILE,'.openclaw'),'openclaw.json'),original=readFileSync(file,'utf8');
 const config=applySandboxPolicy(JSON.parse(original),'docker',root);
 config.plugins??={};config.plugins.load??={};config.plugins.load.paths??=[];
 const plugin=path.join(ROOT,'modules/session-sandbox');

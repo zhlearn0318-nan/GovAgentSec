@@ -1,0 +1,15 @@
+{
+  "name": "GovAgentSec",
+  "display_name": "政安智枢 正式版 v1.0",
+  "version": "1.0.0",
+  "tag": "v1.0",
+  "platform": "windows-x64",
+  "openclaw": "2026.7.1-2",
+  "node_install_version": "24.15.0",
+  "python": "3.12",
+  "default_engine": "docker",
+  "local_model": "qwen2.5:7b-instruct-q4_K_M",
+  "review_model": "qwen3:8b",
+  "requires_cuda": true,
+  "archive": "GovAgentSec-v1.0-windows-x64.zip"
+}

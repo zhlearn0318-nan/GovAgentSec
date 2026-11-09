@@ -1,83 +1,37 @@
-# GovAgentSec 文档索引
+# 政安智枢文档导航
 
-本目录是当前仓库版本的说明与验收材料入口。对外产品名仍为 **政安智枢 GovAgentSec**；演示与评委叙事统一主题为 **政安纵深**（四层能力）。
+本目录按 **当前使用、技术参考、历史记录、开发任务书** 分类。当前依据是本地 OpenClaw 2026.7.1-2 工作区，核对日期 2026-11-10；旧版设计/验收保留原结论，不再充当最新操作手册。
 
-锁定宿主：**OpenClaw `2026.7.1-2`**（未经确认不要升级）。
-
-## 快速入口
+## 当前使用
 
 | 文档 | 用途 |
 | --- | --- |
-| [../README.md](../README.md) | 产品总览、安装与模块说明 |
-| [releases/v1.0.md](releases/v1.0.md) | 正式版 v1.0 更新说明 |
-| [WINDOWS_ONE_CLICK_INSTALL.md](WINDOWS_ONE_CLICK_INSTALL.md) | Windows 一键安装与外部 API 接入 |
-| [INSTALL_WITH_AGENT.md](INSTALL_WITH_AGENT.md) | 给其他 AI Agent 的自动安装入口 |
-| [WINDOWS_INSTALLER_VALIDATION.md](WINDOWS_INSTALLER_VALIDATION.md) | 安装器验证范围和复跑命令 |
-| [releases/3.0.0.md](releases/3.0.0.md) | 历史开发版 3.0 更新记录 |
-| [OPENCLAW_WINDOWS.md](OPENCLAW_WINDOWS.md) | 独立部署 OpenClaw（Windows） |
-| [MAINTENANCE.md](MAINTENANCE.md) | 组件结构与维护入口 |
-| [VALIDATION.md](VALIDATION.md) | 已验证功能与验收边界 |
-| [UPGRADE_ROUND_VALIDATION.md](UPGRADE_ROUND_VALIDATION.md) | U1～U6 深链、轨迹、发布闸、身份、四层汇总与工具面验收 |
-| [产品使用逻辑与模块协同.md](产品使用逻辑与模块协同.md) | 使用前 / 使用中 / 使用后流程 |
-| [DELIVERY_ACCEPTANCE.md](DELIVERY_ACCEPTANCE.md) | 身份、交付与验收边界 |
-| [OIDC_USAGE.md](OIDC_USAGE.md) | OIDC / 演示身份源使用说明（确认「你是谁」与动态授权） |
-| [SESSION_SANDBOX_DEMO.md](SESSION_SANDBOX_DEMO.md) | U9 会话 Docker / srt 安装、切换、实际隔离与限制 |
+| [CURRENT_SYSTEM.md](CURRENT_SYSTEM.md) | 当前版本、五个入口、权限、资料、模型与本机/新装区别 |
+| [WINDOWS_ONE_CLICK_INSTALL.md](WINDOWS_ONE_CLICK_INSTALL.md) | 三种安装方式：EXE、Agent、手动 ZIP |
+| [INSTALL_WITH_AGENT.md](INSTALL_WITH_AGENT.md) | 可复制给其他 AI Agent 的完整指令 |
+| [产品使用逻辑与模块协同.md](产品使用逻辑与模块协同.md) | 登录→准入→执行→确认→审计→候选 |
+| [OIDC_USAGE.md](OIDC_USAGE.md) | 当前账号、30分钟登录、权限与审批 |
+| [FEATURE_MAP.md](FEATURE_MAP.md) | 风险识别、行为约束、组件准入、评测审计 |
+| [PRODUCT_DEMO_RUNBOOK.md](PRODUCT_DEMO_RUNBOOK.md) | 约7分钟演示镜头与场前准备 |
+| [MODEL_ROUTING.md](MODEL_ROUTING.md) | 外部会话 API 与本地轨迹评审分工 |
+| [MAINTENANCE.md](MAINTENANCE.md) | 启停、备份、检查与组件维护 |
+| [VALIDATION.md](VALIDATION.md) | 当前核对与历史验证分别索引 |
+| [ACCEPTANCE_BOUNDARIES.md](ACCEPTANCE_BOUNDARIES.md) | 统一能力/验收边界，不进入产品流程 |
+| [DOCUMENTATION_SYNC_REPORT.md](DOCUMENTATION_SYNC_REPORT.md) | 本地、GitHub 与发布包差异及本轮修订 |
 
-## 政安纵深 · 四层能力对照
+## 四类能力与技术参考
 
-| 中文名 | 原模块名 | 作用 | 主要文档 |
-| --- | --- | --- | --- |
-| 行为护栏 | Protect Agent / Group1 | 提示注入、内容安全、工具结果与输出检查 | [产品使用逻辑与模块协同.md](产品使用逻辑与模块协同.md) |
-| 权限闸门 | AgentGuard | 受管工具策略、审批、执行票据；政务受管读文件演示 | [CONTROLLED_DOCUMENT_IMPLEMENTATION.md](CONTROLLED_DOCUMENT_IMPLEMENTATION.md)、[CONTROLLED_DOCUMENT_VALIDATION.md](CONTROLLED_DOCUMENT_VALIDATION.md) |
-| 过程台账 | Trace / trajectory-governance | 会话轨迹、调用关系图、审批与准入证据关联 | [TRACE_IMPLEMENTATION_PLAN.md](TRACE_IMPLEMENTATION_PLAN.md)、[TRACE_DELIVERY_VALIDATION.md](TRACE_DELIVERY_VALIDATION.md)、[TRACE_CALL_GRAPH_VALIDATION.md](TRACE_CALL_GRAPH_VALIDATION.md)、[TRACE_LIVE_SMOKE.md](TRACE_LIVE_SMOKE.md)、[TRACE_HOOK_VERIFICATION.md](TRACE_HOOK_VERIFICATION.md) |
-| 经验自演进 | Skill 自演进 | 质量+安全双门控，候选 Skill 隔离归纳与联合准入 | [TRACE_SCORING_AND_EVOLUTION.md](TRACE_SCORING_AND_EVOLUTION.md)、[REAL_MULTI_TRACE_EVOLUTION.md](REAL_MULTI_TRACE_EVOLUTION.md)、[LOCAL_JUDGE_CALIBRATION.md](LOCAL_JUDGE_CALIBRATION.md) |
+| 能力 | 组件 | 参考 |
+| --- | --- | --- |
+| 风险识别 | Protect Agent / Group1 | [输入防护实现](../modules/protect-agent-group1/智能体安全/README.md) |
+| 行为约束 | AgentGuard / 任务 ACL / 会话沙箱 | [本人确认](PERSONAL_CONFIRMATION_AND_DOCUMENT_IDENTITY.md)、[自动身份](AUTOMATIC_CHAT_IDENTITY.md)、[沙箱](SESSION_SANDBOX_DEMO.md) |
+| 组件准入 | Aegis / Group4 | [Aegis](../modules/aegis/README.md)、[联合准入代码](../modules/supply-chain-group4/integration/combined_install_policy.py) |
+| 评测审计 | trace / trajectory-governance | [事件核验](TRACE_HOOK_VERIFICATION.md)、[评分契约](TRACE_SCORING_AND_EVOLUTION.md)、[本地标定](LOCAL_JUDGE_CALIBRATION.md) |
 
-## OpenClaw 工作区与任务台
+历史证据按原始日期、真实/合成来源与测试范围解释。local-validation 不提交；链接和目录是本机证据定位，不表示 GitHub 下载后已附带真实轨迹。
 
-一键验收入口：[scripts/Verify-ZhengAn.ps1](../scripts/Verify-ZhengAn.ps1)。默认运行离线必跑子集；加 `-Live` 核对本机现网页面，不生成新会话、不调用外部模型。每层结果、跳过原因、日志与复跑命令保存在 `local-validation/verify/<timestamp>/report.json` 和中文 `report.md`。
+## 历史记录与开发资料
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Verify-ZhengAn.ps1
-# 网关已启动时追加现网检查
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Verify-ZhengAn.ps1 -Live
-```
+[完整分类目录](DOCUMENTATION_CATALOG.md)覆盖本目录106份仓库 Markdown；另5份本机演示讲稿排除于发布；[机器可读清单](DOCUMENTATION_INDEX.json)供检查脚本使用。Uxx、旧评审、旧任务工作台和旧发布说明作为历史追溯；codex-prompts 是开发任务书，不能当作当前产品保证。
 
-退出码：0=选定检查通过；1=检查失败；2=必跑项因依赖缺失或子测试跳过而未完成。未指定 `-Live` 的范围外跳过不影响离线通过结论。依赖、范围和限制见 [维护说明](MAINTENANCE.md#四层一键验收)。
-
-| 文档 | 用途 |
-| --- | --- |
-| [openclaw-workspace.md](openclaw-workspace.md) | 原生工作区使用与部署 |
-| [task-workbench.md](task-workbench.md) | 任务工作台 |
-| [trajectory-development.md](trajectory-development.md) | 轨迹能力开发说明 |
-| [WORD_TASK_INVESTIGATION.md](WORD_TASK_INVESTIGATION.md) | Word 任务排查记录 |
-
-## 安全边界（必读）
-
-- 轨迹安全评审默认走**本地模型**；不要把轨迹原文发给外部 API。
-- `govagentsec-trace` 默认仅保存脱敏后的内容哈希与事件元信息，不保存 prompt / 参数 / 输出原文。
-- 联合准入通过（`admission_passed`）不等于自动发布或安装；候选落在隔离车间，仍需 Aegis + Group4 复核。
-- 演示身份（如 `loopback_static_dev`）仅用于本机验收，不代表生产 OIDC。用法见 [OIDC_USAGE.md](OIDC_USAGE.md)。
-- 不把密钥、令牌、聊天记录、上传文件、审计库或已装 Skill 打进发行包。
-
-## 下一轮升级（Codex）
-
-- 总方案：[UPGRADE_PLAN_政安纵深.md](UPGRADE_PLAN_政安纵深.md)
-- 提示词目录：[codex-prompts/README.md](codex-prompts/README.md)
-
-## 相关源码入口
-
-- `modules/protect-agent-group1` — 行为护栏
-- `modules/agentguard-group2` — 权限闸门（含政务文档演示）
-- `modules/govagentsec-trace` / `modules/trajectory-governance` — 过程台账与演进
-- `modules/aegis` / `modules/supply-chain-group4` — 供应链与 Skill 专项检查
-- `modules/govagentsec-ui` — 统一工作区界面
-
-演示录屏与评委成片不在本仓库，统一放在本机 `F:\揭榜挂帅\评委演示素材\`。
-
-## U7 权限闸门补强
-
-[参数来源、任务契约、合成通知送审与复跑说明](BEHAVIOR_CONSTRAINT_SOTA_UPGRADE.md)。四层验收已纳入参数来源与任务权限两组测试。
-
-## U8 会话 API 与本地安全评审
-
-[模型双路配置、数据边界与验收](MODEL_ROUTING.md)。仓库根目录运行 `python scripts/check_model_routing.py`；四层验收已包含该检查。
+正式版下载见 [v1.0](releases/v1.0.md)，此前 [3.0](releases/3.0.0.md) 是历史开发编号。历史标签不移动，最新 Windows 包通过 SOURCE_COMMIT.txt 标识构建提交。维护时运行 `python scripts/check_current_docs.py` 检查分类、链接和关键约定。

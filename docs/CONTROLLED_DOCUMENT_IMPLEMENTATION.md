@@ -1,5 +1,7 @@
 # 受控合成文档读取实施记录
 
+> 文档状态（2026-11-10）：技术参考：接口/算法和原始证据按本文件的范围解释；阶段页面与账号说明不作为当前使用步骤。当前行为见[系统基准](CURRENT_SYSTEM.md)。
+
 ## 已核实的接口
 
 - OPA 现有 file.read/read 已在可信工具和 office_user/records_admin/security_admin 权限内。

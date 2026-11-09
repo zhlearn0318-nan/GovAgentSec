@@ -1,5 +1,7 @@
 # U26 双库与会话运行闸门
 
+> 文档状态（2026-11-10）：历史记录：保留当时的设计、界面或验收结论，不代表当前操作流程。当前行为见[系统基准](CURRENT_SYSTEM.md)。
+
 ## 阶段 A：确定的实现
 
 资料来自 `enforcement/documents.py::REGISTRY`；页面只提交 document_id。

@@ -1,5 +1,7 @@
 # U13 逐用户执行委托设计
 
+> 文档状态（2026-11-10）：历史记录：保留当时的设计、界面或验收结论，不代表当前操作流程。当前行为见[系统基准](CURRENT_SYSTEM.md)。
+
 实况：`identity-status.mjs` 的全局服务徽章始终 executionEnabled=false，旧 HTTP 管理页拒绝业务执行；真正可操作的演示路径是 `govagentsec-ui/demo-identity.mjs` 页面内存 Bearer → runtime plugin/demo-identity.mjs 已登录网关 RPC → identity/demo_provider.py → 同一 OidcVerifier → U10/U11 契约、OPA、审批和票据。已有选人签发 JWT，但旧 token 在切换用户后仍有效，缺少主动撤销。
 
 状态：未登录/无委托 → 选人取得已验证 Bearer → 按角色可评估执行 → 当前委托关闭/切换/过期/演示关闭 → 服务端撤销或拒绝。经办可发起和任务内读、处长可审批他人、审计只能看台账。执行启用只表示可以提交闸门评估，不能越过任务 ACL 或自批。

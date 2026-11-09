@@ -1,5 +1,7 @@
 # Aegis Chain：面向智能体生态的供应链安全原型
 
+> 集成版说明（2026-11-10）：本文件保留组件接口与原始开发背景。当前产品导航、登录、审批、模型及部署以[系统基准](../../docs/CURRENT_SYSTEM.md)和仓库根目录安装说明为准；组件独立运行步骤不是额外的产品下载入口。
+
 [![CI](https://github.com/zhlearn0318-nan/aegis-chain-supply-security/actions/workflows/ci.yml/badge.svg)](https://github.com/zhlearn0318-nan/aegis-chain-supply-security/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 

@@ -1,5 +1,7 @@
 # U17 会话与评审现网边界设计
 
+> 文档状态（2026-11-10）：历史记录：保留当时的设计、界面或验收结论，不代表当前操作流程。当前行为见[系统基准](CURRENT_SYSTEM.md)。
+
 | 路径 | 配置 / 调用者 | 出域 | 验收 |
 | --- | --- | --- | --- |
 | 会话/规划/工具循环 | config/model-routing.json session_llm → OpenClaw models.providers、agents.defaults.model | 会话上下文可送配置的 API；敏感任务另选本地 | python scripts/check_model_routing.py；本包不做云账号测试 |

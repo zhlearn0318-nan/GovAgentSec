@@ -1,5 +1,7 @@
 # 双约束评分与候选技能
 
+> 文档状态（2026-11-10）：技术参考：接口/算法和原始证据按本文件的范围解释；阶段页面与账号说明不作为当前使用步骤。当前行为见[系统基准](CURRENT_SYSTEM.md)。
+
 2026-11-07 补充：已实现 Ollama / 启发式本地评审器的严格证据核对与 9 条合成对抗开发集；Q/S 公式及本文件中的 scoring 契约不变。运行 `node scripts/judge_calibration_demo.mjs`，实测 5 pass、4 quarantine，分数有区分。H 仍是未标定先验，0.75 仅为开发演示阈值；详见 [本地评审标定记录](LOCAL_JUDGE_CALIBRATION.md)。
 
 ## 与论文代码逐项对应
@@ -26,9 +28,9 @@
 
 `LocalJudge.review(trace) -> {status:'reviewed', evidence_hash, safety:{B,I,A,D}, quality:{N,U,A_r,R,H,failure_status}, rationale}`。
 
-默认 `FixtureJudge` 是**本地测试评审器**，只接受演示程序提供的匹配证据 hash，真实轨迹没有测试标签时返回缺失。UI 持续显示评分来源。新的本地实现继承 LocalJudge，在进程内运行；没有外部 API 客户端，也不加载用户在页面提供的任意评审代码。可自行接入本机模型服务的适配器，但本轮没有把旧版固定 Qwen 实现冒充新接口的已标定评审器。
+当前 `makeLocalJudge()` 默认 **Ollama**，失败按实现回退本地启发式并记录实际来源；CLI 显式支持 ollama / heuristic / fixture，UI 只提供前两者。FixtureJudge 只接收测试程序提供的匹配证据 hash，不能用于把真实缺失字段补成满分。旧版“默认 FixtureJudge”是初始实现记录，已由本地评审路径替代。
 
-配置 `t_star`、`calibration_version` 必填。非测试评审还须 calibrated=true 和匹配 judge_version；这些声明须对应操作者真实标定证据，软件本身不能替代标定。演示使用 0.6，标记 synthetic-demo-v1-not-production，**不是论文 DeepSeek 0.55，也不是本地模型有效阈值结论**。
+当前 UI 的 t_star=.75、keep=.9、calibration_version=ui-process-assessment-v1-not-production，calibrated=false、test_only=true。开发演示 CLI 可使用自己的显式阈值与版本，例如旧六轨迹 fixture 用 0.6；这些均不是论文 DeepSeek 0.55 或生产标定结论。非测试评审仍须满足现有 calibrated/judge_version 契约，不能只改配置声称标定完成。
 
 ## 人工归属、证据与生成
 

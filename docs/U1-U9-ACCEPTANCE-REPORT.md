@@ -1,5 +1,7 @@
 # GovAgentSec U1–U9 证据型总验收报告
 
+> 文档状态（2026-11-10）：历史记录：保留当时的设计、界面或验收结论，不代表当前操作流程。当前行为见[系统基准](CURRENT_SYSTEM.md)。
+
 **综合结论：需补强。** 硬门禁通过，核心链路具备演示证据；U4 生产身份与 U7 现网新增工具接入仍为 PARTIAL，不宣称 U1–U9 已全部完成正式交付。
 
 验收时间：2026-11-08 12:27:59 — 2026-11-08 13:06:26（Asia/Shanghai，UTC+8）。目录名使用 UTC。本报告严格按 [U1-U9-ACCEPTANCE.md](F:/揭榜挂帅/GovAgentSec/docs/codex-prompts/U1-U9-ACCEPTANCE.md)，默认只验收、写报告。

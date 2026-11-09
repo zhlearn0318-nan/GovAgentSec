@@ -7,7 +7,7 @@
 ## 执行规程
 
 1. 使用本机当前用户。确认 Windows x64、winget、NVIDIA CUDA 条件；不要将安装扩展为修改其他电脑或组织环境。
-2. 从固定发布页 https://github.com/zhlearn0318-nan/GovAgentSec/releases/tag/v1.0 下载 `GovAgentSec-v1.0-windows-x64.zip` 与 `SHA256SUMS.txt`。核对 ZIP 的 SHA-256。不要用 main 的浮动快照代替发行包。
+2. 从固定发布页 https://github.com/zhlearn0318-nan/GovAgentSec/releases/tag/v1.0 下载 `GovAgentSec-v1.0-windows-x64.zip` 与 `SHA256SUMS.txt`。核对 ZIP 的 SHA-256。使用发布页 Windows ZIP；包内 SOURCE_COMMIT.txt 标明实际构建提交，不用 GitHub 自动生成的历史标签 Source code 代替该附件。
 3. 解压到长期保留的空目录。阅读 `release-manifest.json`、`docs/WINDOWS_ONE_CLICK_INSTALL.md` 和安装脚本。先运行下面的 Plan，再运行安装；不要只写方案。
 
 ```powershell

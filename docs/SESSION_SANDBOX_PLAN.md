@@ -1,5 +1,7 @@
 # 会话执行沙箱方案（Docker + srt 双引擎）
 
+> 文档状态（2026-11-10）：历史记录：保留当时的设计、界面或验收结论，不代表当前操作流程。当前行为见[系统基准](CURRENT_SYSTEM.md)。
+
 日期：2026-11-07  
 宿主：OpenClaw **2026.7.1-2**  
 Codex 提示词：[`codex-prompts/U9-sandbox-network-isolation-demo.md`](codex-prompts/U9-sandbox-network-isolation-demo.md)

@@ -1,5 +1,7 @@
 # U18 配置恢复演练设计
 
+> 文档状态（2026-11-10）：技术参考：接口/算法和原始证据按本文件的范围解释；阶段页面与账号说明不作为当前使用步骤。当前行为见[系统基准](CURRENT_SYSTEM.md)。
+
 资产：现网 `%USERPROFILE%/.openclaw/openclaw.json`；可用 `OPENCLAW_CONFIG_PATH` 覆盖；batch 为 `.runtime/config-batch.json`（本包只识别、不改）；私有备份根 `%USERPROFILE%/.openclaw/backups/`；证据 `local-validation/u18-openclaw-recovery-drill/<ISO-UTC>/`。
 
 流程：断言宿主 2026.7.1-2 → wx 创建私有备份 → SHA-256 → 默认在私有副本追加换行作字节探针 → 校验备份与目标期望哈希 → 恢复副本 → 校验原字节。dry-run 不修改现网；`--live` 才在现网追加 JSON 合法空白并强制恢复。两种模式都验证恢复算法，报告区分恢复对象。并发修改时不覆盖外部更新，失败非零、保留私有现场。

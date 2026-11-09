@@ -1,5 +1,7 @@
 # U16 演进发布闸的本地稳定性
 
+> 文档状态（2026-11-10）：历史记录：保留当时的设计、界面或验收结论，不代表当前操作流程。当前行为见[系统基准](CURRENT_SYSTEM.md)。
+
 ## 阶段 A：演示路径
 
 同任务多轨迹 → 本地 Ollama / 明示的本地启发式 → 先安全隔离，再按质量 TopK → Workshop 候选 → Aegis/Group4 allow 或 block → 人工复核回执。`admission_passed` 不等于安装；不新增 auto_install。

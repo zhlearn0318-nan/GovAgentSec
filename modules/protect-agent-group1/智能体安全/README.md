@@ -1,5 +1,7 @@
 # 智能体安全 Agent V1
 
+> 集成版说明（2026-11-10）：本文件保留组件接口与原始开发背景。当前产品导航、登录、审批、模型及部署以[系统基准](../../../docs/CURRENT_SYSTEM.md)和仓库根目录安装说明为准；组件独立运行步骤不是额外的产品下载入口。
+
 一个多层智能体安全工程基线。默认 profile 可离线运行；`deepseek` profile
 使用本地真实 PIGuard、Qwen3Guard、TrustRAG 与 DeepSeek 官方 API。当前已贯通：
 

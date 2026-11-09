@@ -1,38 +1,40 @@
-# Windows 发行验收
+# 当前验证索引
 
-## 后续界面更新（2026-09-15）
+更新：2026-11-10。此页区分当前核对与历史验收，不用过去的 PASS 代表当前所有服务及业务均通过。
 
-最新源码加入 `modules/govagentsec-ui` 共享资源：首页改为输入防护、运行时安全、供应链安全三个入口，第四模块仍保留独立路由与后端能力。此轮前端及资源装载检查 48 项通过，配置回归 5 项通过；新增检查覆盖导航目标、内嵌脚本语法与未下载字体时的页面加载。字体由安装器从官方来源获取，不随仓库再分发。
+## 本轮只读核对
 
-当前五个页面的 HTTP 检查通过，但 AgentGuard 的 `127.0.0.1:8080/readyz` 无法连接，完整 `Verify.ps1` 因而未通过。这次同步没有启动或修改该后端服务，也没有重新执行安装、审批或模型全链路验收；以下记录是此前集成发行版验收结果，不代表当前全部运行依赖均就绪。
+| 项目 | 结果 | 本机证据 |
+| --- | --- | --- |
+| 本地与 GitHub main | 核对起点同为 86c7054，工作区干净 | GitHub API commits/main 与本地 rev-parse |
+| 宿主与插件来源 | OpenClaw 2026.7.1-2；六个项目插件目录均指向本仓库 | local-validation/docs-sync/20261110/runtime-summary.json |
+| 网关 / AgentGuard / OPA / Ollama | HTTP 探测均 200，仅代表检查时点 | 同上 |
+| 当前页面 | 五入口、总览/设置分区、登录守卫、无手动绑定入口通过 | local-validation/docs-sync/20261110/deployment/report.json |
+| 现网配置 | 检查前后哈希一致 | 同上 config_unchanged=true |
+| 文档 | 当前说明、源码约定、链接和分类检查 | scripts/check_current_docs.py；本轮报告写入 local-validation/docs-sync/20261110/docs-check.json |
 
-## 初始集成发行版
+页面检查未登录业务账号、未开启演示源、未发送聊天或外部模型请求，也没有审批或修改系统配置。本轮不是新一轮安全攻击集、完整生产链或模型准确率测试。
 
-2026-09-15，在独立整理的发行目录安装到已有 OpenClaw，并实际重启网关验收。环境：原生 Windows、OpenClaw 2026.7.1-2、Node.js 24.15.0、32 GB 内存、RTX 3070 Ti Laptop 8 GB 显存、Docker Linux 引擎 29.7.2。
+## 复跑当前检查
 
-| 检查 | 结果 |
+```powershell
+python scripts/check_current_docs.py
+node scripts/verify_u25_current_workspace.mjs local-validation/docs-sync/recheck
+```
+
+页面脚本要求当前网关可访问，且演示源关闭；它不会为通过测试而关闭用户已启用的身份源。若源已启用，报告应按前置条件解释，不覆盖用户状态。完整在线服务检查可执行 Verify.ps1，但不要把健康检查等同完整业务验收。
+
+## 专项证据
+
+| 范围 | 记录 |
 | --- | --- |
-| 输入防护 Python 测试 | 198 passed |
-| 输入防护插件测试 | 27 passed |
-| Aegis 页面与上传测试 | 19 passed |
-| v2 沙箱安全配置测试 | 8 passed |
-| 发布配置保留与 Group4 提示注入回归 | 5 passed |
-| Docker 真实五场景 | 5 / 5，无容器残留 |
-| v2 Python / Node / Shell 正常执行 | 全部 ALLOW |
-| Aegis 固定 Skill／插件扫描及审计链 | 通过，4 条审计链有效 |
-| 实际 Aegis＋Group4 联合策略进程 | 正常 Skill／插件 allow，注入 Skill／高风险插件 block |
-| AgentGuard／OPA 与 MCP 只读调用 | ready，协议调用成功 |
-| AgentGuard 递归停止与重启 | 两端口均释放，重启 ready |
-| 完整安装与网关重启 | 成功，五个控制台页面 HTTP 200 |
-| 已安装防护服务 | 正常输入 ALLOW，注入输入 BLOCK |
-| 登录自启动任务 | 当前用户、Limited 权限注册成功 |
-| 完整依赖复装与 PrepareOnly | 通过，11 项配置 dry-run 有效 |
-| PIGuard、Qwen3Guard、SimCSE 官方权重 | 固定提交与 SHA-256 校验通过 |
-| 三个真实防护模型 | GPU 推理通过 |
-| 本地 Ollama 语义审查 | 在防护服务运行时返回 malicious 及对应特征码 |
+| Windows 安装器、配置保留、ZIP/EXE | [WINDOWS_INSTALLER_VALIDATION.md](WINDOWS_INSTALLER_VALIDATION.md) |
+| 自动会话身份、撤销和隔离短链 | [AUTOMATIC_CHAT_IDENTITY.md](AUTOMATIC_CHAT_IDENTITY.md) |
+| 本人确认、最高资料权限、待办/回执分区 | [PERSONAL_CONFIRMATION_AND_DOCUMENT_IDENTITY.md](PERSONAL_CONFIRMATION_AND_DOCUMENT_IDENTITY.md) |
+| 固定宿主事件字段 | [TRACE_HOOK_VERIFICATION.md](TRACE_HOOK_VERIFICATION.md) |
+| 历史真实短链与多轨迹 | [TRACE_LIVE_SMOKE.md](TRACE_LIVE_SMOKE.md)、[REAL_MULTI_TRACE_EVOLUTION.md](REAL_MULTI_TRACE_EVOLUTION.md) |
+| 本地对抗标定与评分公式 | [LOCAL_JUDGE_CALIBRATION.md](LOCAL_JUDGE_CALIBRATION.md)、[TRACE_SCORING_AND_EVOLUTION.md](TRACE_SCORING_AND_EVOLUTION.md) |
+| Docker/srt 覆盖 | [SESSION_SANDBOX_DEMO.md](SESSION_SANDBOX_DEMO.md) |
+| 早期 Windows 集成验收 | [2026-09-15 历史记录](history/VALIDATION_20260915.md)，不再作为当前状态 |
 
-PIGuard 冒烟样例分数：正常文本 0.000023838，直接注入文本 0.999944925；Qwen3Guard 对正常问题返回 Safe；TrustRAG 四段材料保留掩码为 `[true, true, true, false]`。这些是接口与推理验收样例，不是准确率评测。
-
-本轮修复了 Docker 临时 socket 故障、缺失模型、AgentGuard 必需策略/WASM 源文件、中文路径和 PowerShell UTF-8 读取、模型预热等待、OPA 孙进程清理及 Python 应用别名遮蔽。安装失败测试中配置与控制台文件已恢复；进程树修复后独立验证了停止、端口释放及重新启动。
-
-限制：本次验证覆盖本机的独立环境构建、已有宿主安装和复装，未在一台全新 Windows 虚拟机上复现系统重启与首次 WSL2 初始化，也未实际注销或重启 Windows 来触发登录任务。原始机器日志保存在不提交的 `local-validation/`，其中可能包含本机路径。远程多用户部署、所有攻击覆盖率、完整 TrustRAG 论文流程均不在此次验收范围内。
+全新 Windows 完整安装、真实组织 OIDC、生产文件与完整业务产物、持续稳定性尚需独立验收。报告边界统一见 [ACCEPTANCE_BOUNDARIES.md](ACCEPTANCE_BOUNDARIES.md)。

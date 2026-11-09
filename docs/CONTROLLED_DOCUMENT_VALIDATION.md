@@ -1,5 +1,7 @@
 # 受控合成文档验证（2026-11-06）
 
+> 文档状态（2026-11-10）：历史记录：保留当时的设计、界面或验收结论，不代表当前操作流程。当前行为见[系统基准](CURRENT_SYSTEM.md)。
+
 新增 MCP 工具 read_gov_document，仅接受 document_id。固定 registry 位于 enforcement/documents.py，正文位于 demo_documents；全部为合成数据，不是生产文件接入。
 
 | document_id | 数据等级 | 预期策略 |

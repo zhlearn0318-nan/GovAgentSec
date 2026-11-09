@@ -1,5 +1,7 @@
 # OIDC 演示与补齐选项（U4 缺口）
 
+> 文档状态（2026-11-10）：历史记录：保留当时的设计、界面或验收结论，不代表当前操作流程。当前行为见[系统基准](CURRENT_SYSTEM.md)。
+
 **当前默认：仅演示；组织未接。** 本文比较表为历史方案背景，不代表现行缺口；U13 已补演示逐用户委托与撤销，原 HTTP 管理入口仍拒绝无委托执行。现行强制口径和组织 runbook 以 [U12](U12_ORG_OIDC_OR_DEMO_BOUNDARY.md) 为准，委托见 [U13](U13_PER_USER_EXECUTION_DELEGATE.md)。
 
 **2026-11-08 当前状态：B3 已在 U4b 落地，U10 已扩展审计角色和任务目录 ACL。** 下文 A/B/C 保留方案比较背景；现行操作以 [OIDC_USAGE.md](OIDC_USAGE.md) 为准。真实组织身份仍未接。U10 验收见 [U10_IDENTITY_TASK_ACL_VALIDATION.md](U10_IDENTITY_TASK_ACL_VALIDATION.md)。

@@ -1,6 +1,9 @@
 [CmdletBinding()]
 param([string]$OutputDirectory)
 $ErrorActionPreference='Stop'
+# A Python parent may inherit PowerShell 7's module path. Use this host's utility
+# module so Get-FileHash is available when building with Windows PowerShell 5.1.
+Import-Module (Join-Path $PSHOME 'Modules\Microsoft.PowerShell.Utility\Microsoft.PowerShell.Utility.psd1') -Force
 $root=Split-Path $PSScriptRoot -Parent
 if(-not $OutputDirectory){$OutputDirectory=Join-Path $root 'local-validation\releases\v1.0'}
 $output=[IO.Path]::GetFullPath($OutputDirectory)

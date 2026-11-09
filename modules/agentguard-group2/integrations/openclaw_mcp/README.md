@@ -1,11 +1,15 @@
 # AgentGuard × OpenClaw 受控 MCP 接入
 
-这是一个纯 Python 标准库的 stdio MCP Server。当前本地演示暴露六个受控工具：
+这是一个纯 Python 标准库的 stdio MCP Server。服务端实现六个受控工具：
 `list_notices`、`read_gov_document`、`submit_emergency_notice`、`request_test_payment`、
 `run_protected_command` 和只读的 `get_control_request_status`。MCP 层不直接读写业务数据库、
 付款系统或调用 Shell 执行器；实际调用固定发送到 AgentGuard `POST /invoke`，因此仍经过
 策略决策、一次性票据、安全内核和审计链。远程 Streamable HTTP 入口继续只暴露
 只读的 `list_notices`。
+
+## 当前工作区接线
+
+当前工作区的 MCP toolFilter 只暴露通知、支付、命令、状态与通知提交五项，排除 read_gov_document。聊天改用 runtime-security 插件的 gov_read_document，以当前登录身份复用 AgentGuard 安全链；其他独立 MCP 仍验证各自服务身份。新安装在 OIDC 未就绪时默认禁用此独立服务，本机已有演示配置不能当作新安装默认值。见 [当前系统基准](../../../../docs/CURRENT_SYSTEM.md)。
 
 ## 架构与边界
 

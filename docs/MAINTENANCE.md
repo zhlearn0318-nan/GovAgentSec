@@ -6,6 +6,10 @@
 
 | 路径 | 用途 |
 | --- | --- |
+| `Setup-Windows.ps1` | 完整部署：宿主、依赖、模型、插件、沙箱与检查 |
+| `Start-GovAgentSec.cmd` | 启动系统并打开工作区 |
+| `Configure-Model.cmd` | 本机配置会话 API/模型，备份配置并重启网关 |
+| `scripts/check_current_docs.py` | 文档分类、链接及当前产品约定核对 |
 | `Install.cmd` / `Install.ps1` | 已有宿主的安装与复装；`-PrepareOnly` 仅准备及校验 |
 | `Setup-OpenClaw.ps1` | 单独安装固定版 OpenClaw 并进入官方引导 |
 | `Verify.ps1` | 五个页面、AgentGuard 就绪和已启动模型服务检查 |
@@ -21,7 +25,7 @@
 | `modules/agentguard-group2/live-runtime` | 本机策略状态、票据密钥、日志与进程记录，不提交 |
 | `hooks/supply-chain-security` | 网关启动标记；实际安装检测由联合准入策略完成 |
 
-更换仓库目录后重新运行安装器。更新 OpenClaw 会替换它的控制台文件，因此更新后需要重新安装入口，并重新验证兼容性。当前发行版固定宿主版本；不要把新版本宿主直接视为已兼容。
+安装后不要直接移动目录。需要迁移时先按备份/恢复流程评估，安装器重新接入插件路径并验证。OpenClaw 固定 2026.7.1-2，不执行宿主升级；已有工作区/工具结果适配层需保留备份，不能把未验证上游版本直接当兼容更新。
 
 ## 四层一键验收
 

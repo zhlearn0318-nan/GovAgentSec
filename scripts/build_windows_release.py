@@ -18,6 +18,9 @@ def build(out):
     out.mkdir(parents=True, exist_ok=True)
     archive = out / manifest['archive']
     subprocess.run(['git', 'archive', '--format=zip', '--prefix=GovAgentSec/', '-o', str(archive), 'HEAD'], cwd=ROOT, check=True)
+    commit = subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
+    with zipfile.ZipFile(archive, 'a', compression=zipfile.ZIP_DEFLATED) as z:
+        z.writestr('GovAgentSec/SOURCE_COMMIT.txt', commit+'\n')
     with zipfile.ZipFile(archive) as z:
         for name in z.namelist():
             parts = pathlib.PurePosixPath(name).parts
@@ -27,7 +30,7 @@ def build(out):
     installer = out / 'GovAgentSec-v1.0-Setup.exe'
     checksums = '\n'.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name for p in [archive,installer])+'\n'
     (out/'SHA256SUMS.txt').write_text(checksums,encoding='ascii')
-    report = dict(version=manifest['version'],tag=manifest['tag'],commit=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip(),source='git-archive-committed-source',archive=archive.name,bytes=archive.stat().st_size)
+    report = dict(version=manifest['version'],tag=manifest['tag'],commit=commit,source='git-archive-committed-source',archive=archive.name,bytes=archive.stat().st_size)
     (out/'package-report.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
     print(json.dumps(report))
 

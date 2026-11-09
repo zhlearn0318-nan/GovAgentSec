@@ -1,5 +1,7 @@
 # U15 素材索引
 
+> 文档状态（2026-11-10）：历史记录：保留当时的设计、界面或验收结论，不代表当前操作流程。当前行为见[系统基准](CURRENT_SYSTEM.md)。
+
 - [五分钟讲稿](U15_JUDGE_DEMO_REEL_SCRIPT.md)
 - 素材包：`F:\揭榜挂帅\评委演示素材\验收与证据\u15-four-layer-shots-2026-11-08T08-23-17-228Z`
 - 本轮报告：`F:\揭榜挂帅\GovAgentSec\local-validation\u15-demo-reel\2026-11-08T08-23-17-228Z\report.json`

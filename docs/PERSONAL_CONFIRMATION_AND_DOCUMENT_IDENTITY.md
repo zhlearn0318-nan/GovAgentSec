@@ -40,4 +40,4 @@ node scripts/test_personal_confirmation_live.mjs
 
 真实冒烟使用固定 OpenClaw 2026.7.1-2、隔离配置、Docker、本机确定性测试模型。验证最高账号五份资料实际读取、会话卡片及动态权限本人确认、拒绝与超时；读取计数由独立底层文件观察器记录。报告须 PASS 后才能声称交付。原生产模型表现不在这条确定性测试的结论内。
 
-部署使用 `scripts/deploy_personal_document_tool.mjs <证据目录>`，先在用户私有 `.openclaw/backups` 备份并核验哈希，再仅替换工作区读文档工具入口。其他 MCP 工具、模型账号、输入防护、沙箱引擎不变。无升级、内核补丁或 git push。
+部署使用 `scripts/deploy_personal_document_tool.mjs <证据目录>`，先在用户私有 `.openclaw/backups` 备份并核验哈希，再仅替换工作区读文档工具入口。其他 MCP 工具、模型账号、输入防护、沙箱引擎不变。此部署脚本不升级宿主；整套发行已有固定版本适配层，备份及发布流程见根目录说明。

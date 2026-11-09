@@ -1,5 +1,7 @@
 # U14 聊天越权与单次审批回归
 
+> 文档状态（2026-11-10）：历史记录：保留当时的设计、界面或验收结论，不代表当前操作流程。当前行为见[系统基准](CURRENT_SYSTEM.md)。
+
 ## 阶段 A：路径与边界
 
 依赖 U11：`local-validation/identity-task-acl-full/2026-11-08T07-21-54-329Z/report.json` 已 PASS；执行脚本仍重跑 U11。U13 已实现逐页委托，审批人使用独立页面，不替换经办人的委托。OpenClaw 固定 2026.7.1-2；U7b 的 `submit_emergency_notice` 必须仍在现网列表。

@@ -77,3 +77,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Verify.ps1
 现有安装链会给固定宿主安装工作区 UI 与工具结果保护适配层；不是原样 OpenClaw。先备份宿主文件、配置再接入，结构不匹配即停止。`Install.ps1` 的应用阶段失败时尝试恢复配置、UI 和原 AgentGuard；软件依赖、模型下载及新建服务不会全部自动卸载。配置备份位于 `%USERPROFILE%\.openclaw\govagentsec\`，含凭据，禁止上传。
 
 安装后不要移动目录。不要在另一 Windows 用户的身份下运行安装来替当前用户配置。切换 srt 是可选维护动作，默认仍为 Docker。安装器的真实测试范围见[安装验证记录](WINDOWS_INSTALLER_VALIDATION.md)，本版尚无全新 Windows 虚拟机从零到完成的端到端验证记录。
+
+## 版本核对
+
+发布页 Windows ZIP 内 SOURCE_COMMIT.txt 标明构建提交；v1.0 历史标签不移动，GitHub 自动生成的 Source code 是旧标签快照。文档修订随 Windows ZIP 发布，校验该页最新 SHA256SUMS.txt。首次安装包不会复制作者本机采购 MCP、开发身份凭据、会话/轨迹或 API Key；已有同版安装的引导器会复用安装目录，不是自动覆盖用户目录的更新器。

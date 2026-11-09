@@ -2,7 +2,7 @@
 
 完整新装优先使用 [Windows 一键安装](WINDOWS_ONE_CLICK_INSTALL.md)。`Setup-OpenClaw.ps1 -NonInteractive` 仅为完整安装器初始化固定宿主，新配置默认本地 Ollama，已有配置保留；交互模式仍调用原生 onboarding。
 
-GovAgentSec 安装器用于已有 OpenClaw 的原生 Windows 环境。本说明单独安装宿主，之后再安装安全套件。
+本页是高级手动宿主部署参考；完整安装器也支持缺少 OpenClaw 的环境。本说明单独安装宿主，之后再安装安全套件。
 
 ## 准备环境
 
@@ -11,7 +11,7 @@ GovAgentSec 安装器用于已有 OpenClaw 的原生 Windows 环境。本说明�
 可用 Windows Package Manager 安装依赖：
 
 ```powershell
-winget install --id OpenJS.NodeJS.LTS --exact
+winget install --id OpenJS.NodeJS.LTS --version 24.15.0 --exact
 winget install --id Git.Git --exact
 winget install --id Python.Python.3.12 --exact
 winget install --id Anaconda.Miniconda3 --exact
@@ -39,7 +39,7 @@ openclaw doctor
 openclaw gateway status
 ```
 
-在 OpenClaw 引导中填写你自己的模型提供商和 API Key。套件不提供共享密钥，也不依赖原作者的聊天记录、设备配对或账号。打开 OpenClaw 控制台，先确认普通对话可用。
+可先使用本地 Ollama；选择外部模型时在本机引导中填写自己的提供商和 API Key。套件不提供共享密钥，也不依赖原作者的聊天记录、设备配对或账号。打开 OpenClaw 控制台，先确认普通对话可用。
 
 OpenClaw 官方安装方法和宿主平台说明见 [官方安装文档](https://docs.openclaw.ai/install)。官方文档随版本更新，上述固定版命令用于本套件的兼容目标。
 

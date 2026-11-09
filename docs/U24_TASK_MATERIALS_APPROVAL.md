@@ -1,5 +1,7 @@
 # U24 任务材料与过期审批恢复
 
+> 文档状态（2026-11-10）：历史记录：保留当时的设计、界面或验收结论，不代表当前操作流程。当前行为见[系统基准](CURRENT_SYSTEM.md)。
+
 阶段A，2026-11-09。沿用现有DemoIdentity/ChatAcl、OIDC验证、TaskPolicies、OPA、HMAC和审批存储，不改公式或TTL，不修改现网配置。
 
 - `materials(session_key)`：已绑定同一委托后返回服务端REGISTRY材料ID、名称、密级和当前策略可选性，不返回路径或凭证。

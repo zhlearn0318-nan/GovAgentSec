@@ -1,63 +1,41 @@
-# OIDC 与任务权限使用说明
+# 登录、资料权限与审批
 
-**当前默认：仅演示；组织未接。** 强制口径与组织接线清单见 [U12](U12_ORG_OIDC_OR_DEMO_BOUNDARY.md)，按人开/关与撤销见 [U13](U13_PER_USER_EXECUTION_DELEGATE.md)。
+2026-11-10，以[当前系统基准](CURRENT_SYSTEM.md)及代码为准。当前使用本机演示身份源，真实组织 OIDC 尚未接入。网关连接只授权打开控制台，不等于取得业务权限。
 
-**当前已实现 U4b / U10 演示闭环；真实组织 OIDC 未接。** OpenClaw 固定 2026.7.1-2。网关登录只授权打开控制台，不代表取得业务执行或审批权限。
+## 日常操作
 
-## 本机演示
+1. 管理员在“防护设置 → 配置与维护”开启演示身份源，源默认关闭。
+2. 在会话顶部“资料权限”或“动态权限”用账号密码登录。各视图共享当前浏览器工作区身份，无需绑定任务、选择目录或勾选材料。
+3. 直接发送任务。服务端核定登记资料范围，执行时继续核验主体、密级、资源与任务权限。
+4. 确认卡片出现时选“允许一次／拒绝”；动态权限待审批区也能处理同一请求，完成后在执行回执区查看结果。
+5. 切换/退出撤销旧委托及未消费授权，进行中的任务不能借新账号升级权限；独立浏览器上下文不共用最后登录者。
 
-入口：工作台 / 待审批 / 防护设置 →「演示身份源」。默认关闭。
+## 演示账号
 
-1. 开启演示身份源，选择 `office-test`，点击「建立演示会话」。徽章始终为「演示身份源（非生产）」。
-2. 在「任务最小权限」选择目录 A，创建只读任务。任务只列出 `emergency_plan`，工具为 `file.read`。
-3. 点击「尝试读取目录 B（未授权演示）」，得到 `P014_RESOURCE_OUTSIDE_TASK`，底层读取不执行。点击该回执上的「申请一次性扩权」。
-4. 切换 `approver-test` 建立会话，在同一审批队列确认；原任务原动作只执行一次。不能自批，不能用网关 token 或请求体角色替代审批人身份。
-5. 切换 `auditor-test` 查看脱敏过程台账；最后关闭演示源，恢复执行/审批禁用。
-
-| 用户 | 已验证角色 | 用途 |
+| 账号 | 演示口令 | 权限 |
 | --- | --- | --- |
-| office-test | office_user | 经办：绑定任务、范围内读文档、申请越权审批 |
-| finance-test | finance_operator | 原 U4b 隔离测试付款 |
-| approver-test | business_approver | 审批他人原动作；不自动取得经办权限 |
-| auditor-test | audit_reader | 只读台账，不发起、不执行、不审批 |
+| admin | Demo#Admin26 | 最高，全部登记合成资料，包括秘密与受保护资料 |
+| weihu | Demo#Weihu26 | 高级维护，与 admin 同属最高执行等级 |
+| shenpi | Demo#Shenpi26 | 中级，公开/内部及业务审批角色 |
+| jingban | Demo#Jingban26 | 基础，公开资料 |
+| shenji | Demo#Shenji26 | 只读审计，可本地评估，无业务执行/配置权 |
 
-所有文档、身份和业务动作均为合成演示数据。目录 A/B 是 registry 的逻辑 URI 树，不代表任意主机目录接入。基础范围只能收紧；审批只赋予原动作的一次授权，不扩大基础权限。
+这是公开的合成演示账号，只有演示源开启后有效，不用于生产。服务端保存口令哈希；模型不能覆盖角色、密级和资料范围。
 
-## 身份与票据边界
+## 有效期与确认
 
-U4b 使用进程内 RS256/JWKS，复用 Keycloak realm 用户声明及 `OidcVerifier`。校验签名、issuer、audience、有效期、角色、部门、密级、MFA 声明、scope 与客户端绑定。演示 issuer 不对外联网；不改变生产 HTTPS/拒重定向要求。演示选人由网关管理员操作，不等于真人认证；MFA 为合成声明。
+每次成功登录 **30 分钟**，身份源期限随成功登录延长；旧令牌不自动续期，错误密码不续期。刷新页面需重新登录。动作确认 **60 秒**、执行票据 **30 秒**且单次消费，批准与执行分别记录。
 
-Bearer 仅保存在当前页面内存及私有 stdio，300 秒有效；刷新/切页会丢失当前页面身份，重新选人即可。演示源最多启用 15 分钟，关闭销毁内存密钥；不会写入组织 OIDC 配置。
+当前工作区演示 worker 的指定聊天路径支持发起人本人确认，两处入口处理同一请求；不是取消正式审批服务的禁自批规则。admin/weihu 免另一人业务审批，仍保留 OpenClaw 原生危险动作确认。D004 密级不足、D005 受保护资源硬拒绝不能靠批准突破。超时、撤销、重复处理、篡改动作均拒绝。
 
-U10 扩展 U7 `TaskPolicies`，复用 OPA → 任务权限 → 审批凭证 → HMAC 票据 → 隔离适配器 → 审计。任务默认 1 小时有效；扩权授权 60 秒、执行票据 30 秒且单次，绑定 task、主体、动作、revision 与 scope digest。收紧范围使旧授权失效；D004/D005 等硬拒绝不能用扩权审批覆盖。
+原生宿主审批、工作区本人确认和独立服务业务审批是不同来源，审计按实际事件记录，不把一张卡片当成全部审批闭环。
 
-回执与台账记录来源 `demo_idp_verified_jwt`、task_id、scope digest、审批与执行结果，不记录正文、Bearer、私钥或秘密票据。轨迹评审仍仅本地，本包不发起模型会话。
+## 读文档与组织接入
 
-## 验收与证据
+聊天使用 `gov_read_document(document_id)`，沿当前身份和 AgentGuard 安全链执行。独立 MCP `read_gov_document` 保留给受控集成，但当前工作区 toolFilter 不暴露它。其他 MCP 不因页面登录就自动携带用户委托。最高账号也不因此取得任意电脑路径权限。
 
-```powershell
-Set-Location 'F:\揭榜挂帅\GovAgentSec'
-node scripts/verify_identity_task_acl.mjs
-```
+组织接入复用 OidcVerifier，需要真实 HTTPS issuer、audience、client、角色/部门/密级与 MFA 映射。沿用 AGENTGUARD_OIDC_ENABLED、AGENTGUARD_OIDC_ISSUER、AGENTGUARD_OIDC_AUDIENCE 等配置，生产关闭开发身份，MCP 用 oidc 模式和用户短期凭据；网关 token 不能代替 Bearer。
 
-前置：固定版本网关在本机 18789 运行，加载本仓库 runtime-security / govagentsec UI 插件；AgentGuard venv、OPA、Wasmtime 和 Edge 可用。插件新增 RPC 后需重启网关；不需要更改网关配置。失败返回非零并保留日志。
+`scripts/check_identity.py` 仅检查配置缺口。接线参考 [U12](U12_ORG_OIDC_OR_DEMO_BOUNDARY.md)，阶段账号与旧有效期以本页为准。U4b/U10 的选人、目录 A/B 与手工绑定仍是隔离回归路径，不是日常使用步骤。
 
-报告与截图输出 `local-validation/identity-task-acl/<timestamp>/`。本轮结果见 [U10_IDENTITY_TASK_ACL_VALIDATION.md](U10_IDENTITY_TASK_ACL_VALIDATION.md)，设计与边界见 [IDENTITY_TASK_ACL_DESIGN.md](IDENTITY_TASK_ACL_DESIGN.md)。测试结束会关闭本轮演示源，并比较网关配置哈希。
-
-## 后续接入真实组织
-
-组织需提供 HTTPS issuer、audience、应用 client、角色/部门/密级/MFA 映射与独立经办/审批测试账号。服务配置沿用：
-
-| 配置 | 要求 |
-| --- | --- |
-| AGENTGUARD_OIDC_ENABLED | true，显式启用 |
-| AGENTGUARD_OIDC_ISSUER | 单位 HTTPS issuer，禁止演示域冒充 |
-| AGENTGUARD_OIDC_AUDIENCE | 单位分配的资源 audience |
-| AGENTGUARD_OIDC_REQUIRE_MFA | 默认 true |
-| AGENTGUARD_ALLOW_DEVELOPMENT_IDENTITY | 生产 false |
-| AGENTGUARD_MCP_IDENTITY_MODE | oidc |
-| AGENTGUARD_MCP_TOKEN_FILE / BEARER_TOKEN | 当前用户短期令牌的安全注入；不是网关管理员 token |
-
-`python scripts/check_identity.py` 只报告配置缺口，不把填了字段或演示源开启当作组织身份已验证。演示逐用户委托/撤销见 U13，聊天自动 scope 见 U11；真实组织浏览器授权码与单位 MFA 仍需联调，不能据演示通过将生产身份判为完成。
-
-Aegis 管能力准入，U9 管会话执行隔离，U10 管受管动作的任务权限；三者互不替代。Keycloak 独立 HTTP E2E 不是本轮进程内 JWKS 路径的验收。
+实现与测试：[本人确认](PERSONAL_CONFIRMATION_AND_DOCUMENT_IDENTITY.md)、[自动会话身份](AUTOMATIC_CHAT_IDENTITY.md)。

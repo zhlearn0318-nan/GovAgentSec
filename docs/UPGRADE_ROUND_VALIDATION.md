@@ -1,5 +1,7 @@
 # 升级轮次验收
 
+> 文档状态（2026-11-10）：历史记录：保留当时的设计、界面或验收结论，不代表当前操作流程。当前行为见[系统基准](CURRENT_SYSTEM.md)。
+
 ## U9：会话执行沙箱双引擎（2026-11-08）
 
 已在本机安装 srt 0.0.81 原生 Windows 运行时、构建 Docker 专用镜像，注册 `govagentsec-session-sandbox` 插件，并在工作台 / 防护设置加入管理员切换入口。默认 Docker，OpenClaw 保持 **2026.7.1-2**。实现和复跑命令见 [SESSION_SANDBOX_DEMO.md](SESSION_SANDBOX_DEMO.md)。

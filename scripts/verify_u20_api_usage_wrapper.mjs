@@ -104,7 +104,7 @@ finally {
   report.live_approvals_unchanged = approvalHash() === approvalsBefore;
   if (!report.live_config_unchanged || !report.live_approvals_unchanged || report.rollback_failed) { report.passed = false; process.exitCode = 1; }
   save('report.json', report);
-  save('design-ref.md', '# Design\n\nRepository: docs/U20_API_USAGE_WRAPPER.md\n');
+  save('design-ref.md', '# Design\n\nRepository: modules/govagentsec-usage-wrapper/README.md\n');
   save('rollback.md', '# Rollback\n\nDefault verification modifies only an isolated config. U18 private backup and dual hashes restore original bytes; live config and approvals are checked unchanged.\n\nProduction enable: `node scripts/usage_wrapper.mjs enable`. Disable: `node scripts/usage_wrapper.mjs disable`, then reload/restart OpenClaw. Never overwrite concurrent config changes.\n');
   console.log(JSON.stringify({ passed: report.passed, output: out, failure: report.failure, source: report.source }));
 }

@@ -91,4 +91,4 @@ python scripts/check_current_docs.py
 
 密钥、模型权重、对话与轨迹、运行库和本机证据不随 Git 发布。下载的官方权重与依赖按锁文件管理。新增整合代码与自有模块采用 Apache-2.0，AgentGuard 保留 MIT，第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-本版不是生产 OIDC、任意工具全覆盖或自动生产发布的认证。全新 Windows 整套安装仍需实机验证；当前已验证范围及剩余限制统一见 [ACCEPTANCE_BOUNDARIES.md](docs/ACCEPTANCE_BOUNDARIES.md)。历史设计与实验只用于追溯，不替代当前操作手册。
+本版不是生产 OIDC、任意工具全覆盖或自动生产发布的认证。全新 Windows 整套安装仍需实机验证；当前已验证范围及剩余限制统一见 [ACCEPTANCE_BOUNDARIES.md](docs/ACCEPTANCE_BOUNDARIES.md)。公开仓库仅发布系统源码、安装程序、运行样例、测试和必要说明；开发提示词、阶段方案与内部评审已移出。

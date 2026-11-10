@@ -36,6 +36,6 @@
 
 组织接入复用 OidcVerifier，需要真实 HTTPS issuer、audience、client、角色/部门/密级与 MFA 映射。沿用 AGENTGUARD_OIDC_ENABLED、AGENTGUARD_OIDC_ISSUER、AGENTGUARD_OIDC_AUDIENCE 等配置，生产关闭开发身份，MCP 用 oidc 模式和用户短期凭据；网关 token 不能代替 Bearer。
 
-`scripts/check_identity.py` 仅检查配置缺口。接线参考 [U12](U12_ORG_OIDC_OR_DEMO_BOUNDARY.md)，阶段账号与旧有效期以本页为准。U4b/U10 的选人、目录 A/B 与手工绑定仍是隔离回归路径，不是日常使用步骤。
+`scripts/check_identity.py` 仅检查配置缺口。真实组织接入需要另行联调和验收；隔离回归中使用的选人、目录 A/B 与显式绑定接口不是日常使用步骤。
 
 实现与测试：[本人确认](PERSONAL_CONFIRMATION_AND_DOCUMENT_IDENTITY.md)、[自动会话身份](AUTOMATIC_CHAT_IDENTITY.md)。

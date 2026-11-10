@@ -1,6 +1,6 @@
 # 安全说明
 
-> 当前能力、未完成项和生产 NO-GO 判断见 [`CURRENT_STATUS.md`](CURRENT_STATUS.md)；本文件定义必须持续遵守的安全边界。
+> 当前能力、未完成项和生产 NO-GO 判断见 [`CURRENT_STATUS.md`](README.md)；本文件定义必须持续遵守的安全边界。
 
 ## 支持范围
 

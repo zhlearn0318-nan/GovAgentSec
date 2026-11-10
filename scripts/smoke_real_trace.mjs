@@ -33,7 +33,7 @@ function persist() {
       : '本报告声称走生产 OIDC 身份路径。\n\n')
     + `See report.json for individual checks. This report contains no prompts, response bodies or credentials. `
     + `No synthetic JSONL is used by this runner. A blocked preflight is not an end-to-end pass.\n\n`
-    + `Reproduce from the repository with scripts/smoke_real_trace.ps1; prerequisites and remediation: docs/TRACE_LIVE_SMOKE.md.\n`);
+    + `Reproduce from the repository with scripts/smoke_real_trace.ps1; prerequisites and remediation: docs/TRACE_HOOK_VERIFICATION.md.\n`);
 }
 try {
   const options = { agent: 'main', timeout: '180', config: path.join(process.env.USERPROFILE, '.openclaw/openclaw.json') };

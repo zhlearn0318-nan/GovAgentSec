@@ -32,4 +32,4 @@ python scripts/check_model_routing.py
 
 一键验收使用隔离配置、真实 OpenClaw 2026.7.1-2 和本机**合成 HTTP 上游**，不验证云账号或计费。完成后自动关闭并恢复原字节，核对现网配置和审批文件未变。结果位于 `local-validation/u20-api-usage-wrapper/<timestamp>/`，包括图、时间线和哈希。
 
-只支持 `/chat/completions` 与 `/v1/chat/completions`；不支持 Responses API、非 loopback 监听、跨域重定向或其它 provider 自动接管。上游请求总时限默认 120 秒，超时 504、连接错误 502；上游 4xx/5xx 原样透传。SSE/JSON 采集上限 1 MiB（SSE 按帧）；超限仍转发响应，用量显示缺失。无字段不估算；重复 span 的 SDK 重试不擅自汇总。计数缓存 5 分钟/1000 条，去重 ID 集合 100000 个；满后采集提示容量限制，重启可清空。详情见 [设计](../../docs/U20_API_USAGE_WRAPPER.md)。
+只支持 `/chat/completions` 与 `/v1/chat/completions`；不支持 Responses API、非 loopback 监听、跨域重定向或其它 provider 自动接管。上游请求总时限默认 120 秒，超时 504、连接错误 502；上游 4xx/5xx 原样透传。SSE/JSON 采集上限 1 MiB（SSE 按帧）；超限仍转发响应，用量显示缺失。无字段不估算；重复 span 的 SDK 重试不擅自汇总。计数缓存 5 分钟/1000 条，去重 ID 集合 100000 个；满后采集提示容量限制，重启可清空。详情见 [MODEL_ROUTING](../../docs/MODEL_ROUTING.md)。

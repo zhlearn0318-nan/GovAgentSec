@@ -63,5 +63,5 @@ try {
   report.reason = 'Public fixed-version hook lacks per-call usage; actual optional fields are supported, missing values are explicit.';
 } catch (error) { report.error = error.message; process.exitCode = 1; }
 writeFileSync(path.join(out, 'hook-limitation.json'), JSON.stringify(report, null, 2) + '\n');
-writeFileSync(path.join(out, 'design-ref.md'), '# U19 design\n\n[Design](../../../docs/U19_PER_CALL_TOKEN_USAGE.md)\n\nRepository path: docs/U19_PER_CALL_TOKEN_USAGE.md\n');
+writeFileSync(path.join(out, 'design-ref.md'), '# U19 design\n\n[Design](../../../docs/TRACE_HOOK_VERIFICATION.md)\n\nRepository path: docs/TRACE_HOOK_VERIFICATION.md\n');
 console.log(JSON.stringify({ status: report.status, real_per_call_usage_observed: report.real_per_call_usage_observed, output: out, error: report.error }));

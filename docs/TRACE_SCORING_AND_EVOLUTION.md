@@ -2,7 +2,7 @@
 
 > 文档状态（2026-11-10）：技术参考：接口/算法和原始证据按本文件的范围解释；阶段页面与账号说明不作为当前使用步骤。当前行为见[系统基准](CURRENT_SYSTEM.md)。
 
-2026-11-07 补充：已实现 Ollama / 启发式本地评审器的严格证据核对与 9 条合成对抗开发集；Q/S 公式及本文件中的 scoring 契约不变。运行 `node scripts/judge_calibration_demo.mjs`，实测 5 pass、4 quarantine，分数有区分。H 仍是未标定先验，0.75 仅为开发演示阈值；详见 [本地评审标定记录](LOCAL_JUDGE_CALIBRATION.md)。
+2026-11-07 补充：已实现 Ollama / 启发式本地评审器的严格证据核对与 9 条合成对抗开发集；Q/S 公式及本文件中的 scoring 契约不变。运行 `node scripts/judge_calibration_demo.mjs`，实测 5 pass、4 quarantine，分数有区分。H 仍是未标定先验，0.75 仅为开发演示阈值；详见 [TRACE_SCORING_AND_EVOLUTION](TRACE_SCORING_AND_EVOLUTION.md)。
 
 ## 与论文代码逐项对应
 

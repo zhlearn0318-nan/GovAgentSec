@@ -49,7 +49,7 @@ node scripts/probe_trace_hooks.mjs
 
 ## 真实 Agent 路径冒烟
 
-新增 `scripts/smoke_real_trace.ps1`，通过真实 Control UI `chat.send` 请求本地模型调用 AgentGuard MCP 的 `read_gov_document`。前置条件、事件/参数哈希/受控回执/JSONL 核对和复跑命令见 [真实短链冒烟](TRACE_LIVE_SMOKE.md)。本机本轮运行退出码 1：网关与采集插件可连接，但 MCP 停用、身份未就绪、本地模型未配置，因此没有提交模型任务，不能作为真实全链通过证据。
+新增 `scripts/smoke_real_trace.ps1`，通过真实 Control UI `chat.send` 请求本地模型调用 AgentGuard MCP 的 `read_gov_document`。前置条件、事件/参数哈希/受控回执/JSONL 核对和复跑命令见 [真实短链冒烟](TRACE_HOOK_VERIFICATION.md)。本机本轮运行退出码 1：网关与采集插件可连接，但 MCP 停用、身份未就绪、本地模型未配置，因此没有提交模型任务，不能作为真实全链通过证据。
 
 执行接口另核对固定安装源码：`schema-BuOFpc7K.js:3269` 的 ChatSendParamsSchema 支持 sessionKey、agentId、message、thinking、deliver、timeoutMs、idempotencyKey；`chat-pg-BxhF6.js:2566` 使用 idempotencyKey 作为 clientRunId；`session-utils-DD3pe_2A.js:478` 从运行中配置加载会话。`model-fallback-BPQMpbqN.js:1221–1234` 除显式 fallback 外可追加全局主模型，故冒烟同时要求全局主模型和 Agent 主模型本地化。异常时调用该版本 `chat.abort`（sessionKey、runId），不注入结束事件。
 

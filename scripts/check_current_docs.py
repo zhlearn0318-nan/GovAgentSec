@@ -13,6 +13,8 @@ def main():
     errors, checks = [], []
     index = json.loads((ROOT / 'docs/DOCUMENTATION_INDEX.json').read_text(encoding='utf-8'))
     rows = index['documents']
+    if any(row['status'] not in ('current', 'technical-reference') for row in rows):
+        errors.append('Public documentation must not include development specifications or historical process records')
     declared = {row['path'] for row in rows}
     local_only = index.get('excluded_local_directories', [])
     actual = {p.relative_to(ROOT).as_posix() for p in (ROOT / 'docs').rglob('*.md')

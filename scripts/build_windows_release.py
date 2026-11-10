@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import json
 import pathlib
+import re
 import subprocess
 import zipfile
 
@@ -26,6 +27,9 @@ def build(out):
             parts = pathlib.PurePosixPath(name).parts
             if any(p in {'.git','.runtime','local-validation','node_modules','.venv','models','live-runtime','__pycache__'} for p in parts) or name.endswith(('.env','.token','.sqlite','.db','.log')):
                 raise RuntimeError('Runtime or private file in release: ' + name)
+            relative = name.removeprefix('GovAgentSec/')
+            if relative.startswith(('docs/codex-prompts/', 'docs/history/')) or re.match(r'docs/U\d.*\.md$', relative) or re.match(r'modules/aegis/demo_web/docs/M\d.*\.md$', relative):
+                raise RuntimeError('Development-only material in public release: ' + relative)
     subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(ROOT/'scripts/build_windows_installer.ps1'),'-OutputDirectory',str(out)],cwd=ROOT,check=True)
     installer = out / 'GovAgentSec-v1.0-Setup.exe'
     checksums = '\n'.join(hashlib.sha256(p.read_bytes()).hexdigest()+'  '+p.name for p in [archive,installer])+'\n'

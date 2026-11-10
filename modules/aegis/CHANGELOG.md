@@ -1,6 +1,6 @@
 # Aegis Chain 版本变化记录
 
-本文件记录影响团队协作、部署或实验结论的主要变化。当前能力以 [`CURRENT_STATUS.md`](CURRENT_STATUS.md) 为准。
+本文件记录影响团队协作、部署或实验结论的主要变化。当前能力以 [`CURRENT_STATUS.md`](README.md) 为准。
 
 ## v0.2 — 2026-09-09
 
@@ -36,4 +36,4 @@
 - 完成 OpenClaw 安装前准入、统一安全中心、规则管理、报告和哈希链审计；
 - 完成 Windows 一键安装器和现场演示基线。
 
-不可变发布说明见 [`RELEASE_V0.1.md`](RELEASE_V0.1.md)。
+不可变发布说明见 [`RELEASE_V0.1.md`](README.md)。

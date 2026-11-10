@@ -15,7 +15,7 @@ from identity.demo_provider import DemoIdentity
 from enforcement.documents import REGISTRY, document_action
 
 PASSWORDS=dict(re.findall(r'\| (jingban|shenpi|shenji|weihu) \| ([^|]+?) \|',
-    (ROOT/'docs/U25_FOUR_ENTRY_WORKSPACE_IA.md').read_text(encoding='utf-8')))
+    (ROOT/'docs/OIDC_USAGE.md').read_text(encoding='utf-8')))
 
 class AccountPermissions(unittest.TestCase):
     def setUp(self):

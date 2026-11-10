@@ -106,7 +106,7 @@ $openclawEntry = Join-Path $projectRoot 'third_party\runtime\openclaw-client\nod
 
 新增 `read_gov_document({document_id})`。只接受已登记 ID，不接受路径、身份、密级、审批或票据参数。支持 emergency_plan、material_inventory、duty_contacts、command_contacts、protected_resource。
 
-使用现有 OIDC 或显式隔离测试身份；不自动启用开发身份。正文只来自专用合成数据目录。运行命令、策略映射与未完成验收项见 [受控文档验证](../../../../docs/CONTROLLED_DOCUMENT_VALIDATION.md)。
+使用现有 OIDC 或显式隔离测试身份；不自动启用开发身份。正文只来自专用合成数据目录。运行命令、策略映射与未完成验收项见 [受控文档验证](../../../../docs/VALIDATION.md)。
 
 ## U7 参数来源与任务契约
 
@@ -114,4 +114,4 @@ $openclawEntry = Join-Path $projectRoot 'third_party\runtime\openclaw-client\nod
 
 可信控制端通过已验证业务 OIDC 的 `POST /task-contracts` 创建或收紧任务；用操作者配置 `AGENTGUARD_MCP_TASK_ID` 绑定，模型不能传入该值。未配置任务授权时，敏感调用不能再仅凭 OPA ALLOW 自动执行。首次调用只生成无参数授权的只读契约。示例 toolFilter 已列出新工具，安装脚本本轮未在现网执行。
 
-无逐用户 OIDC 委托的管理页面继续只读。说明及一键演示见 [U7 文档](../../../../docs/BEHAVIOR_CONSTRAINT_SOTA_UPGRADE.md)。
+无逐用户 OIDC 委托的管理页面继续只读。说明及一键演示见 [CURRENT_SYSTEM](../../../../docs/CURRENT_SYSTEM.md)。

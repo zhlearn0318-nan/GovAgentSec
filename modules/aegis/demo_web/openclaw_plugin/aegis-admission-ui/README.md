@@ -69,4 +69,4 @@ MCP 配置准入通过安全中心的“MCP 准入”标签执行；放行时使
 4. 安装前复核内容哈希，并由 OpenClaw 原生策略再次扫描；
 5. 同名 Skill 显示页面内确认，确认后事务更新，失败恢复原版本。
 
-默认限制为 ZIP 50 MB、解压或文件夹总量 200 MB、5,000 个文件、单文件 50 MB。上传安全合同见 [`../../docs/M11_OPENCLAW_FORMAL_SKILL_UPLOAD_ADMISSION.md`](../../docs/M11_OPENCLAW_FORMAL_SKILL_UPLOAD_ADMISSION.md)，最终单入口发布证据见 [`../../docs/M12_OPENCLAW_UNIFIED_SECURITY_CENTER_RELEASE.md`](../../docs/M12_OPENCLAW_UNIFIED_SECURITY_CENTER_RELEASE.md)。
+默认限制为 ZIP 50 MB、解压或文件夹总量 200 MB、5,000 个文件、单文件 50 MB。上传安全合同见 [README](../../../README.md)，最终单入口发布证据见 [README](../../../README.md)。

@@ -5,7 +5,7 @@ import {createRequire,registerHooks} from 'node:module';import {pathToFileURL} f
 import {DemoIdentityBridge,registerDemoIdentity,requireBusinessPermission} from '../modules/agentguard-group2/integrations/openclaw_runtime_security_plugin/demo-identity.mjs';
 const out=path.resolve(process.argv[2]??fs.readFileSync('.runtime/u25-evidence-path.txt','utf8').trim()+'/identity-rpc');fs.mkdirSync(out,{recursive:true});
 const report={passed:false,source:'local-real-jwt-opa-public-rpc',production_oidc:false,checks:[],external_requests:0};
-const passwords=Object.fromEntries([...fs.readFileSync('docs/U25_FOUR_ENTRY_WORKSPACE_IA.md','utf8').matchAll(/\| (jingban|shenpi|shenji|weihu) \| ([^|]+?) \|/g)].map(m=>[m[1],m[2]]));
+const passwords=Object.fromEntries([...fs.readFileSync('docs/OIDC_USAGE.md','utf8').matchAll(/\| (jingban|shenpi|shenji|weihu) \| ([^|]+?) \|/g)].map(m=>[m[1],m[2]]));
 const bridge=new DemoIdentityBridge({root:path.join(out,'worker')});globalThis[Symbol.for('govagentsec.demoIdentity.bridge')]=bridge;
 const methods=new Map(),registerGatewayMethod=(n,f)=>methods.set(n,f);registerDemoIdentity({registerGatewayMethod});
 const rpc=async(name,params={})=>{let reply;await methods.get(name)({params,respond:(ok,data,error)=>{reply={ok,data,error};}});return reply;};

@@ -18,7 +18,7 @@ try{
   assert.equal(methods.get('govagentsec.runtime.overview').options.scope,'operator.read');
   assert.equal((await rpc({})).ok,false);assert.equal(requests,0);check('anonymous-denied-before-service-or-audit-read');
   await bridge.request('enable');
-  const passwords=Object.fromEntries([...fs.readFileSync('docs/U25_FOUR_ENTRY_WORKSPACE_IA.md','utf8').matchAll(/\| (jingban|shenpi|weihu) \| ([^|]+?) \|/g)].map(m=>[m[1],m[2]]));
+  const passwords=Object.fromEntries([...fs.readFileSync('docs/OIDC_USAGE.md','utf8').matchAll(/\| (jingban|shenpi|weihu) \| ([^|]+?) \|/g)].map(m=>[m[1],m[2]]));
   const bearer='Bearer '+(await bridge.request('login',{account:'jingban',password:passwords.jingban})).access_token;
   assert.equal((await rpc({bearer,roles:['security_admin']})).error.code,'INVALID_REQUEST');assert.equal(requests,0);check('extra-fields-rejected-before-read');
   const result=await rpc({bearer});assert(result.ok);const original=await buildSnapshot(config);

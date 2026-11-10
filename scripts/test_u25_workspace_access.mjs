@@ -13,7 +13,7 @@ const store=registerTrace(api('trace')),fixture=createFixtures(store),ids=Object
 registerTrajectory(api('legacy'));hooks.before_agent_run({runId:'isolated-u25',prompt:'synthetic permission test'});hooks.agent_end({runId:'isolated-u25',success:true});hooks.llm_output({runId:'isolated-u25',assistantTexts:['synthetic']});
 const key=Symbol.for('govagentsec.demoIdentity.bridge'),previous=globalThis[key],bridge=new DemoIdentityBridge({root:path.join(out,'identity')});globalThis[key]=bridge;
 const rpc=async(name,params={})=>{let response;await methods.get(name)({params,respond:(ok,data,error)=>response={ok,data,error}});return response;};
-const passwords=Object.fromEntries([...fs.readFileSync('docs/U25_FOUR_ENTRY_WORKSPACE_IA.md','utf8').matchAll(/\| (jingban|shenpi|shenji|weihu) \| ([^|]+?) \|/g)].map(m=>[m[1],m[2]]));
+const passwords=Object.fromEntries([...fs.readFileSync('docs/OIDC_USAGE.md','utf8').matchAll(/\| (jingban|shenpi|shenji|weihu) \| ([^|]+?) \|/g)].map(m=>[m[1],m[2]]));
 const login=async account=>'Bearer '+(await bridge.request('login',{account,password:passwords[account]})).access_token;
 const check=name=>report.checks.push(name);
 try{

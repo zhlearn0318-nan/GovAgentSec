@@ -7,175 +7,11 @@
       "status": "current"
     },
     {
-      "path": "docs/ADMIN_NATIVE_APPROVAL.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/APPROVAL_PROMPT_FIX.md",
-      "status": "historical"
-    },
-    {
       "path": "docs/AUTOMATIC_CHAT_IDENTITY.md",
       "status": "current"
     },
     {
-      "path": "docs/BEHAVIOR_CONSTRAINT_SOTA_UPGRADE.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/codex-prompts/govagentsec-ui-polish.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/POST-U11-BACKLOG.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/README.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U1-aegis-deep-link-admission.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U1-U9-ACCEPTANCE.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U10-identity-login-task-acl.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U11-task-acl-full-coverage.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U12-org-oidc-or-demo-boundary.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U13-per-user-execution-delegate.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U14-judge-chat-acl-regression.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U15-judge-demo-reel-script.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U16-evolution-gate-demo-stability.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U17-u8-live-activation-boundary.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U18-openclaw-config-recovery-drill.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U19-per-call-token-usage.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U2-trace-workspace-embed.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U20-api-usage-wrapper.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U21-judge-user-full-critique.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U22-login-task-bind-approval-path.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U23-approval-graph-sandbox-fp.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U25-four-entry-workspace-ia.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U25b-protect-settings-layout.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U26-dual-library-runtime-gate.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U26-then-U25-serial.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U3-evolution-release-gate-ui.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U4-identity-product-guardrails.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U4b-oidc-demo-identity.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U5-four-layer-verify.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U6-protect-tool-surface.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U7-behavior-constraint-sota.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U7b-notify-tools-live.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U8-session-api-local-review.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/codex-prompts/U9-sandbox-network-isolation-demo.md",
-      "status": "development-spec"
-    },
-    {
-      "path": "docs/CONTROLLED_DOCUMENT_IMPLEMENTATION.md",
-      "status": "technical-reference"
-    },
-    {
-      "path": "docs/CONTROLLED_DOCUMENT_VALIDATION.md",
-      "status": "historical"
-    },
-    {
       "path": "docs/CURRENT_SYSTEM.md",
-      "status": "current"
-    },
-    {
-      "path": "docs/DELIVERY_ACCEPTANCE.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/DOCUMENTATION_CATALOG.md",
-      "status": "current"
-    },
-    {
-      "path": "docs/DOCUMENTATION_SYNC_REPORT.md",
       "status": "current"
     },
     {
@@ -183,28 +19,8 @@
       "status": "current"
     },
     {
-      "path": "docs/history/VALIDATION_20260915.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/IDENTITY_TASK_ACL_DESIGN.md",
-      "status": "historical"
-    },
-    {
       "path": "docs/INSTALL_WITH_AGENT.md",
       "status": "current"
-    },
-    {
-      "path": "docs/JUDGE_DEMO_PLAN_FOUR_ENTRY.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/JUDGE_USER_FULL_CRITIQUE.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/LOCAL_JUDGE_CALIBRATION.md",
-      "status": "technical-reference"
     },
     {
       "path": "docs/MAINTENANCE.md",
@@ -215,16 +31,8 @@
       "status": "current"
     },
     {
-      "path": "docs/OIDC_DEMO_OPTIONS.md",
-      "status": "historical"
-    },
-    {
       "path": "docs/OIDC_USAGE.md",
       "status": "current"
-    },
-    {
-      "path": "docs/openclaw-workspace.md",
-      "status": "historical"
     },
     {
       "path": "docs/OPENCLAW_WINDOWS.md",
@@ -235,35 +43,11 @@
       "status": "current"
     },
     {
-      "path": "docs/POST_U11_DELIVERY_REPORT.md",
-      "status": "historical"
-    },
-    {
       "path": "docs/PRODUCT_DEMO_RUNBOOK.md",
       "status": "current"
     },
     {
-      "path": "docs/PRODUCT_UX_LOGIN_AND_DEMO_FLOW.md",
-      "status": "historical"
-    },
-    {
       "path": "docs/README.md",
-      "status": "current"
-    },
-    {
-      "path": "docs/REAL_MULTI_TRACE_EVOLUTION.md",
-      "status": "technical-reference"
-    },
-    {
-      "path": "docs/releases/3.0-main-20261109.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/releases/3.0.0.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/releases/v1.0.md",
       "status": "current"
     },
     {
@@ -271,140 +55,12 @@
       "status": "current"
     },
     {
-      "path": "docs/SESSION_SANDBOX_PLAN.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/SNAPSHOT_20261109.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/task-workbench.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/TRACE_CALL_GRAPH_VALIDATION.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/TRACE_DELIVERY_VALIDATION.md",
-      "status": "historical"
-    },
-    {
       "path": "docs/TRACE_HOOK_VERIFICATION.md",
-      "status": "technical-reference"
-    },
-    {
-      "path": "docs/TRACE_IMPLEMENTATION_PLAN.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/TRACE_LIVE_SMOKE.md",
-      "status": "technical-reference"
+      "status": "current"
     },
     {
       "path": "docs/TRACE_SCORING_AND_EVOLUTION.md",
-      "status": "technical-reference"
-    },
-    {
-      "path": "docs/trajectory-development.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U1-U9-ACCEPTANCE-REPORT.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U10_IDENTITY_TASK_ACL_VALIDATION.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U11_TASK_ACL_FULL_VALIDATION.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U12_ORG_OIDC_OR_DEMO_BOUNDARY.md",
-      "status": "technical-reference"
-    },
-    {
-      "path": "docs/U13_PER_USER_EXECUTION_DELEGATE.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U14_JUDGE_CHAT_ACL_REGRESSION.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U15_JUDGE_DEMO_PACK.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U15_JUDGE_DEMO_REEL_SCRIPT.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U16_EVOLUTION_GATE_DEMO_STABILITY.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U17_U8_LIVE_ACTIVATION_BOUNDARY.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U18_OPENCLAW_CONFIG_RECOVERY_DRILL.md",
-      "status": "technical-reference"
-    },
-    {
-      "path": "docs/U19_PER_CALL_TOKEN_USAGE.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U20_API_USAGE_WRAPPER.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U22_LOGIN_TASK_BIND_APPROVAL.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U23_APPROVAL_GRAPH_SANDBOX_FP.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U24_LOCAL_ASSESSMENT_FLOW.md",
-      "status": "technical-reference"
-    },
-    {
-      "path": "docs/U24_PRODUCT_FLOW_IMPLEMENTATION.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U24_TASK_MATERIALS_APPROVAL.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U25_FOUR_ENTRY_WORKSPACE_IA.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U26_DUAL_LIBRARY_RUNTIME_GATE.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U4B_IDENTITY_DEMO_VALIDATION.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/U7B_NOTIFY_TOOLS_LIVE.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/UPGRADE_PLAN_政安纵深.md",
-      "status": "historical"
-    },
-    {
-      "path": "docs/UPGRADE_ROUND_VALIDATION.md",
-      "status": "historical"
+      "status": "current"
     },
     {
       "path": "docs/VALIDATION.md",
@@ -419,8 +75,8 @@
       "status": "current"
     },
     {
-      "path": "docs/WORD_TASK_INVESTIGATION.md",
-      "status": "historical"
+      "path": "docs/releases/v1.0.md",
+      "status": "current"
     },
     {
       "path": "docs/产品使用逻辑与模块协同.md",

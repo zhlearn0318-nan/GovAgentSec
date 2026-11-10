@@ -12,7 +12,7 @@
 ```
 
 当前 OpenClaw + DeepSeek + 多检测器完整图见
-[`docs/Protect_Agent_整体架构图.md`](docs/Protect_Agent_整体架构图.md)；基础模块说明见
+[`docs/Protect_Agent_整体架构图.md`](README.md)；基础模块说明见
 [`docs/architecture-overview.md`](docs/architecture-overview.md)。
 
 ## 快速运行
@@ -42,7 +42,7 @@ $env:PROTECT_AGENT_TRUSTRAG_MODULE = 'D:\软件\Qwen\third_party\TrustRAG\defend
 
 需要启用 RAG 链路时在末尾增加 `--rag`。也可以不设置两个本地路径环境变量，
 改为传入 `--model-root` 和 `--trustrag-module`。完整说明见
-[`docs/DeepSeek接入与启动.md`](docs/DeepSeek接入与启动.md)。
+[`docs/DeepSeek接入与启动.md`](README.md)。
 
 ## 测试与编译
 

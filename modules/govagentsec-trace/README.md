@@ -2,7 +2,7 @@
 
 固定 OpenClaw 2026.7.1-2 的只读采集插件。prompt、参数和输出默认只存脱敏哈希；不修改 Agent 决策、不注册工具、不调用外部模型。
 
-逐次 token：公开 `model_call_ended` 钩子在固定版本不含 usage；插件兼容保存实际提供的计数，缺失时保留元信息，图节点不显示“token 未提供”，`model.output` 单独标注运行汇总。在线图、时间线和离线导出共用标签；合成夹具数字不代表真实钩子已支持。详见 [U19 设计与验收](../../docs/U19_PER_CALL_TOKEN_USAGE.md)。
+逐次 token：公开 `model_call_ended` 钩子在固定版本不含 usage；插件兼容保存实际提供的计数，缺失时保留元信息，图节点不显示“token 未提供”，`model.output` 单独标注运行汇总。在线图、时间线和离线导出共用标签；合成夹具数字不代表真实钩子已支持。详见 [TRACE_HOOK_VERIFICATION](../../docs/TRACE_HOOK_VERIFICATION.md)。
 
 可选 [U20 本机 HTTP 包装层](../govagentsec-usage-wrapper/README.md)（默认关）：从上游回包采集逐次 usage，经公开 trace/span 精确关联后追加 `model.usage`；模型返回节点显示注解用量，详情保留原事件，哈希链不改写。缺失/重试歧义不造数，安全评审路由不变。
 
@@ -61,4 +61,4 @@ node scripts/judge_calibration_demo.mjs --judge heuristic
 node modules/govagentsec-trace/cli.mjs assess DATA_DIR TRACE_ID JUDGE_CONFIG.json
 ```
 
-默认只调用本机 Ollama，失败明确记录启发式回退。9 条样例全部标为 synthetic；报告要求 pass/quarantine 与 S/Q 均有区分，缺失证据不得补分。CLI 的 judge 支持 ollama、heuristic、fixture。版本 `local-adversarial-v2-not-production`、阈值 0.75 与 H 先验都是开发演示配置，不等于论文 DeepSeek 阈值复现或生产标定。详见 [实测结果、计数规则与限制](../../docs/LOCAL_JUDGE_CALIBRATION.md)。
+默认只调用本机 Ollama，失败明确记录启发式回退。9 条样例全部标为 synthetic；报告要求 pass/quarantine 与 S/Q 均有区分，缺失证据不得补分。CLI 的 judge 支持 ollama、heuristic、fixture。版本 `local-adversarial-v2-not-production`、阈值 0.75 与 H 先验都是开发演示配置，不等于论文 DeepSeek 阈值复现或生产标定。详见 [实测结果、计数规则与限制](../../docs/TRACE_SCORING_AND_EVOLUTION.md)。

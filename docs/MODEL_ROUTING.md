@@ -1,6 +1,6 @@
 # 会话 API 与本地安全评审
 
-现网激活边界与评委 FAQ 见 [U17](U17_U8_LIVE_ACTIVATION_BOUNDARY.md)。会话 API 可达不等于轨迹评审可出域。
+会话 API 与本地安全评审分别配置。会话 API 可达不等于轨迹评审可出域。
 
 会话模型负责对话、规划和选工具；权限判断、轨迹评审与候选技能门控不随会话模型供应商改变。全新安装默认本地 Ollama；当前本机已有 DeepSeek 会话配置，安装器保留它。config/model-routing.json 的 DeepSeek 是可选配置模板，不等于所有安装默认使用云模型。本机 Ollama/启发式承担安全评审。
 

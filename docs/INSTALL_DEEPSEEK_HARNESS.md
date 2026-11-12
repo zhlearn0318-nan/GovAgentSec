@@ -16,6 +16,16 @@ GovAgentSec 适配器版本为 `1.0.0-alpha.1`。安装目标为 DeepSeek Harnes
 3. 点击「安装」。安装器下载并校验两份运行环境分卷，自动准备 Python 和模型，然后注册插件。若下载中断，保留相同的安装目录再试，安装器会复用已通过校验的文件或续传分卷。
 4. 界面显示安装完成后，重新启动 Harness。
 
+## 使用 Agent 部署
+
+复制下面这段指令，发给能操作本机 Windows 的 Agent。
+
+```text
+请按 https://github.com/zhlearn0318-nan/GovAgentSec/blob/DeepseekHarness_release/docs/INSTALL_DEEPSEEK_HARNESS_WITH_AGENT.md 安装 GovAgentSec 的 DeepSeek Harness 预览版。沿用已有的模型、API 和登录配置。安装完成后重启 Harness，验证安全工作区与防护状态，并报告结果。
+```
+
+如果 Agent 无法操作安装窗口，按它给出的路径打开安装器并完成安装，再让 Agent 继续验证。
+
 ## 手动下载与校验
 
 将 EXE、[分卷 01](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/deepseek-harness-v1.0.0-alpha.1/govagentsec-python-1.0.0-alpha.1-cp311-win_amd64.zip.part01)、[分卷 02](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/deepseek-harness-v1.0.0-alpha.1/govagentsec-python-1.0.0-alpha.1-cp311-win_amd64.zip.part02) 和 [SHA256SUMS.txt](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/deepseek-harness-v1.0.0-alpha.1/SHA256SUMS.txt) 保存在同一目录。打开该目录下的 PowerShell，运行以下命令核对完整下载。分卷是原始字节切片，安装器会自动合并。

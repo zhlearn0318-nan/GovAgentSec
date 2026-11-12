@@ -33,6 +33,21 @@ def run_skill_static_pipeline(
     """Run the same Cisco and Aegis Skill pipeline used by the admission API."""
     execution = adapter.scan(skill_path)
     cisco_findings, cisco_analyzers = normalize_skill(execution.report)
+    result = run_local_skill_static_pipeline(
+        skill_path, vendor_findings=cisco_findings, vendor_analyzers=cisco_analyzers,
+        semantic_provider=semantic_provider,
+    )
+    return {**result, "logs": execution.logs[-4:], "vendor_scans": 1}
+
+
+def run_local_skill_static_pipeline(
+    skill_path: Path, *, vendor_findings: list[dict[str, Any]] | None = None,
+    vendor_analyzers: list[str] | None = None,
+    semantic_provider: SemanticProvider | None = None,
+) -> dict[str, Any]:
+    """Share the existing local checks without implying an unavailable vendor scan."""
+    cisco_findings = vendor_findings or []
+    cisco_analyzers = vendor_analyzers or []
     aegis_findings, aegis_analyzers = analyze_skill_tree(skill_path)
     sensitive_findings, sensitive_analyzers = analyze_sensitive_flows(skill_path)
     exec_findings, exec_analyzers = analyze_untrusted_exec_flows(skill_path)
@@ -87,6 +102,6 @@ def run_skill_static_pipeline(
     return {
         "findings": findings,
         "analyzers": analyzers,
-        "logs": execution.logs[-4:],
-        "vendor_scans": 1,
+        "logs": [],
+        "vendor_scans": 0,
     }

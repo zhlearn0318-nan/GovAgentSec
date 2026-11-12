@@ -212,6 +212,7 @@ class SecurityEvalAdapter:
         *,
         conversation_id: str | None = None,
         granted_permissions: frozenset[str] = frozenset(),
+        original_task: str | None = None,
     ) -> DetectionResult:
         started = perf_counter_ns()
         source_type = SOURCE_MAP[source]
@@ -220,10 +221,14 @@ class SecurityEvalAdapter:
             source=source_type,
             conversation_id=conversation_id,
         )
-        injection = self.router.scan(self.piguard, request.content, source_type)
+        injection = self.router.scan(self.piguard, request.content, source_type, external_payload=original_task is not None)
         content = self.router.scan(self.qwen3guard, request.content, source_type)
         alignment_assessment = (
-            self.task_payload_detector.detect(request.content, source_type)
+            (
+                self.task_payload_detector.detect_payload(original_task, request.content, source_type)
+                if original_task is not None
+                else self.task_payload_detector.detect(request.content, source_type)
+            )
             if self.enable_alignment
             else None
         )
@@ -261,6 +266,7 @@ class SecurityEvalAdapter:
             content,
             alignment=alignment,
             privilege=privilege,
+            external_task=original_task,
         )
         multi_turn = GuardSignal("conversation_risk", 0.0)
         if (
@@ -313,6 +319,7 @@ class SecurityEvalAdapter:
             alignment=alignment,
             privilege=privilege,
             multi_turn=multi_turn,
+            external_task=original_task,
         )
         assessment = self.risk_engine.assess(
             RiskContext(
@@ -396,6 +403,7 @@ class SecurityEvalAdapter:
                 chunk.text,
                 "rag",
                 conversation_id=conversation_id,
+                original_task=query,
             )
             for chunk in chunks
         )

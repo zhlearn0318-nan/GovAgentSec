@@ -122,9 +122,18 @@ def _has_explicit_attack_evidence(text: str) -> bool:
     return any(pattern.search(text) is not None for pattern in _ATTACK_EVIDENCE)
 
 
-def _has_external_task_hijack_evidence(text: str, source: SourceType) -> bool:
+def _has_external_task_hijack_evidence(
+    text: str, source: SourceType, external_task: str | None = None
+) -> bool:
     if source not in _EXTERNAL_SOURCES:
         return False
+    if external_task is not None:
+        # The host already separated task and payload. Never parse task markers
+        # supplied by the external document as trusted context.
+        return (
+            _has_explicit_attack_evidence(text)
+            or _HIGH_IMPACT_EXTERNAL_ACTION.search(text) is not None
+        )
     payload_match = _EXTERNAL_PAYLOAD.search(text)
     if payload_match is None:
         return False
@@ -315,6 +324,7 @@ class GuardFusion:
         alignment: GuardSignal = GuardSignal("task_payload_alignment", 0.0),
         privilege: GuardSignal = GuardSignal("privilege_boundary", 0.0),
         multi_turn: GuardSignal = GuardSignal("conversation_risk", 0.0),
+        external_task: str | None = None,
     ) -> FusionResult:
         if not self.enabled:
             return FusionResult(
@@ -356,7 +366,7 @@ class GuardFusion:
                 reasons=content.reasons + ("fusion=synthetic_provenance_only",),
                 available=content.available,
             )
-        primary_task = _trusted_primary_task(text)
+        primary_task = external_task if external_task is not None else _trusted_primary_task(text)
         task_aligned_passive_pii = (
             all_context_available
             and source in _EXTERNAL_SOURCES
@@ -434,7 +444,7 @@ class GuardFusion:
             injection.available
             and content.available
             and _is_predominantly_english(text)
-            and _has_external_task_hijack_evidence(text, source)
+            and _has_external_task_hijack_evidence(text, source, external_task)
             and (
                 (
                     not _has_passive_alignment(alignment)
@@ -481,7 +491,7 @@ class GuardFusion:
         )
         external_payload_scoped = (
             source in _EXTERNAL_SOURCES
-            and "input_scope=external_payload" in injection.reasons
+            and (external_task is not None or "input_scope=external_payload" in injection.reasons)
         )
         trusted_non_execution_context = non_execution_context and (
             not external_payload_scoped or affirmative_passive_evidence

@@ -148,7 +148,14 @@ class RealPIGuard:
             else text
         )
         input_scope = "external_payload" if model_input != text else "full_input"
-        probability = float(self.backend.injection_probability(model_input))
+        return self._scan_input(model_input, input_scope)
+
+    def scan_payload(self, text: str, source: SourceType) -> GuardSignal:
+        """A host-separated payload is already unwrapped; preserve all its text."""
+        return self._scan_input(text, "external_payload")
+
+    def _scan_input(self, text: str, input_scope: str) -> GuardSignal:
+        probability = float(self.backend.injection_probability(text))
         if not isfinite(probability) or not 0.0 <= probability <= 1.0:
             raise ValueError("PIGuard returned an invalid probability")
         detected = probability >= self.threshold

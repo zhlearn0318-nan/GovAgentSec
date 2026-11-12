@@ -1,0 +1,4 @@
+- insert:
+    - id: govagentsec-security
+      name: govagentsec-harness
+      config: {}

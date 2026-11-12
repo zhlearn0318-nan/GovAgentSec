@@ -167,6 +167,21 @@ class TaskPayloadAlignmentDetector:
         task = text[task_start:payload_match.start()].strip()
         prefix = text[:task_match.start()].strip() if task_match else ""
         payload = text[payload_match.end():].strip()
+        return self._assess_parts(task, payload, prefix)
+
+    def detect_payload(
+        self, task: str, payload: str, source: SourceType
+    ) -> TaskPayloadAlignmentAssessment:
+        """Use host-separated fields; payload text cannot redefine the task."""
+        if source not in _EXTERNAL_SOURCES:
+            return self._result(0.0, False, False, True, False, False, "none", "none")
+        if not isinstance(task, str) or not task.strip():
+            raise ValueError("external task must not be blank")
+        return self._assess_parts(task.strip(), payload, "")
+
+    def _assess_parts(
+        self, task: str, payload: str, prefix: str
+    ) -> TaskPayloadAlignmentAssessment:
         analysis_only = bool(_ANALYSIS_INTENT.search(task))
         primary_intent = "analysis" if analysis_only else "read" if _READ_INTENT.search(task) else "action"
         task_actions = _actions(task)

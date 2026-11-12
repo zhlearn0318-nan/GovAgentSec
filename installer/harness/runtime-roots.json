@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "platform": "win_amd64",
+  "pythonMinor": "3.11",
+  "provenance": "Dependency versions from the locally validated protection and scanner environments; exported wheels remain development snapshots.",
+  "roots": [
+    {"name": "torch", "version": "2.7.1+cu128", "source": "protect"},
+    {"name": "transformers", "version": "4.55.4", "source": "protect"},
+    {"name": "scikit-learn", "version": "1.7.1", "source": "protect"},
+    {"name": "rouge-score", "version": "0.1.2", "source": "protect"},
+    {"name": "nltk", "version": "3.9.1", "source": "protect"},
+    {"name": "sentencepiece", "version": "0.2.0", "source": "protect"},
+    {"name": "PyYAML", "version": "6.0.3", "source": "protect"},
+    {"name": "pydantic", "version": "2.13.5", "source": "scanner"}
+  ]
+}

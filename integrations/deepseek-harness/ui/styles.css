@@ -1,0 +1,65 @@
+#govagentsec-harness-guard {
+  --text: #172b2b;
+  --muted: #566b6b;
+  --card: #fff;
+  --border: #dce8e7;
+  --border-strong: #b4ceca;
+  --accent: #007d70;
+  --accent-subtle: #e0f3ef;
+  --ok: #08795c;
+  --ok-subtle: #e0f3eb;
+  --warn: #865800;
+  --warn-subtle: #fff3cf;
+  --danger: #b62f3e;
+  --danger-subtle: #fce7eb;
+  --primary-foreground: #fff;
+  --panel-hover: #f0f7f5;
+  --radius-md: 12px;
+  --radius-sm: 6px;
+  --radius-full: 999px;
+  --shadow-sm: 0 4px 24px #123b3418;
+  --font-body: system-ui, "Microsoft YaHei", sans-serif;
+  --mono: ui-monospace, monospace;
+  --focus-ring: 0 0 0 2px var(--accent);
+  position: fixed;
+  z-index: 100;
+  right: 20px;
+  bottom: 160px;
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 200px);
+  margin: 0;
+  overflow: auto;
+  line-height: 1.5;
+  color-scheme: light;
+}
+#govagentsec-harness-guard *, #govagentsec-harness-guard *::before { box-sizing: border-box; }
+#govagentsec-harness-guard summary { list-style: none; }
+#govagentsec-harness-guard summary::-webkit-details-marker { display: none; }
+#govagentsec-harness-guard summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+#govagentsec-harness-guard:not([open]) .protect-guard__chevron { transform: rotate(180deg); }
+#govagentsec-harness-guard .protect-guard__step-copy strong { font-size: 12px; }
+#govagentsec-harness-guard .protect-guard__step-copy small,
+#govagentsec-harness-guard .protect-guard__step-state,
+#govagentsec-harness-guard .protect-guard__footer { font-size: 10px; }
+#govagentsec-harness-guard .protect-guard__step { min-height: 44px; }
+#govagentsec-harness-guard .protect-guard__summary-text { font-size: 12px; }
+#govagentsec-harness-guard .protect-guard__eyebrow { font-size: 10px; }
+#govagentsec-harness-guard .protect-guard__connection { max-width: 96px; font-size: 10px; text-align: right; }
+#govagentsec-harness-guard .protect-guard__notice { margin: 8px 0 0; color: var(--muted); font-size: 11px; }
+#govagentsec-harness-guard[data-connection="offline"] .protect-guard__connection { color: var(--danger); }
+@media (max-width: 600px) {
+  #govagentsec-harness-guard { right: 12px; width: 296px; }
+}
+@media (prefers-color-scheme: dark) {
+  #govagentsec-harness-guard {
+    --text: #e1eeeb; --muted: #adbfba; --card: #182926;
+    --border: #314740; --border-strong: #50756b;
+    --accent: #79d8c6; --accent-subtle: #1c4940;
+    --ok: #88daba; --ok-subtle: #1d4035;
+    --warn: #f2cb72; --warn-subtle: #493d21;
+    --danger: #ff9fab; --danger-subtle: #4b2830;
+    --primary-foreground: #152922; --panel-hover: #223b33;
+    color-scheme: dark;
+  }
+}

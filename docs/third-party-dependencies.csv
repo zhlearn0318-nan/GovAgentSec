@@ -1,0 +1,476 @@
+﻿ecosystem,group,package,version,marker,license,status,source,evidence
+python,protect,absl-py,2.5.0,,Apache-2.0,declared,requirements-protect-lock.txt,https://pypi.org/pypi/absl-py/2.5.0/json
+python,protect,certifi,2026.7.22,,MPL-2.0,declared,requirements-protect-lock.txt,https://pypi.org/pypi/certifi/2026.7.22/json
+python,protect,charset-normalizer,3.5.1,,MIT,declared,requirements-protect-lock.txt,https://pypi.org/pypi/charset-normalizer/3.5.1/json
+python,protect,click,8.5.0,,BSD-3-Clause,declared,requirements-protect-lock.txt,https://pypi.org/pypi/click/8.5.0/json
+python,protect,cloudpickle,3.1.2,,BSD-3-Clause,declared,requirements-protect-lock.txt,https://pypi.org/pypi/cloudpickle/3.1.2/json
+python,protect,colorama,0.4.6,,BSD License,classifier-declaration,requirements-protect-lock.txt,https://pypi.org/pypi/colorama/0.4.6/json
+python,protect,einops,0.8.1,,MIT,declared,requirements-protect-lock.txt,https://pypi.org/pypi/einops/0.8.1/json
+python,protect,filelock,3.32.6,,MIT,declared,requirements-protect-lock.txt,https://pypi.org/pypi/filelock/3.32.6/json
+python,protect,fsspec,2026.7.0,,BSD-3-Clause,upstream-license,requirements-protect-lock.txt,https://github.com/fsspec/filesystem_spec/blob/2026.7.0/LICENSE
+python,protect,huggingface_hub,0.36.2,,Apache,declared,requirements-protect-lock.txt,https://pypi.org/pypi/huggingface_hub/0.36.2/json
+python,protect,idna,3.19,,BSD-3-Clause,declared,requirements-protect-lock.txt,https://pypi.org/pypi/idna/3.19/json
+python,protect,Jinja2,3.1.6,,BSD License,classifier-declaration,requirements-protect-lock.txt,https://pypi.org/pypi/jinja2/3.1.6/json
+python,protect,joblib,1.6.0,,BSD-3-Clause,declared,requirements-protect-lock.txt,https://pypi.org/pypi/joblib/1.6.0/json
+python,protect,MarkupSafe,3.0.3,,BSD-3-Clause,declared,requirements-protect-lock.txt,https://pypi.org/pypi/markupsafe/3.0.3/json
+python,protect,mpmath,1.3.0,,BSD,declared,requirements-protect-lock.txt,https://pypi.org/pypi/mpmath/1.3.0/json
+python,protect,networkx,3.6.1,,BSD-3-Clause,declared,requirements-protect-lock.txt,https://pypi.org/pypi/networkx/3.6.1/json
+python,protect,nltk,3.9.1,,"Apache License, Version 2.0",declared,requirements-protect-lock.txt,https://pypi.org/pypi/nltk/3.9.1/json
+python,protect,numpy,1.26.4,,BSD License,classifier-declaration,requirements-protect-lock.txt,https://pypi.org/pypi/numpy/1.26.4/json
+python,protect,packaging,26.3,,Apache-2.0 OR BSD-2-Clause,declared,requirements-protect-lock.txt,https://pypi.org/pypi/packaging/26.3/json
+python,protect,protobuf,5.29.4,,3-Clause BSD License,declared,requirements-protect-lock.txt,https://pypi.org/pypi/protobuf/5.29.4/json
+python,protect,PyYAML,6.0.3,,MIT,declared,requirements-protect-lock.txt,https://pypi.org/pypi/pyyaml/6.0.3/json
+python,protect,regex,2026.9.10,,Apache-2.0 AND CNRI-Python,declared,requirements-protect-lock.txt,https://pypi.org/pypi/regex/2026.9.10/json
+python,protect,requests,2.32.4,,Apache-2.0,declared,requirements-protect-lock.txt,https://pypi.org/pypi/requests/2.32.4/json
+python,protect,rouge_score,0.1.2,,Apache Software License,classifier-declaration,requirements-protect-lock.txt,https://pypi.org/pypi/rouge_score/0.1.2/json
+python,protect,safetensors,0.8.0,,Apache Software License,classifier-declaration,requirements-protect-lock.txt,https://pypi.org/pypi/safetensors/0.8.0/json
+python,protect,scikit-learn,1.6.1,,BSD License,classifier-declaration,requirements-protect-lock.txt,https://pypi.org/pypi/scikit-learn/1.6.1/json
+python,protect,scipy,1.17.1,,BSD License,classifier-declaration,requirements-protect-lock.txt,https://pypi.org/pypi/scipy/1.17.1/json
+python,protect,sentencepiece,0.2.0,,Apache,declared,requirements-protect-lock.txt,https://pypi.org/pypi/sentencepiece/0.2.0/json
+python,protect,setuptools,84.0.0,,MIT,declared,requirements-protect-lock.txt,https://pypi.org/pypi/setuptools/84.0.0/json
+python,protect,six,1.17.0,,MIT,declared,requirements-protect-lock.txt,https://pypi.org/pypi/six/1.17.0/json
+python,protect,sympy,1.13.1,,BSD,declared,requirements-protect-lock.txt,https://pypi.org/pypi/sympy/1.13.1/json
+python,protect,threadpoolctl,3.6.0,,BSD-3-Clause,declared,requirements-protect-lock.txt,https://pypi.org/pypi/threadpoolctl/3.6.0/json
+python,protect,tokenizers,0.21.4,,Apache Software License,classifier-declaration,requirements-protect-lock.txt,https://pypi.org/pypi/tokenizers/0.21.4/json
+python,protect,torch,2.6.0+cu124,,BSD-style PyTorch core; bundled binary notices also apply,upstream-core-license,requirements-protect-lock.txt,https://github.com/pytorch/pytorch/blob/v2.6.0/LICENSE
+python,protect,tqdm,4.70.1,,MPL-2.0 AND MIT,declared,requirements-protect-lock.txt,https://pypi.org/pypi/tqdm/4.70.1/json
+python,protect,transformers,4.51.3,,Apache 2.0 License,declared,requirements-protect-lock.txt,https://pypi.org/pypi/transformers/4.51.3/json
+python,protect,typing_extensions,4.16.0,,PSF-2.0,declared,requirements-protect-lock.txt,https://pypi.org/pypi/typing-extensions/4.16.0/json
+python,protect,urllib3,2.7.0,,MIT,declared,requirements-protect-lock.txt,https://pypi.org/pypi/urllib3/2.7.0/json
+python,agentguard,aiosqlite,0.22.1,,MIT License,classifier-declaration,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/aiosqlite/0.22.1/json
+python,agentguard,annotated-types,0.8.0,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/annotated-types/0.8.0/json
+python,agentguard,anyio,4.14.2,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/anyio/4.14.2/json
+python,agentguard,attrs,26.1.0,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/attrs/26.1.0/json
+python,agentguard,certifi,2026.7.22,,MPL-2.0,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/certifi/2026.7.22/json
+python,agentguard,cffi,2.1.1,,MIT-0,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/cffi/2.1.1/json
+python,agentguard,charset-normalizer,3.5.0,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/charset-normalizer/3.5.0/json
+python,agentguard,click,8.5.0,,BSD-3-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/click/8.5.0/json
+python,agentguard,cryptography,50.0.0,,Apache-2.0 OR BSD-3-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/cryptography/50.0.0/json
+python,agentguard,distro,1.9.0,,"Apache License, Version 2.0",declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/distro/1.9.0/json
+python,agentguard,h11,0.16.0,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/h11/0.16.0/json
+python,agentguard,httpcore,1.0.9,,BSD-3-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/httpcore/1.0.9/json
+python,agentguard,httpcore2,2.12.0,,BSD-3-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/httpcore2/2.12.0/json
+python,agentguard,httpx,0.28.1,,BSD-3-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/httpx/0.28.1/json
+python,agentguard,httpx2,2.12.0,,BSD-3-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/httpx2/2.12.0/json
+python,agentguard,idna,3.18,,BSD-3-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/idna/3.18/json
+python,agentguard,jsonpatch,1.33,,Modified BSD License,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/jsonpatch/1.33/json
+python,agentguard,jsonpointer,3.1.1,,Modified BSD License,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/jsonpointer/3.1.1/json
+python,agentguard,jsonschema,4.26.0,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/jsonschema/4.26.0/json
+python,agentguard,jsonschema-specifications,2025.9.1,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/jsonschema-specifications/2025.9.1/json
+python,agentguard,langchain-core,1.5.4,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/langchain-core/1.5.4/json
+python,agentguard,langchain-protocol,0.0.18,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/langchain-protocol/0.0.18/json
+python,agentguard,langgraph,1.2.10,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/langgraph/1.2.10/json
+python,agentguard,langgraph-checkpoint,4.2.0,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/langgraph-checkpoint/4.2.0/json
+python,agentguard,langgraph-checkpoint-sqlite,3.1.1,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/langgraph-checkpoint-sqlite/3.1.1/json
+python,agentguard,langgraph-prebuilt,1.1.0,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/langgraph-prebuilt/1.1.0/json
+python,agentguard,langgraph-sdk,0.4.2,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/langgraph-sdk/0.4.2/json
+python,agentguard,langsmith,0.10.15,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/langsmith/0.10.15/json
+python,agentguard,mcp,2.1.1,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/mcp/2.1.1/json
+python,agentguard,mcp-types,2.1.1,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/mcp-types/2.1.1/json
+python,agentguard,opentelemetry-api,1.44.0,,Apache-2.0,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/opentelemetry-api/1.44.0/json
+python,agentguard,orjson,3.11.9,,MPL-2.0 AND (Apache-2.0 OR MIT),declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/orjson/3.11.9/json
+python,agentguard,ormsgpack,1.12.2,,Apache-2.0 OR MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/ormsgpack/1.12.2/json
+python,agentguard,packaging,26.3,,Apache-2.0 OR BSD-2-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/packaging/26.3/json
+python,agentguard,pycdlib,1.14.0,,LGPLv2,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/pycdlib/1.14.0/json
+python,agentguard,pycparser,3.0,,BSD-3-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/pycparser/3.0/json
+python,agentguard,pydantic,2.13.4,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/pydantic/2.13.4/json
+python,agentguard,pydantic-core,2.46.4,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/pydantic-core/2.46.4/json
+python,agentguard,pyjwt,2.10.1,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/pyjwt/2.10.1/json
+python,agentguard,python-multipart,0.0.32,,Apache-2.0,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/python-multipart/0.0.32/json
+python,agentguard,pywin32,312,; sys_platform == 'win32',PSF,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/pywin32/312/json
+python,agentguard,pyyaml,6.0.3,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/pyyaml/6.0.3/json
+python,agentguard,referencing,0.37.0,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/referencing/0.37.0/json
+python,agentguard,requests,2.34.2,,Apache-2.0,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/requests/2.34.2/json
+python,agentguard,requests-toolbelt,1.0.0,,Apache 2.0,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/requests-toolbelt/1.0.0/json
+python,agentguard,rpds-py,2026.6.3,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/rpds-py/2026.6.3/json
+python,agentguard,sniffio,1.3.1,,MIT OR Apache-2.0,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/sniffio/1.3.1/json
+python,agentguard,sqlite-vec,0.1.9,,"MIT License, Apache License, Version 2.0",declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/sqlite-vec/0.1.9/json
+python,agentguard,sse-starlette,3.4.8,,BSD-3-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/sse-starlette/3.4.8/json
+python,agentguard,starlette,1.6.0,,BSD-3-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/starlette/1.6.0/json
+python,agentguard,tenacity,9.1.4,,Apache 2.0,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/tenacity/9.1.4/json
+python,agentguard,truststore,0.10.4,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/truststore/0.10.4/json
+python,agentguard,typing-extensions,4.16.0,,PSF-2.0,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/typing-extensions/4.16.0/json
+python,agentguard,typing-inspection,0.4.4,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/typing-inspection/0.4.4/json
+python,agentguard,urllib3,2.7.0,,MIT,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/urllib3/2.7.0/json
+python,agentguard,uuid-utils,0.17.0,,BSD-3-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/uuid-utils/0.17.0/json
+python,agentguard,uvicorn,0.52.4,,BSD-3-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/uvicorn/0.52.4/json
+python,agentguard,wasmtime,47.0.1,,Apache-2.0 WITH LLVM-exception,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/wasmtime/47.0.1/json
+python,agentguard,websockets,15.0.1,,BSD-3-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/websockets/15.0.1/json
+python,agentguard,xxhash,4.0.0,,BSD-2-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/xxhash/4.0.0/json
+python,agentguard,zstandard,0.25.0,,BSD-3-Clause,declared,modules/agentguard-group2/requirements-lock.txt,https://pypi.org/pypi/zstandard/0.25.0/json
+python,aegis-backend,annotated-doc,0.0.4,,MIT,declared,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/annotated-doc/0.0.4/json
+python,aegis-backend,annotated-types,0.7.0,,MIT License,classifier-declaration,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/annotated-types/0.7.0/json
+python,aegis-backend,anyio,4.12.0,,MIT,declared,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/anyio/4.12.0/json
+python,aegis-backend,click,8.3.3,,BSD-3-Clause,declared,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/click/8.3.3/json
+python,aegis-backend,colorama,0.4.6,; sys_platform == 'win32',BSD License,classifier-declaration,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/colorama/0.4.6/json
+python,aegis-backend,fastapi,0.141.1,,MIT,declared,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/fastapi/0.141.1/json
+python,aegis-backend,h11,0.16.0,,MIT,declared,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/h11/0.16.0/json
+python,aegis-backend,idna,3.19,,BSD-3-Clause,declared,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/idna/3.19/json
+python,aegis-backend,pydantic,2.12.5,,MIT,declared,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/pydantic/2.12.5/json
+python,aegis-backend,pydantic-core,2.41.5,,MIT,declared,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/pydantic-core/2.41.5/json
+python,aegis-backend,python-multipart,0.0.32,,Apache-2.0,declared,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/python-multipart/0.0.32/json
+python,aegis-backend,pyyaml,6.0.3,,MIT,declared,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/pyyaml/6.0.3/json
+python,aegis-backend,starlette,1.3.1,,BSD-3-Clause,declared,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/starlette/1.3.1/json
+python,aegis-backend,typing-extensions,4.15.0,,PSF-2.0,declared,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/typing-extensions/4.15.0/json
+python,aegis-backend,typing-inspection,0.4.2,,MIT,declared,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/typing-inspection/0.4.2/json
+python,aegis-backend,uvicorn,0.38.0,,BSD-3-Clause,declared,modules/aegis/demo_web/backend/requirements.lock,https://pypi.org/pypi/uvicorn/0.38.0/json
+python,aegis-security-overrides,aiohttp,3.14.3,,Apache-2.0 AND MIT,declared,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/aiohttp/3.14.3/json
+python,aegis-security-overrides,black,26.3.1,,MIT,declared,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/black/26.3.1/json
+python,aegis-security-overrides,cryptography,50.0.0,,Apache-2.0 OR BSD-3-Clause,declared,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/cryptography/50.0.0/json
+python,aegis-security-overrides,filelock,3.20.3,,Unlicense,declared,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/filelock/3.20.3/json
+python,aegis-security-overrides,mcp,1.28.1,,MIT,declared,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/mcp/1.28.1/json
+python,aegis-security-overrides,msgpack,1.2.1,,Apache-2.0,declared,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/msgpack/1.2.1/json
+python,aegis-security-overrides,pathspec,1.1.1,,Mozilla Public License 2.0 (MPL 2.0),classifier-declaration,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/pathspec/1.1.1/json
+python,aegis-security-overrides,pip,26.2,,MIT,declared,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/pip/26.2/json
+python,aegis-security-overrides,pydantic-settings,2.14.2,,MIT,declared,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/pydantic-settings/2.14.2/json
+python,aegis-security-overrides,pygments,2.20.0,,BSD-2-Clause,declared,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/pygments/2.20.0/json
+python,aegis-security-overrides,pyjwt,2.13.0,,MIT,declared,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/pyjwt/2.13.0/json
+python,aegis-security-overrides,pytest,9.0.3,,MIT,declared,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/pytest/9.0.3/json
+python,aegis-security-overrides,python-dotenv,1.2.2,,BSD-3-Clause,declared,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/python-dotenv/1.2.2/json
+python,aegis-security-overrides,pytokens,0.4.1,,MIT License,classifier-declaration,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/pytokens/0.4.1/json
+python,aegis-security-overrides,requests,2.33.0,,Apache-2.0,declared,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/requests/2.33.0/json
+python,aegis-security-overrides,urllib3,2.7.0,,MIT,declared,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/urllib3/2.7.0/json
+python,aegis-security-overrides,virtualenv,20.36.1,,MIT,declared,modules/aegis/demo_web/backend/runtime-security.lock,https://pypi.org/pypi/virtualenv/20.36.1/json
+python,aegis-dev,annotated-doc,0.0.4,,MIT,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/annotated-doc/0.0.4/json
+python,aegis-dev,annotated-types,0.7.0,,MIT License,classifier-declaration,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/annotated-types/0.7.0/json
+python,aegis-dev,anyio,4.12.0,,MIT,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/anyio/4.12.0/json
+python,aegis-dev,certifi,2026.7.22,,MPL-2.0,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/certifi/2026.7.22/json
+python,aegis-dev,charset-normalizer,3.5.1,,MIT,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/charset-normalizer/3.5.1/json
+python,aegis-dev,click,8.3.3,,BSD-3-Clause,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/click/8.3.3/json
+python,aegis-dev,colorama,0.4.6,; sys_platform == 'win32',BSD License,classifier-declaration,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/colorama/0.4.6/json
+python,aegis-dev,fastapi,0.141.1,,MIT,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/fastapi/0.141.1/json
+python,aegis-dev,h11,0.16.0,,MIT,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/h11/0.16.0/json
+python,aegis-dev,httpcore2,2.12.0,; sys_platform != 'emscripten',BSD-3-Clause,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/httpcore2/2.12.0/json
+python,aegis-dev,httpx2,2.12.0,,BSD-3-Clause,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/httpx2/2.12.0/json
+python,aegis-dev,httpx2-jsfetch,1.0,; sys_platform == 'emscripten',BSD-3-Clause,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/httpx2-jsfetch/1.0/json
+python,aegis-dev,idna,3.19,,BSD-3-Clause,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/idna/3.19/json
+python,aegis-dev,iniconfig,2.3.0,,MIT,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/iniconfig/2.3.0/json
+python,aegis-dev,packaging,25.0,,Apache Software License; BSD License,classifier-declaration,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/packaging/25.0/json
+python,aegis-dev,pluggy,1.6.0,,MIT,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/pluggy/1.6.0/json
+python,aegis-dev,pydantic,2.12.5,,MIT,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/pydantic/2.12.5/json
+python,aegis-dev,pydantic-core,2.41.5,,MIT,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/pydantic-core/2.41.5/json
+python,aegis-dev,pygments,2.20.0,,BSD-2-Clause,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/pygments/2.20.0/json
+python,aegis-dev,pytest,9.0.3,,MIT,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/pytest/9.0.3/json
+python,aegis-dev,python-multipart,0.0.32,,Apache-2.0,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/python-multipart/0.0.32/json
+python,aegis-dev,pyyaml,6.0.3,,MIT,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/pyyaml/6.0.3/json
+python,aegis-dev,requests,2.33.0,,Apache-2.0,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/requests/2.33.0/json
+python,aegis-dev,starlette,1.3.1,,BSD-3-Clause,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/starlette/1.3.1/json
+python,aegis-dev,truststore,0.10.4,; sys_platform != 'emscripten',MIT,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/truststore/0.10.4/json
+python,aegis-dev,typing-extensions,4.15.0,,PSF-2.0,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/typing-extensions/4.15.0/json
+python,aegis-dev,typing-inspection,0.4.2,,MIT,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/typing-inspection/0.4.2/json
+python,aegis-dev,urllib3,2.7.0,,MIT,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/urllib3/2.7.0/json
+python,aegis-dev,uvicorn,0.38.0,,BSD-3-Clause,declared,modules/aegis/demo_web/backend/requirements-dev.lock,https://pypi.org/pypi/uvicorn/0.38.0/json
+python,aegis-ci,yara-python,4.5.4,,Apache 2.0,declared,modules/aegis/demo_web/backend/requirements-ci.lock,https://pypi.org/pypi/yara-python/4.5.4/json
+python,cisco-skill-dependencies,aiohappyeyeballs,2.6.1,,PSF-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/aiohappyeyeballs/2.6.1/json
+python,cisco-skill-dependencies,aiohttp,3.14.1,,Apache-2.0 AND MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/aiohttp/3.14.1/json
+python,cisco-skill-dependencies,aiosignal,1.4.0,,Apache 2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/aiosignal/1.4.0/json
+python,cisco-skill-dependencies,annotated-doc,0.0.4,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/annotated-doc/0.0.4/json
+python,cisco-skill-dependencies,annotated-types,0.7.0,,MIT License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/annotated-types/0.7.0/json
+python,cisco-skill-dependencies,anthropic,0.97.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/anthropic/0.97.0/json
+python,cisco-skill-dependencies,anyio,4.13.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/anyio/4.13.0/json
+python,cisco-skill-dependencies,async-timeout,5.0.1,; python_full_version < '3.11',Apache 2,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/async-timeout/5.0.1/json
+python,cisco-skill-dependencies,attrs,26.1.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/attrs/26.1.0/json
+python,cisco-skill-dependencies,backports-asyncio-runner,1.2.0,; python_full_version < '3.11',PSF-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/backports-asyncio-runner/1.2.0/json
+python,cisco-skill-dependencies,boolean-py,5.0,,BSD-2-Clause,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/boolean-py/5.0/json
+python,cisco-skill-dependencies,cachecontrol,0.14.4,,Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/cachecontrol/0.14.4/json
+python,cisco-skill-dependencies,certifi,2026.4.22,,MPL-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/certifi/2026.4.22/json
+python,cisco-skill-dependencies,cffi,2.0.0,; platform_python_implementation != 'PyPy',MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/cffi/2.0.0/json
+python,cisco-skill-dependencies,cfgv,3.5.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/cfgv/3.5.0/json
+python,cisco-skill-dependencies,charset-normalizer,3.4.7,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/charset-normalizer/3.4.7/json
+python,cisco-skill-dependencies,click,8.1.8,,BSD License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/click/8.1.8/json
+python,cisco-skill-dependencies,colorama,0.4.6,; sys_platform == 'win32',BSD License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/colorama/0.4.6/json
+python,cisco-skill-dependencies,colorclass,2.2.2,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/colorclass/2.2.2/json
+python,cisco-skill-dependencies,coloredlogs,15.0.1,; python_full_version < '3.11',MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/coloredlogs/15.0.1/json
+python,cisco-skill-dependencies,confusable-homoglyphs,3.3.1,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/confusable-homoglyphs/3.3.1/json
+python,cisco-skill-dependencies,coverage,7.13.5,,Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/coverage/7.13.5/json
+python,cisco-skill-dependencies,cryptography,49.0.0,; (platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_python_implementation != 'PyPy' and sys_platform == 'win32') or (sys_platform != 'darwin' and sys_platform != 'win32'),Apache-2.0 OR BSD-3-Clause,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/cryptography/49.0.0/json
+python,cisco-skill-dependencies,cyclonedx-python-lib,11.7.0,,Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/cyclonedx-python-lib/11.7.0/json
+python,cisco-skill-dependencies,defusedxml,0.7.1,,PSFL,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/defusedxml/0.7.1/json
+python,cisco-skill-dependencies,distlib,0.4.0,,PSF-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/distlib/0.4.0/json
+python,cisco-skill-dependencies,distro,1.9.0,,"Apache License, Version 2.0",declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/distro/1.9.0/json
+python,cisco-skill-dependencies,docstring-parser,0.18.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/docstring-parser/0.18.0/json
+python,cisco-skill-dependencies,easygui,0.98.3,,BSD,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/easygui/0.98.3/json
+python,cisco-skill-dependencies,exceptiongroup,1.3.1,; python_full_version < '3.11',MIT License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/exceptiongroup/1.3.1/json
+python,cisco-skill-dependencies,fastapi,0.136.1,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/fastapi/0.136.1/json
+python,cisco-skill-dependencies,fastuuid,0.14.0,,BSD License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/fastuuid/0.14.0/json
+python,cisco-skill-dependencies,filelock,3.29.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/filelock/3.29.0/json
+python,cisco-skill-dependencies,flatbuffers,25.12.19,,Apache 2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/flatbuffers/25.12.19/json
+python,cisco-skill-dependencies,frozenlist,1.8.0,,Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/frozenlist/1.8.0/json
+python,cisco-skill-dependencies,fsspec,2026.3.0,,BSD-3-Clause,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/fsspec/2026.3.0/json
+python,cisco-skill-dependencies,h11,0.16.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/h11/0.16.0/json
+python,cisco-skill-dependencies,hf-xet,1.4.3,; platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64',Apache Software License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/hf-xet/1.4.3/json
+python,cisco-skill-dependencies,httpcore,1.0.9,,BSD-3-Clause,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/httpcore/1.0.9/json
+python,cisco-skill-dependencies,httptools,0.7.1,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/httptools/0.7.1/json
+python,cisco-skill-dependencies,httpx,0.28.1,,BSD-3-Clause,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/httpx/0.28.1/json
+python,cisco-skill-dependencies,huggingface-hub,1.12.2,,Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/huggingface-hub/1.12.2/json
+python,cisco-skill-dependencies,humanfriendly,10.0,; python_full_version < '3.11',MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/humanfriendly/10.0/json
+python,cisco-skill-dependencies,identify,2.6.19,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/identify/2.6.19/json
+python,cisco-skill-dependencies,idna,3.18,,BSD-3-Clause,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/idna/3.18/json
+python,cisco-skill-dependencies,importlib-metadata,8.5.0,,Apache Software License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/importlib-metadata/8.5.0/json
+python,cisco-skill-dependencies,iniconfig,2.3.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/iniconfig/2.3.0/json
+python,cisco-skill-dependencies,jinja2,3.1.6,,BSD License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/jinja2/3.1.6/json
+python,cisco-skill-dependencies,jiter,0.14.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/jiter/0.14.0/json
+python,cisco-skill-dependencies,jsonschema,4.23.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/jsonschema/4.23.0/json
+python,cisco-skill-dependencies,jsonschema-specifications,2025.9.1,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/jsonschema-specifications/2025.9.1/json
+python,cisco-skill-dependencies,librt,0.9.0,; platform_python_implementation != 'PyPy',MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/librt/0.9.0/json
+python,cisco-skill-dependencies,liccheck,0.9.2,,Apache Software License,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/liccheck/0.9.2/json
+python,cisco-skill-dependencies,license-expression,30.4.4,,Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/license-expression/30.4.4/json
+python,cisco-skill-dependencies,linkify-it-py,2.1.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/linkify-it-py/2.1.0/json
+python,cisco-skill-dependencies,litellm,1.89.3,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/litellm/1.89.3/json
+python,cisco-skill-dependencies,magika,1.0.2,,Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/magika/1.0.2/json
+python,cisco-skill-dependencies,markdown-it-py,4.0.0,,MIT License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/markdown-it-py/4.0.0/json
+python,cisco-skill-dependencies,markupsafe,3.0.3,,BSD-3-Clause,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/markupsafe/3.0.3/json
+python,cisco-skill-dependencies,mdit-py-plugins,0.5.0,,MIT License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/mdit-py-plugins/0.5.0/json
+python,cisco-skill-dependencies,mdurl,0.1.2,,MIT License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/mdurl/0.1.2/json
+python,cisco-skill-dependencies,mpmath,1.3.0,; python_full_version < '3.11',BSD,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/mpmath/1.3.0/json
+python,cisco-skill-dependencies,msgpack,1.2.1,,Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/msgpack/1.2.1/json
+python,cisco-skill-dependencies,msoffcrypto-tool,6.0.0,; (platform_python_implementation != 'PyPy' and sys_platform == 'darwin') or (platform_python_implementation != 'PyPy' and sys_platform == 'win32') or (sys_platform != 'darwin' and sys_platform != 'win32'),MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/msoffcrypto-tool/6.0.0/json
+python,cisco-skill-dependencies,multidict,6.7.1,,Apache License 2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/multidict/6.7.1/json
+python,cisco-skill-dependencies,mypy,1.19.1,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/mypy/1.19.1/json
+python,cisco-skill-dependencies,mypy-extensions,1.1.0,,MIT,upstream-license,modules/aegis/results/skill_scanner_locked_requirements.txt,https://github.com/python/mypy_extensions/blob/1.1.0/LICENSE
+python,cisco-skill-dependencies,nodeenv,1.10.0,,BSD,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/nodeenv/1.10.0/json
+python,cisco-skill-dependencies,numpy,2.2.6,; python_full_version < '3.11',BSD License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/numpy/2.2.6/json
+python,cisco-skill-dependencies,numpy,2.4.4,; python_full_version >= '3.11',BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/numpy/2.4.4/json
+python,cisco-skill-dependencies,olefile,0.47,,BSD,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/olefile/0.47/json
+python,cisco-skill-dependencies,oletools,0.60.2,,BSD,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/oletools/0.60.2/json
+python,cisco-skill-dependencies,onnxruntime,1.23.2,; python_full_version < '3.11',MIT License,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/onnxruntime/1.23.2/json
+python,cisco-skill-dependencies,onnxruntime,1.25.1,; python_full_version >= '3.11',MIT License,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/onnxruntime/1.25.1/json
+python,cisco-skill-dependencies,openai,2.24.0,,Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/openai/2.24.0/json
+python,cisco-skill-dependencies,packageurl-python,0.17.6,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/packageurl-python/0.17.6/json
+python,cisco-skill-dependencies,packaging,26.2,,Apache-2.0 OR BSD-2-Clause,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/packaging/26.2/json
+python,cisco-skill-dependencies,pathspec,1.1.1,,Mozilla Public License 2.0 (MPL 2.0),classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pathspec/1.1.1/json
+python,cisco-skill-dependencies,pcodedmp,1.2.6,,GPL,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pcodedmp/1.2.6/json
+python,cisco-skill-dependencies,pdfid,1.1.3,,MIT License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pdfid/1.1.3/json
+python,cisco-skill-dependencies,pip,26.1.2,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pip/26.1.2/json
+python,cisco-skill-dependencies,pip-api,0.0.34,,Apache Software License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pip-api/0.0.34/json
+python,cisco-skill-dependencies,pip-audit,2.10.0,,Apache Software License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pip-audit/2.10.0/json
+python,cisco-skill-dependencies,pip-requirements-parser,32.0.1,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pip-requirements-parser/32.0.1/json
+python,cisco-skill-dependencies,platformdirs,4.9.6,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/platformdirs/4.9.6/json
+python,cisco-skill-dependencies,pluggy,1.6.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pluggy/1.6.0/json
+python,cisco-skill-dependencies,pre-commit,4.5.1,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pre-commit/4.5.1/json
+python,cisco-skill-dependencies,propcache,0.4.1,,Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/propcache/0.4.1/json
+python,cisco-skill-dependencies,protobuf,5.29.6,,3-Clause BSD License,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/protobuf/5.29.6/json
+python,cisco-skill-dependencies,py-serializable,2.1.0,,Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/py-serializable/2.1.0/json
+python,cisco-skill-dependencies,pycparser,3.0,; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy',BSD-3-Clause,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pycparser/3.0/json
+python,cisco-skill-dependencies,pydantic,2.12.5,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pydantic/2.12.5/json
+python,cisco-skill-dependencies,pydantic-core,2.41.5,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pydantic-core/2.41.5/json
+python,cisco-skill-dependencies,pygments,2.20.0,,BSD-2-Clause,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pygments/2.20.0/json
+python,cisco-skill-dependencies,pyparsing,3.3.2,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pyparsing/3.3.2/json
+python,cisco-skill-dependencies,pyreadline3,3.5.4,; python_full_version < '3.11' and sys_platform == 'win32',BSD,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pyreadline3/3.5.4/json
+python,cisco-skill-dependencies,pytest,9.0.3,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pytest/9.0.3/json
+python,cisco-skill-dependencies,pytest-asyncio,1.3.0,,Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pytest-asyncio/1.3.0/json
+python,cisco-skill-dependencies,pytest-cov,7.0.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pytest-cov/7.0.0/json
+python,cisco-skill-dependencies,python-discovery,1.2.2,,MIT License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/python-discovery/1.2.2/json
+python,cisco-skill-dependencies,python-dotenv,1.2.2,,BSD-3-Clause,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/python-dotenv/1.2.2/json
+python,cisco-skill-dependencies,python-frontmatter,1.1.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/python-frontmatter/1.1.0/json
+python,cisco-skill-dependencies,python-multipart,0.0.32,,Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/python-multipart/0.0.32/json
+python,cisco-skill-dependencies,pyyaml,6.0.3,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/pyyaml/6.0.3/json
+python,cisco-skill-dependencies,referencing,0.37.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/referencing/0.37.0/json
+python,cisco-skill-dependencies,regex,2026.4.4,,Apache-2.0 AND CNRI-Python,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/regex/2026.4.4/json
+python,cisco-skill-dependencies,requests,2.33.1,,Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/requests/2.33.1/json
+python,cisco-skill-dependencies,rich,14.3.4,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/rich/14.3.4/json
+python,cisco-skill-dependencies,rpds-py,0.30.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/rpds-py/0.30.0/json
+python,cisco-skill-dependencies,ruff,0.14.12,,MIT License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/ruff/0.14.12/json
+python,cisco-skill-dependencies,semantic-version,2.10.0,,BSD,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/semantic-version/2.10.0/json
+python,cisco-skill-dependencies,shellingham,1.5.4,,ISC License,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/shellingham/1.5.4/json
+python,cisco-skill-dependencies,sniffio,1.3.1,,MIT OR Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/sniffio/1.3.1/json
+python,cisco-skill-dependencies,sortedcontainers,2.4.0,,Apache 2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/sortedcontainers/2.4.0/json
+python,cisco-skill-dependencies,starlette,1.3.1,,BSD-3-Clause,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/starlette/1.3.1/json
+python,cisco-skill-dependencies,sympy,1.14.0,; python_full_version < '3.11',BSD,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/sympy/1.14.0/json
+python,cisco-skill-dependencies,tabulate,0.10.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/tabulate/0.10.0/json
+python,cisco-skill-dependencies,textual,7.5.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/textual/7.5.0/json
+python,cisco-skill-dependencies,tiktoken,0.12.0,,MIT,upstream-license,modules/aegis/results/skill_scanner_locked_requirements.txt,https://github.com/openai/tiktoken/blob/0.12.0/LICENSE
+python,cisco-skill-dependencies,tokenizers,0.22.2,,Apache Software License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/tokenizers/0.22.2/json
+python,cisco-skill-dependencies,toml,0.10.2,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/toml/0.10.2/json
+python,cisco-skill-dependencies,tomli,2.4.1,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/tomli/2.4.1/json
+python,cisco-skill-dependencies,tomli-w,1.2.0,,MIT License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/tomli-w/1.2.0/json
+python,cisco-skill-dependencies,tqdm,4.67.3,,MPL-2.0 AND MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/tqdm/4.67.3/json
+python,cisco-skill-dependencies,typer,0.23.1,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/typer/0.23.1/json
+python,cisco-skill-dependencies,typing-extensions,4.15.0,,PSF-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/typing-extensions/4.15.0/json
+python,cisco-skill-dependencies,typing-inspection,0.4.2,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/typing-inspection/0.4.2/json
+python,cisco-skill-dependencies,uc-micro-py,2.0.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/uc-micro-py/2.0.0/json
+python,cisco-skill-dependencies,urllib3,2.7.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/urllib3/2.7.0/json
+python,cisco-skill-dependencies,uvicorn,0.46.0,,BSD-3-Clause,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/uvicorn/0.46.0/json
+python,cisco-skill-dependencies,uvloop,0.22.1,; platform_python_implementation != 'PyPy' and sys_platform != 'cygwin' and sys_platform != 'win32',MIT License,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/uvloop/0.22.1/json
+python,cisco-skill-dependencies,virtualenv,21.3.0,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/virtualenv/21.3.0/json
+python,cisco-skill-dependencies,watchfiles,1.1.1,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/watchfiles/1.1.1/json
+python,cisco-skill-dependencies,websockets,16.0,,BSD-3-Clause,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/websockets/16.0/json
+python,cisco-skill-dependencies,win-unicode-console,0.5,; platform_python_implementation != 'PyPy' and sys_platform == 'win32',MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/win-unicode-console/0.5/json
+python,cisco-skill-dependencies,yara-x,1.15.0,,BSD License,classifier-declaration,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/yara-x/1.15.0/json
+python,cisco-skill-dependencies,yarl,1.23.0,,Apache-2.0,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/yarl/1.23.0/json
+python,cisco-skill-dependencies,zipp,3.23.1,,MIT,declared,modules/aegis/results/skill_scanner_locked_requirements.txt,https://pypi.org/pypi/zipp/3.23.1/json
+python,cisco-mcp-dependencies,aiohappyeyeballs,2.6.1,,PSF-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/aiohappyeyeballs/2.6.1/json
+python,cisco-mcp-dependencies,aiohttp,3.13.5,,Apache-2.0 AND MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/aiohttp/3.13.5/json
+python,cisco-mcp-dependencies,aiosignal,1.4.0,,Apache 2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/aiosignal/1.4.0/json
+python,cisco-mcp-dependencies,annotated-doc,0.0.4,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/annotated-doc/0.0.4/json
+python,cisco-mcp-dependencies,annotated-types,0.7.0,,MIT License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/annotated-types/0.7.0/json
+python,cisco-mcp-dependencies,anyio,4.12.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/anyio/4.12.0/json
+python,cisco-mcp-dependencies,attrs,25.4.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/attrs/25.4.0/json
+python,cisco-mcp-dependencies,black,25.12.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/black/25.12.0/json
+python,cisco-mcp-dependencies,boolean-py,5.0,,BSD-2-Clause,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/boolean-py/5.0/json
+python,cisco-mcp-dependencies,cachecontrol,0.14.4,,Apache-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/cachecontrol/0.14.4/json
+python,cisco-mcp-dependencies,certifi,2025.11.12,,MPL-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/certifi/2025.11.12/json
+python,cisco-mcp-dependencies,cffi,2.0.0,; platform_python_implementation != 'PyPy',MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/cffi/2.0.0/json
+python,cisco-mcp-dependencies,cfgv,3.5.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/cfgv/3.5.0/json
+python,cisco-mcp-dependencies,charset-normalizer,3.4.4,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/charset-normalizer/3.4.4/json
+python,cisco-mcp-dependencies,click,8.1.8,,BSD License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/click/8.1.8/json
+python,cisco-mcp-dependencies,colorama,0.4.6,; sys_platform == 'win32',BSD License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/colorama/0.4.6/json
+python,cisco-mcp-dependencies,coverage,7.13.0,,Apache-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/coverage/7.13.0/json
+python,cisco-mcp-dependencies,cryptography,46.0.3,,Apache-2.0 OR BSD-3-Clause,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/cryptography/46.0.3/json
+python,cisco-mcp-dependencies,cyclonedx-python-lib,11.7.0,,Apache-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/cyclonedx-python-lib/11.7.0/json
+python,cisco-mcp-dependencies,defusedxml,0.7.1,,PSFL,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/defusedxml/0.7.1/json
+python,cisco-mcp-dependencies,distlib,0.4.0,,PSF-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/distlib/0.4.0/json
+python,cisco-mcp-dependencies,distro,1.9.0,,"Apache License, Version 2.0",declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/distro/1.9.0/json
+python,cisco-mcp-dependencies,expandvars,1.1.2,,MIT License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/expandvars/1.1.2/json
+python,cisco-mcp-dependencies,fastapi,0.125.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/fastapi/0.125.0/json
+python,cisco-mcp-dependencies,fastuuid,0.14.0,,BSD License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/fastuuid/0.14.0/json
+python,cisco-mcp-dependencies,filelock,3.20.1,,Unlicense,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/filelock/3.20.1/json
+python,cisco-mcp-dependencies,flake8,7.3.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/flake8/7.3.0/json
+python,cisco-mcp-dependencies,frozenlist,1.8.0,,Apache-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/frozenlist/1.8.0/json
+python,cisco-mcp-dependencies,fsspec,2025.12.0,,BSD-3-Clause,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/fsspec/2025.12.0/json
+python,cisco-mcp-dependencies,h11,0.16.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/h11/0.16.0/json
+python,cisco-mcp-dependencies,hf-xet,1.2.0,; platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64',Apache Software License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/hf-xet/1.2.0/json
+python,cisco-mcp-dependencies,httpcore,1.0.9,,BSD-3-Clause,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/httpcore/1.0.9/json
+python,cisco-mcp-dependencies,httpx,0.28.1,,BSD-3-Clause,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/httpx/0.28.1/json
+python,cisco-mcp-dependencies,httpx-sse,0.4.3,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/httpx-sse/0.4.3/json
+python,cisco-mcp-dependencies,huggingface-hub,1.2.3,,Apache,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/huggingface-hub/1.2.3/json
+python,cisco-mcp-dependencies,identify,2.6.15,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/identify/2.6.15/json
+python,cisco-mcp-dependencies,idna,3.11,,BSD-3-Clause,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/idna/3.11/json
+python,cisco-mcp-dependencies,importlib-metadata,8.5.0,,Apache Software License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/importlib-metadata/8.5.0/json
+python,cisco-mcp-dependencies,iniconfig,2.3.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/iniconfig/2.3.0/json
+python,cisco-mcp-dependencies,isort,7.0.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/isort/7.0.0/json
+python,cisco-mcp-dependencies,jinja2,3.1.6,,BSD License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/jinja2/3.1.6/json
+python,cisco-mcp-dependencies,jiter,0.12.0,,MIT License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/jiter/0.12.0/json
+python,cisco-mcp-dependencies,jsonschema,4.23.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/jsonschema/4.23.0/json
+python,cisco-mcp-dependencies,jsonschema-specifications,2025.9.1,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/jsonschema-specifications/2025.9.1/json
+python,cisco-mcp-dependencies,librt,0.7.4,; platform_python_implementation != 'PyPy',MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/librt/0.7.4/json
+python,cisco-mcp-dependencies,license-expression,30.4.4,,Apache-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/license-expression/30.4.4/json
+python,cisco-mcp-dependencies,litellm,1.93.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/litellm/1.93.0/json
+python,cisco-mcp-dependencies,markdown-it-py,4.0.0,,MIT License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/markdown-it-py/4.0.0/json
+python,cisco-mcp-dependencies,markupsafe,3.0.3,,BSD-3-Clause,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/markupsafe/3.0.3/json
+python,cisco-mcp-dependencies,mccabe,0.7.0,,Expat license,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/mccabe/0.7.0/json
+python,cisco-mcp-dependencies,mcp,1.25.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/mcp/1.25.0/json
+python,cisco-mcp-dependencies,mdurl,0.1.2,,MIT License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/mdurl/0.1.2/json
+python,cisco-mcp-dependencies,msgpack,1.1.2,,Apache-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/msgpack/1.1.2/json
+python,cisco-mcp-dependencies,multidict,6.7.0,,Apache License 2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/multidict/6.7.0/json
+python,cisco-mcp-dependencies,mypy,1.19.1,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/mypy/1.19.1/json
+python,cisco-mcp-dependencies,mypy-extensions,1.1.0,,MIT,upstream-license,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://github.com/python/mypy_extensions/blob/1.1.0/LICENSE
+python,cisco-mcp-dependencies,nodeenv,1.9.1,,BSD,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/nodeenv/1.9.1/json
+python,cisco-mcp-dependencies,openai,2.30.0,,Apache-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/openai/2.30.0/json
+python,cisco-mcp-dependencies,packageurl-python,0.17.6,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/packageurl-python/0.17.6/json
+python,cisco-mcp-dependencies,packaging,25.0,,Apache Software License; BSD License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/packaging/25.0/json
+python,cisco-mcp-dependencies,pathspec,0.12.1,,Mozilla Public License 2.0 (MPL 2.0),classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pathspec/0.12.1/json
+python,cisco-mcp-dependencies,pip,26.0.1,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pip/26.0.1/json
+python,cisco-mcp-dependencies,pip-api,0.0.34,,Apache Software License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pip-api/0.0.34/json
+python,cisco-mcp-dependencies,pip-audit,2.10.0,,Apache Software License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pip-audit/2.10.0/json
+python,cisco-mcp-dependencies,pip-requirements-parser,32.0.1,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pip-requirements-parser/32.0.1/json
+python,cisco-mcp-dependencies,platformdirs,4.5.1,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/platformdirs/4.5.1/json
+python,cisco-mcp-dependencies,pluggy,1.6.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pluggy/1.6.0/json
+python,cisco-mcp-dependencies,pre-commit,4.5.1,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pre-commit/4.5.1/json
+python,cisco-mcp-dependencies,propcache,0.4.1,,Apache-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/propcache/0.4.1/json
+python,cisco-mcp-dependencies,puremagic,1.30,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/puremagic/1.30/json
+python,cisco-mcp-dependencies,py-serializable,2.1.0,,Apache-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/py-serializable/2.1.0/json
+python,cisco-mcp-dependencies,pycodestyle,2.14.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pycodestyle/2.14.0/json
+python,cisco-mcp-dependencies,pycparser,2.23,; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy',BSD-3-Clause,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pycparser/2.23/json
+python,cisco-mcp-dependencies,pydantic,2.12.5,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pydantic/2.12.5/json
+python,cisco-mcp-dependencies,pydantic-core,2.41.5,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pydantic-core/2.41.5/json
+python,cisco-mcp-dependencies,pydantic-settings,2.12.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pydantic-settings/2.12.0/json
+python,cisco-mcp-dependencies,pyflakes,3.4.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pyflakes/3.4.0/json
+python,cisco-mcp-dependencies,pygments,2.19.2,,BSD-2-Clause,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pygments/2.19.2/json
+python,cisco-mcp-dependencies,pyjwt,2.10.1,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pyjwt/2.10.1/json
+python,cisco-mcp-dependencies,pyparsing,3.3.2,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pyparsing/3.3.2/json
+python,cisco-mcp-dependencies,pytest,9.0.2,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pytest/9.0.2/json
+python,cisco-mcp-dependencies,pytest-asyncio,1.3.0,,Apache-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pytest-asyncio/1.3.0/json
+python,cisco-mcp-dependencies,pytest-cov,7.0.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pytest-cov/7.0.0/json
+python,cisco-mcp-dependencies,python-dotenv,1.0.1,,BSD-3-Clause,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/python-dotenv/1.0.1/json
+python,cisco-mcp-dependencies,python-multipart,0.0.21,,Apache-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/python-multipart/0.0.21/json
+python,cisco-mcp-dependencies,pytokens,0.3.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pytokens/0.3.0/json
+python,cisco-mcp-dependencies,pywin32,311,; sys_platform == 'win32',PSF,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pywin32/311/json
+python,cisco-mcp-dependencies,pyyaml,6.0.3,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/pyyaml/6.0.3/json
+python,cisco-mcp-dependencies,referencing,0.37.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/referencing/0.37.0/json
+python,cisco-mcp-dependencies,regex,2025.11.3,,Apache-2.0 AND CNRI-Python,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/regex/2025.11.3/json
+python,cisco-mcp-dependencies,requests,2.32.5,,Apache-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/requests/2.32.5/json
+python,cisco-mcp-dependencies,respx,0.22.0,,BSD-3-Clause,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/respx/0.22.0/json
+python,cisco-mcp-dependencies,rich,14.2.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/rich/14.2.0/json
+python,cisco-mcp-dependencies,rpds-py,0.30.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/rpds-py/0.30.0/json
+python,cisco-mcp-dependencies,shellingham,1.5.4,,ISC License,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/shellingham/1.5.4/json
+python,cisco-mcp-dependencies,sniffio,1.3.1,,MIT OR Apache-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/sniffio/1.3.1/json
+python,cisco-mcp-dependencies,sortedcontainers,2.4.0,,Apache 2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/sortedcontainers/2.4.0/json
+python,cisco-mcp-dependencies,sse-starlette,3.0.4,,BSD-3-Clause,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/sse-starlette/3.0.4/json
+python,cisco-mcp-dependencies,starlette,0.50.0,,BSD-3-Clause,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/starlette/0.50.0/json
+python,cisco-mcp-dependencies,tiktoken,0.12.0,,MIT,upstream-license,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://github.com/openai/tiktoken/blob/0.12.0/LICENSE
+python,cisco-mcp-dependencies,tokenizers,0.22.2,,Apache Software License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/tokenizers/0.22.2/json
+python,cisco-mcp-dependencies,tomli,2.3.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/tomli/2.3.0/json
+python,cisco-mcp-dependencies,tomli-w,1.2.0,,MIT License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/tomli-w/1.2.0/json
+python,cisco-mcp-dependencies,tqdm,4.67.1,,MPL-2.0 AND MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/tqdm/4.67.1/json
+python,cisco-mcp-dependencies,tree-sitter,0.25.2,,MIT License,classifier-declaration,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/tree-sitter/0.25.2/json
+python,cisco-mcp-dependencies,tree-sitter-c-sharp,0.23.1,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/tree-sitter-c-sharp/0.23.1/json
+python,cisco-mcp-dependencies,tree-sitter-go,0.25.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/tree-sitter-go/0.25.0/json
+python,cisco-mcp-dependencies,tree-sitter-java,0.23.5,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/tree-sitter-java/0.23.5/json
+python,cisco-mcp-dependencies,tree-sitter-javascript,0.25.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/tree-sitter-javascript/0.25.0/json
+python,cisco-mcp-dependencies,tree-sitter-kotlin,1.1.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/tree-sitter-kotlin/1.1.0/json
+python,cisco-mcp-dependencies,tree-sitter-php,0.24.1,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/tree-sitter-php/0.24.1/json
+python,cisco-mcp-dependencies,tree-sitter-python,0.25.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/tree-sitter-python/0.25.0/json
+python,cisco-mcp-dependencies,tree-sitter-ruby,0.23.1,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/tree-sitter-ruby/0.23.1/json
+python,cisco-mcp-dependencies,tree-sitter-rust,0.24.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/tree-sitter-rust/0.24.0/json
+python,cisco-mcp-dependencies,tree-sitter-typescript,0.23.2,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/tree-sitter-typescript/0.23.2/json
+python,cisco-mcp-dependencies,typer,0.20.1,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/typer/0.20.1/json
+python,cisco-mcp-dependencies,typer-slim,0.20.1,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/typer-slim/0.20.1/json
+python,cisco-mcp-dependencies,typing-extensions,4.15.0,,PSF-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/typing-extensions/4.15.0/json
+python,cisco-mcp-dependencies,typing-inspection,0.4.2,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/typing-inspection/0.4.2/json
+python,cisco-mcp-dependencies,urllib3,2.6.2,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/urllib3/2.6.2/json
+python,cisco-mcp-dependencies,uvicorn,0.38.0,,BSD-3-Clause,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/uvicorn/0.38.0/json
+python,cisco-mcp-dependencies,virtualenv,20.35.4,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/virtualenv/20.35.4/json
+python,cisco-mcp-dependencies,yara-python,4.5.4,,Apache 2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/yara-python/4.5.4/json
+python,cisco-mcp-dependencies,yarl,1.22.0,,Apache-2.0,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/yarl/1.22.0/json
+python,cisco-mcp-dependencies,zipp,3.23.0,,MIT,declared,modules/aegis/results/mcp_scanner_locked_requirements.txt,https://pypi.org/pypi/zipp/3.23.0/json
+node,aegis-frontend-all-locked-platforms,@emnapi/core,2.0.0-alpha.3,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40emnapi%2Fcore/2.0.0-alpha.3
+node,aegis-frontend-all-locked-platforms,@emnapi/runtime,2.0.0-alpha.3,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40emnapi%2Fruntime/2.0.0-alpha.3
+node,aegis-frontend-all-locked-platforms,@emnapi/wasi-threads,2.0.1,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40emnapi%2Fwasi-threads/2.0.1
+node,aegis-frontend-all-locked-platforms,@napi-rs/wasm-runtime,1.2.2,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40napi-rs%2Fwasm-runtime/1.2.2
+node,aegis-frontend-all-locked-platforms,@oxc-project/types,0.142.0,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40oxc-project%2Ftypes/0.142.0
+node,aegis-frontend-all-locked-platforms,@rolldown/binding-android-arm64,1.2.1,"{""os"":[""android""],""cpu"":[""arm64""]}",MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fbinding-android-arm64/1.2.1
+node,aegis-frontend-all-locked-platforms,@rolldown/binding-darwin-arm64,1.2.1,"{""os"":[""darwin""],""cpu"":[""arm64""]}",MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fbinding-darwin-arm64/1.2.1
+node,aegis-frontend-all-locked-platforms,@rolldown/binding-darwin-x64,1.2.1,"{""os"":[""darwin""],""cpu"":[""x64""]}",MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fbinding-darwin-x64/1.2.1
+node,aegis-frontend-all-locked-platforms,@rolldown/binding-freebsd-x64,1.2.1,"{""os"":[""freebsd""],""cpu"":[""x64""]}",MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fbinding-freebsd-x64/1.2.1
+node,aegis-frontend-all-locked-platforms,@rolldown/binding-linux-arm-gnueabihf,1.2.1,"{""os"":[""linux""],""cpu"":[""arm""]}",MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fbinding-linux-arm-gnueabihf/1.2.1
+node,aegis-frontend-all-locked-platforms,@rolldown/binding-linux-arm64-gnu,1.2.1,"{""os"":[""linux""],""cpu"":[""arm64""],""libc"":[""glibc""]}",MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fbinding-linux-arm64-gnu/1.2.1
+node,aegis-frontend-all-locked-platforms,@rolldown/binding-linux-arm64-musl,1.2.1,"{""os"":[""linux""],""cpu"":[""arm64""],""libc"":[""musl""]}",MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fbinding-linux-arm64-musl/1.2.1
+node,aegis-frontend-all-locked-platforms,@rolldown/binding-linux-ppc64-gnu,1.2.1,"{""os"":[""linux""],""cpu"":[""ppc64""],""libc"":[""glibc""]}",MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fbinding-linux-ppc64-gnu/1.2.1
+node,aegis-frontend-all-locked-platforms,@rolldown/binding-linux-s390x-gnu,1.2.1,"{""os"":[""linux""],""cpu"":[""s390x""],""libc"":[""glibc""]}",MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fbinding-linux-s390x-gnu/1.2.1
+node,aegis-frontend-all-locked-platforms,@rolldown/binding-linux-x64-gnu,1.2.1,"{""os"":[""linux""],""cpu"":[""x64""],""libc"":[""glibc""]}",MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fbinding-linux-x64-gnu/1.2.1
+node,aegis-frontend-all-locked-platforms,@rolldown/binding-linux-x64-musl,1.2.1,"{""os"":[""linux""],""cpu"":[""x64""],""libc"":[""musl""]}",MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fbinding-linux-x64-musl/1.2.1
+node,aegis-frontend-all-locked-platforms,@rolldown/binding-openharmony-arm64,1.2.1,"{""os"":[""openharmony""],""cpu"":[""arm64""]}",MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fbinding-openharmony-arm64/1.2.1
+node,aegis-frontend-all-locked-platforms,@rolldown/binding-wasm32-wasi,1.2.1,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fbinding-wasm32-wasi/1.2.1
+node,aegis-frontend-all-locked-platforms,@rolldown/binding-win32-arm64-msvc,1.2.1,"{""os"":[""win32""],""cpu"":[""arm64""]}",MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fbinding-win32-arm64-msvc/1.2.1
+node,aegis-frontend-all-locked-platforms,@rolldown/binding-win32-x64-msvc,1.2.1,"{""os"":[""win32""],""cpu"":[""x64""]}",MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fbinding-win32-x64-msvc/1.2.1
+node,aegis-frontend-all-locked-platforms,@rolldown/pluginutils,1.0.1,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40rolldown%2Fpluginutils/1.0.1
+node,aegis-frontend-all-locked-platforms,@tybys/wasm-util,0.10.3,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40tybys%2Fwasm-util/0.10.3
+node,aegis-frontend-all-locked-platforms,@vitejs/plugin-react,6.0.5,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/%40vitejs%2Fplugin-react/6.0.5
+node,aegis-frontend-all-locked-platforms,detect-libc,2.1.2,,Apache-2.0,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/detect-libc/2.1.2
+node,aegis-frontend-all-locked-platforms,fdir,6.5.0,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/fdir/6.5.0
+node,aegis-frontend-all-locked-platforms,fsevents,2.3.3,"{""os"":[""darwin""]}",MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/fsevents/2.3.3
+node,aegis-frontend-all-locked-platforms,lightningcss-android-arm64,1.33.0,"{""os"":[""android""],""cpu"":[""arm64""]}",MPL-2.0,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/lightningcss-android-arm64/1.33.0
+node,aegis-frontend-all-locked-platforms,lightningcss-darwin-arm64,1.33.0,"{""os"":[""darwin""],""cpu"":[""arm64""]}",MPL-2.0,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/lightningcss-darwin-arm64/1.33.0
+node,aegis-frontend-all-locked-platforms,lightningcss-darwin-x64,1.33.0,"{""os"":[""darwin""],""cpu"":[""x64""]}",MPL-2.0,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/lightningcss-darwin-x64/1.33.0
+node,aegis-frontend-all-locked-platforms,lightningcss-freebsd-x64,1.33.0,"{""os"":[""freebsd""],""cpu"":[""x64""]}",MPL-2.0,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/lightningcss-freebsd-x64/1.33.0
+node,aegis-frontend-all-locked-platforms,lightningcss-linux-arm-gnueabihf,1.33.0,"{""os"":[""linux""],""cpu"":[""arm""]}",MPL-2.0,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/lightningcss-linux-arm-gnueabihf/1.33.0
+node,aegis-frontend-all-locked-platforms,lightningcss-linux-arm64-gnu,1.33.0,"{""os"":[""linux""],""cpu"":[""arm64""],""libc"":[""glibc""]}",MPL-2.0,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/lightningcss-linux-arm64-gnu/1.33.0
+node,aegis-frontend-all-locked-platforms,lightningcss-linux-arm64-musl,1.33.0,"{""os"":[""linux""],""cpu"":[""arm64""],""libc"":[""musl""]}",MPL-2.0,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/lightningcss-linux-arm64-musl/1.33.0
+node,aegis-frontend-all-locked-platforms,lightningcss-linux-x64-gnu,1.33.0,"{""os"":[""linux""],""cpu"":[""x64""],""libc"":[""glibc""]}",MPL-2.0,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/lightningcss-linux-x64-gnu/1.33.0
+node,aegis-frontend-all-locked-platforms,lightningcss-linux-x64-musl,1.33.0,"{""os"":[""linux""],""cpu"":[""x64""],""libc"":[""musl""]}",MPL-2.0,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/lightningcss-linux-x64-musl/1.33.0
+node,aegis-frontend-all-locked-platforms,lightningcss-win32-arm64-msvc,1.33.0,"{""os"":[""win32""],""cpu"":[""arm64""]}",MPL-2.0,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/lightningcss-win32-arm64-msvc/1.33.0
+node,aegis-frontend-all-locked-platforms,lightningcss-win32-x64-msvc,1.33.0,"{""os"":[""win32""],""cpu"":[""x64""]}",MPL-2.0,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/lightningcss-win32-x64-msvc/1.33.0
+node,aegis-frontend-all-locked-platforms,lightningcss,1.33.0,,MPL-2.0,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/lightningcss/1.33.0
+node,aegis-frontend-all-locked-platforms,nanoid,3.3.18,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/nanoid/3.3.18
+node,aegis-frontend-all-locked-platforms,picocolors,1.1.1,,ISC,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/picocolors/1.1.1
+node,aegis-frontend-all-locked-platforms,picomatch,4.0.5,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/picomatch/4.0.5
+node,aegis-frontend-all-locked-platforms,postcss,8.5.25,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/postcss/8.5.25
+node,aegis-frontend-all-locked-platforms,react-dom,19.2.8,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/react-dom/19.2.8
+node,aegis-frontend-all-locked-platforms,react,19.2.8,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/react/19.2.8
+node,aegis-frontend-all-locked-platforms,rolldown,1.2.1,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/rolldown/1.2.1
+node,aegis-frontend-all-locked-platforms,scheduler,0.27.0,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/scheduler/0.27.0
+node,aegis-frontend-all-locked-platforms,source-map-js,1.2.1,,BSD-3-Clause,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/source-map-js/1.2.1
+node,aegis-frontend-all-locked-platforms,tinyglobby,0.2.17,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/tinyglobby/0.2.17
+node,aegis-frontend-all-locked-platforms,tslib,2.8.1,,0BSD,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/tslib/2.8.1
+node,aegis-frontend-all-locked-platforms,vite,8.2.0,,MIT,declared,modules/aegis/demo_web/frontend/pnpm-lock.yaml,https://registry.npmjs.org/vite/8.2.0

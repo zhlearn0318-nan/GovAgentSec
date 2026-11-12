@@ -1,0 +1,11 @@
+{
+  "name": "govagentsec-harness",
+  "version": "1.0.0-alpha.1",
+  "type": "module",
+  "main": "dist/integrations/deepseek-harness/index.mjs",
+  "files": ["dist/", "cordis.patch.yml", "notices/", "resources.json"],
+  "engines": {"node": ">=22.14.0", "dsh": "0.2.2-alpha.2"},
+  "peerDependencies": {"@deepseek-ai/dsh-skill": "0.2.2-alpha.2", "@deepseek-ai/dsh-mcp-client": "0.2.2-alpha.2"},
+  "peerDependenciesMeta": {"@deepseek-ai/dsh-mcp-client": {"optional": true}},
+  "dsh": {"bundle": {"patch": "./cordis.patch.yml"}}
+}

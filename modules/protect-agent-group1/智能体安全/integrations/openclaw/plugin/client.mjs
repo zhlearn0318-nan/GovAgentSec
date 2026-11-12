@@ -232,9 +232,10 @@ export function createScreeningClient(config, dependencies = {}) {
 }
 
 
-async function waitUntilReady(config, fetchImpl, token, child) {
+async function waitUntilReady(config, fetchImpl, token, child, startupFailure = () => undefined) {
   const deadline = Date.now() + config.startupTimeoutMs;
   while (Date.now() < deadline) {
+    if (startupFailure()) throw new Error("Protect Agent sidecar failed to start");
     if (child?.exitCode !== null && child?.exitCode !== undefined) {
       throw new Error("Protect Agent sidecar exited during startup");
     }
@@ -317,19 +318,28 @@ export function createSidecarService(config, dependencies = {}) {
         sidecarArgs,
         {
           cwd: config.projectRoot,
-          env: { ...process.env, PYTHONUTF8: "1" },
+          env: { ...process.env, PYTHONUTF8: "1", ...(config.isolatedEnvironment
+            ? { PYTHONHOME: undefined, PYTHONPATH: undefined, PYTHONNOUSERSITE: '1' } : {}) },
           shell: false,
           windowsHide: true,
           stdio: "ignore",
         },
       );
+      let spawnFailure;
+      child.once?.('error', error => { spawnFailure = error; });
       ownsChild = true;
-      await waitUntilReady(config, fetchImpl, token, child);
+      await waitUntilReady(config, fetchImpl, token, child, () => spawnFailure);
       context.logger.info("Protect Agent sidecar is ready.");
     },
     async stop() {
-      if (ownsChild && child && child.exitCode === null) {
-        child.kill();
+      if (ownsChild && child && child.exitCode === null && !child.signalCode) {
+        const current = child;
+        await new Promise(resolve => {
+          const timer = setTimeout(resolve, 1500);
+          current.once?.('exit', () => { clearTimeout(timer); resolve(); });
+          current.kill();
+          if (!current.once) { clearTimeout(timer); resolve(); }
+        });
       }
       child = undefined;
       ownsChild = false;

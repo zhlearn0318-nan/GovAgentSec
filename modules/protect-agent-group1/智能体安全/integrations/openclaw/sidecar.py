@@ -27,7 +27,7 @@ MAX_TEXT_CHARACTERS = 16_000
 MAX_TOOL_NAME_CHARACTERS = 128
 _KINDS = frozenset({"input", "tool_call", "tool_result", "output"})
 _ALLOWED_FIELDS = frozenset(
-    {"version", "kind", "text", "conversationId", "toolName", "query", "outputContext"}
+    {"version", "kind", "text", "conversationId", "toolName", "query", "outputContext", "chunks"}
 )
 _OUTPUT_CONTEXT_FIELDS = frozenset(
     {"originalTask", "retrievedContext", "role", "isQuoted"}
@@ -71,6 +71,7 @@ class ScreenRequest:
     tool_name: str | None = None
     query: str | None = None
     output_context: OutputContext | None = None
+    chunks: tuple[RAGChunkInput, ...] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,6 +125,25 @@ def _optional_bounded_text(
     return normalized
 
 
+def _parse_chunks(value: object) -> tuple[RAGChunkInput, ...]:
+    if not isinstance(value, list) or not 1 <= len(value) <= 16:
+        raise ValueError("chunks must contain between 1 and 16 items")
+    chunks = []
+    ids = set()
+    for item in value:
+        if not isinstance(item, dict) or set(item) != {"id", "text"}:
+            raise ValueError("chunk fields are invalid")
+        identifier = _optional_bounded_text(item, "id", maximum=128)
+        text = _optional_bounded_text(item, "text", maximum=MAX_TEXT_CHARACTERS, allow_multiline=True)
+        if identifier is None or text is None or identifier in ids:
+            raise ValueError("chunk id/text is missing or duplicated")
+        ids.add(identifier)
+        chunks.append(RAGChunkInput(identifier, text))
+    if sum(len(chunk.text) for chunk in chunks) > MAX_TEXT_CHARACTERS:
+        raise ValueError("combined chunks exceed the text limit")
+    return tuple(chunks)
+
+
 def parse_screen_request(payload: object) -> ScreenRequest:
     if not isinstance(payload, dict):
         raise ValueError("request body must be an object")
@@ -135,12 +155,19 @@ def parse_screen_request(payload: object) -> ScreenRequest:
     kind = payload.get("kind")
     if not isinstance(kind, str) or kind not in _KINDS:
         raise ValueError("kind is invalid")
+    chunks = _parse_chunks(payload["chunks"]) if "chunks" in payload else None
+    if chunks is not None and "text" in payload:
+        raise ValueError("use either text or chunks, not both")
+    if chunks is not None and kind != "tool_result":
+        raise ValueError("chunks are only valid for tool results")
     text = payload.get("text")
+    if chunks is not None and text is None:
+        text = ""
     if not isinstance(text, str):
         raise ValueError("text must be a string")
     normalized_text = text.strip()
     if (
-        not normalized_text
+        (not normalized_text and chunks is None)
         or len(normalized_text) > MAX_TEXT_CHARACTERS
         or any(
             ord(character) < 32 and character not in "\t\r\n"
@@ -181,6 +208,7 @@ def parse_screen_request(payload: object) -> ScreenRequest:
         tool_name=tool_name,
         query=query,
         output_context=output_context,
+        chunks=chunks,
     )
 
 
@@ -245,13 +273,26 @@ class OpenClawScreeningService:
         with self._inference_lock:
             retained = True
             if request.kind == "tool_result":
-                result = self._adapter.defend_rag(
+                chunks = request.chunks or (RAGChunkInput("openclaw-tool-result", request.text),)
+                results = self._adapter.defend_rag(
                     request.query or "tool result",
-                    (RAGChunkInput("openclaw-tool-result", request.text),),
+                    chunks,
                     conversation_id=request.conversation_id,
-                )[0]
-                detection = result.detection
-                retained = result.retained
+                )
+                if len(results) != len(chunks) or tuple(item.retrieval_id for item in results) != tuple(chunk.retrieval_id for chunk in chunks):
+                    raise ValueError("RAG returned incomplete or mismatched results")
+                responses = tuple(self._response(item.detection, item.retained) for item in results)
+                levels = ("LOW", "MEDIUM", "HIGH", "CRITICAL")
+                decisions = ("ALLOW", "REVIEW", "BLOCK")
+                worst = max(responses, key=lambda item: (decisions.index(item.decision), levels.index(item.risk_level), item.risk_score))
+                risk_level = max((item.risk_level for item in responses), key=levels.index)
+                return ScreenResponse(
+                    decision=worst.decision, policy_action=worst.policy_action,
+                    risk_level=risk_level, risk_score=max(item.risk_score for item in responses),
+                    categories=tuple(sorted({category for item in responses for category in item.categories})),
+                    detectors_available=all(item.detectors_available for item in responses),
+                    reason_code=f"RISK_{risk_level}", retained=all(item.retained for item in responses),
+                )
             elif request.kind == "output":
                 if request.output_context is None:
                     raise ValueError("output context is required")
@@ -268,7 +309,11 @@ class OpenClawScreeningService:
                     conversation_id=request.conversation_id,
                 )
 
-        decision = self._map_decision(detection, retained=retained)
+        return self._response(detection, retained)
+
+    @classmethod
+    def _response(cls, detection: DetectionResult, retained: bool) -> ScreenResponse:
+        decision = cls._map_decision(detection, retained=retained)
         return ScreenResponse(
             decision=decision,
             policy_action=detection.action,
@@ -321,7 +366,8 @@ class ProtectAgentRequestHandler(BaseHTTPRequestHandler):
             if not self._authorized():
                 self._error(401, "UNAUTHORIZED", "Authentication required.")
                 return
-            self._json(200, {"ready": True})
+            self._json(200, {"ready": True, "version": API_VERSION, "mode": getattr(self.server, 'mode', 'unknown'),
+                             "capabilities": {"structuredToolTask": True, "ragChunks": 16}})
             return
         self._error(404, "NOT_FOUND", "Resource not found.")
 
@@ -499,6 +545,7 @@ def main() -> int:
     except Exception:
         return 2
     try:
+        server.mode = args.mode
         server.serve_forever(poll_interval=0.25)
     except KeyboardInterrupt:
         pass

@@ -7,13 +7,14 @@ from .base import GuardPort
 
 
 class GuardRouter:
-    def scan(self, guard: GuardPort, text: str, source: SourceType) -> GuardSignal:
+    def scan(self, guard: GuardPort, text: str, source: SourceType, *, external_payload: bool = False) -> GuardSignal:
         try:
             detector_name = str(guard.name).strip() or "unknown_guard"
         except Exception:
             detector_name = "unknown_guard"
         try:
-            signal = guard.scan(text, source)
+            scan = getattr(guard, 'scan_payload', None) if external_payload else None
+            signal = (scan if callable(scan) else guard.scan)(text, source)
             if not isinstance(signal, GuardSignal):
                 raise TypeError("invalid detector output")
             return signal

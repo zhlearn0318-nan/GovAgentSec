@@ -72,6 +72,26 @@ class FakeAdapter:
 
 
 class ScreenRequestTests(unittest.TestCase):
+    def test_parses_separate_rag_chunks_without_a_duplicate_text_envelope(self):
+        request = parse_screen_request({
+            'version': '1', 'kind': 'tool_result', 'toolName': 'retrieve',
+            'query': 'Summarize the status.',
+            'chunks': [{'id': 'a', 'text': 'First notice.'}, {'id': 'b', 'text': 'Second notice.'}],
+        })
+        self.assertEqual([chunk.text for chunk in request.chunks], ['First notice.', 'Second notice.'])
+
+    def test_rejects_ambiguous_or_unbounded_rag_batches(self):
+        base = {'version': '1', 'kind': 'tool_result', 'toolName': 'retrieve', 'query': 'Summarize.'}
+        for chunks in [[], [{'id': 'a', 'text': 'a'}] * 2,
+                       [{'id': str(i), 'text': 'a'} for i in range(17)],
+                       [{'id': 'a', 'text': 'a' * 9000}, {'id': 'b', 'text': 'b' * 9000}]]:
+            with self.subTest(chunks_count=len(chunks)), self.assertRaises(ValueError):
+                parse_screen_request({**base, 'chunks': chunks})
+        with self.assertRaises(ValueError):
+            parse_screen_request({**base, 'kind': 'input', 'text': 'hello', 'chunks': [{'id': 'a', 'text': 'data'}]})
+        with self.assertRaises(ValueError):
+            parse_screen_request({**base, 'text': 'different data', 'chunks': [{'id': 'a', 'text': 'data'}]})
+
     def test_rejects_unknown_fields_and_oversized_text(self) -> None:
         with self.assertRaises(ValueError):
             parse_screen_request(

@@ -10,9 +10,9 @@ GovAgentSec 为 DeepSeek Harness 提供本地输入和输出检查、工具调�
 
 安装前请准备 [DeepSeek Harness `0.2.2-alpha.2`](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.2-alpha.2)、支持 CUDA 的 NVIDIA 显卡及驱动，并关闭正在运行的 Harness。首次安装需要联网。建议安装盘预留至少 24 GiB。
 
-### 1. Windows 一键安装包（推荐）
+### 1. Windows 联网安装包（推荐）
 
-下载 [GovAgentSec-DeepSeekHarness-v1.0-Setup.exe](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/deepseek-harness-v1.0.0-alpha.1/GovAgentSec-DeepSeekHarness-v1.0-Setup.exe)，双击选择插件安装目录，再点击「安装」。安装器自动下载并校验 Python 运行环境和缺失的防护模型，将插件注册到 Harness 的 `web` profile。约需下载 3.15 GiB 运行环境，首次使用还需下载模型。
+下载 [联网安装包（EXE，574 KiB）](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/deepseek-harness-v1.0.0-alpha.1/GovAgentSec-DeepSeekHarness-v1.0-Setup.exe)，双击选择插件安装目录，再点击「安装」。安装器自动下载并校验缺失的 Python 运行环境和防护模型，将插件注册到 Harness 的 `web` profile。首次安装需要下载约 3.15 GiB 的 Python 运行环境，另需下载本机缺少的模型。
 
 ### 2. 使用 Agent 部署
 

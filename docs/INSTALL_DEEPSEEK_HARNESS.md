@@ -11,10 +11,16 @@ GovAgentSec 适配器版本为 `1.0.0-alpha.1`。安装目标为 DeepSeek Harnes
 
 ## 一键安装
 
-1. 从[预发布页](https://github.com/zhlearn0318-nan/GovAgentSec/releases/tag/deepseek-harness-v1.0.0-alpha.1)下载 [GovAgentSec-DeepSeekHarness-v1.0-Setup.exe](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/deepseek-harness-v1.0.0-alpha.1/GovAgentSec-DeepSeekHarness-v1.0-Setup.exe)。安装器未签名，可先按下方步骤核对 SHA-256。
-2. 双击 EXE，选择可长期保留的插件目录。默认是 `%LOCALAPPDATA%\GovAgentSec`。
-3. 点击「安装」。安装器下载并校验两份运行环境分卷，自动准备 Python 和模型，然后注册插件。若下载中断，保留相同的安装目录再试，安装器会复用已通过校验的文件或续传分卷。
+1. 下载 [GovAgentSec-DeepSeekHarness-v1.0-Online-Setup.exe（574 KiB）](https://raw.githubusercontent.com/zhlearn0318-nan/GovAgentSec/DeepseekHarness_release/GovAgentSec-DeepSeekHarness-v1.0-Online-Setup.exe)。[Harness 预发布页](https://github.com/zhlearn0318-nan/GovAgentSec/releases/tag/deepseek-harness-v1.0.0-alpha.1)提供同一份 EXE，文件名为 `GovAgentSec-DeepSeekHarness-v1.0-Setup.exe`。两个文件的 SHA-256 均为 `979913161b8305e1f82563c0f89c90288cccacf8c1c8ee2abd2d10a6a8b09428`。安装器未签名。
+2. 双击 EXE，确认窗口标题为「GovAgentSec · DeepSeek Harness 安装」，选择可长期保留的插件目录。默认是 `%LOCALAPPDATA%\GovAgentSec`。
+3. 点击「安装」。安装器下载并校验两份运行环境分卷（合计约 3.15 GiB），自动补齐缺失的防护模型，再注册到 `web` profile。下载中断后，使用相同的插件目录重新点击「安装」，安装器会复用已通过校验的文件或续传分卷。
 4. 界面显示安装完成后，重新启动 Harness。
+
+### 实测结果
+
+2026-11-13 在 Windows 11 x64（25H2、RTX 5060 Laptop 8 GiB）使用 DeepSeek Harness `0.2.2-alpha.2` 源码构建版验证。测试从只有联网 EXE 的目录和全新的 `DSH_HOME` 开始，通过安装窗口完成 Python 分卷下载、缺失模型下载和插件注册。GitHub 大文件传输停顿后，使用同一插件目录重试，安装器从已保存的断点续传。
+
+重启后，Harness Web 正常响应，`web` profile 中只有一个 `govagentsec-security` 条目，真实防护服务报告就绪。测试使用隔离配置，未验证外部模型 API 的聊天请求。
 
 ## 使用 Agent 部署
 
@@ -28,7 +34,7 @@ GovAgentSec 适配器版本为 `1.0.0-alpha.1`。安装目标为 DeepSeek Harnes
 
 ## 手动下载与校验
 
-将 EXE、[分卷 01](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/deepseek-harness-v1.0.0-alpha.1/govagentsec-python-1.0.0-alpha.1-cp311-win_amd64.zip.part01)、[分卷 02](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/deepseek-harness-v1.0.0-alpha.1/govagentsec-python-1.0.0-alpha.1-cp311-win_amd64.zip.part02) 和 [SHA256SUMS.txt](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/deepseek-harness-v1.0.0-alpha.1/SHA256SUMS.txt) 保存在同一目录。打开该目录下的 PowerShell，运行以下命令核对完整下载。分卷是原始字节切片，安装器会自动合并。
+将预发布页上的 `GovAgentSec-DeepSeekHarness-v1.0-Setup.exe`、[分卷 01](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/deepseek-harness-v1.0.0-alpha.1/govagentsec-python-1.0.0-alpha.1-cp311-win_amd64.zip.part01)、[分卷 02](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/deepseek-harness-v1.0.0-alpha.1/govagentsec-python-1.0.0-alpha.1-cp311-win_amd64.zip.part02) 和 [SHA256SUMS.txt](https://github.com/zhlearn0318-nan/GovAgentSec/releases/download/deepseek-harness-v1.0.0-alpha.1/SHA256SUMS.txt) 以原文件名保存在同一目录。打开该目录下的 PowerShell，运行以下命令核对完整下载。安装器会自动合并分卷。
 
 ```powershell
 & {
@@ -54,9 +60,10 @@ GovAgentSec 适配器版本为 `1.0.0-alpha.1`。安装目标为 DeepSeek Harnes
 
 ## 修复与卸载
 
+- **出现 `Bootstrap-Windows.ps1` 或 `Archive checksum is missing or ambiguous`**。这是 `GovAgentSec-v1.0-Setup.exe` 的 OpenClaw 安装入口。请重新下载上面的一键安装包，确认窗口标题为「GovAgentSec · DeepSeek Harness 安装」。
 - **找不到 Harness**。确认 CLI 版本和 PATH，使用与安装 Harness 相同的 Windows 用户。源码构建在自定义目录时，可按[高级配置](HARNESS_BUNDLE_INSTALLATION.md)传入 JS 入口。
 - **CUDA 或模型检测失败**。检查 `nvidia-smi`、显存、可用磁盘空间和上游网络。安装诊断在所选目录的 `setup-logs` 下。
 - **修复**。退出 Harness 后，用原安装器和同一目录重新安装。核对启动后的防护状态。
-- **卸载**。退出 Harness 后运行 `.\GovAgentSec-DeepSeekHarness-v1.0-Setup.exe --uninstall`，在窗口中选择原安装目录。卸载移除受管插件配置和服务令牌，保留模型缓存和审计记录。
+- **卸载**。退出 Harness 后运行 `.\GovAgentSec-DeepSeekHarness-v1.0-Online-Setup.exe --uninstall`（从预发布页下载时使用该 EXE 的原文件名），在窗口中选择原安装目录。卸载移除受管插件配置和服务令牌，保留模型缓存和审计记录。
 
 预览版使用本地检测模型和 Harness 原生工具审批。组织 OIDC 和 AgentGuard 业务工具需要单独配置。已验收范围见[开发验收记录](HARNESS_BUNDLE_VALIDATION.md)。

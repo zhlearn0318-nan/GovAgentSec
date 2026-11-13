@@ -25,10 +25,40 @@ foreach($bad in @('../escape.ps1','GovAgentSec/../escape.ps1','C:/escape.ps1','G
     Reject $file (Get-FileHash $file -Algorithm SHA256).Hash
 }
 $missing=Archive 'incomplete.zip' @('GovAgentSec/readme.txt');Reject $missing (Get-FileHash $missing -Algorithm SHA256).Hash
+
+# Reproduce the binary response returned for the GitHub checksum asset in Windows PowerShell 5.1.
+$fixture=Archive 'online.zip' $required
+$zip=[IO.Compression.ZipFile]::Open($fixture,[IO.Compression.ZipArchiveMode]::Update)
+try {
+    $manifest=$zip.GetEntry('GovAgentSec/release-manifest.json').Open()
+    try {
+        $bytes=[Text.Encoding]::UTF8.GetBytes('{"tag":"v1.0","openclaw":"2026.7.1-2"}')
+        $manifest.Write($bytes,0,$bytes.Length)
+    } finally {$manifest.Dispose()}
+} finally {$zip.Dispose()}
+$fixtureHash=(Get-FileHash -LiteralPath $fixture -Algorithm SHA256).Hash
+$checksumBytes=[Text.Encoding]::UTF8.GetBytes("$fixtureHash  GovAgentSec-v1.0-windows-x64.zip`r`n")
+$destination=Join-Path $out 'installed-fixture'
+& {
+    function Invoke-WebRequest([switch]$UseBasicParsing,[string]$Uri,[string]$OutFile) {
+        switch -Wildcard ($Uri) {
+            '*/GovAgentSec-v1.0-windows-x64.zip' {Copy-Item -LiteralPath $fixture -Destination $OutFile}
+            '*/SHA256SUMS.txt' {
+                [pscustomobject]@{Content=$checksumBytes;RawContentStream=[IO.MemoryStream]::new($checksumBytes)}
+            }
+            default {throw "Unexpected download: $Uri"}
+        }
+    }
+    & (Join-Path $root 'Bootstrap-Windows.ps1') -InstallDirectory $destination -NoBrowser
+    if($LASTEXITCODE -ne 0){throw 'Bootstrap rejected a valid binary checksum response.'}
+}
+$receipt=Get-Content -LiteralPath (Join-Path $destination '.govagentsec-release.json') -Raw -Encoding UTF8|ConvertFrom-Json
+if($receipt.archive_sha256 -ne $fixtureHash){throw 'Bootstrap receipt is missing the verified archive checksum.'}
+
 foreach($file in @('Setup-Windows.ps1','Setup-OpenClaw.ps1','Bootstrap-Windows.ps1','Install.ps1','scripts/Start-GovAgentSec.ps1','scripts/Configure-Model.ps1')){
     $errors=$null;$tokens=$null
     $null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $root $file),[ref]$tokens,[ref]$errors)
     if($errors.Count){throw "PowerShell parse errors: $file"}
 }
-@{passed=$true;checks=8;source='offline-real-powershell-zip-validation';host_modified=$false}|ConvertTo-Json|Set-Content (Join-Path $out 'report.json') -Encoding UTF8
-Write-Output "PASS bootstrap checksum, traversal, incomplete archive and PowerShell syntax; $out"
+@{passed=$true;checks=9;source='offline-real-powershell-zip-validation';host_modified=$false}|ConvertTo-Json|Set-Content (Join-Path $out 'report.json') -Encoding UTF8
+Write-Output "PASS bootstrap checksum, binary checksum response, traversal, incomplete archive and PowerShell syntax; $out"

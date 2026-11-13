@@ -36,7 +36,9 @@ try {
         $archive=Join-Path $temp $archiveName
         Write-Host 'Downloading GovAgentSec v1.0...'
         Invoke-WebRequest -UseBasicParsing ($base+'/'+$archiveName) -OutFile $archive
-        $checksums=(Invoke-WebRequest -UseBasicParsing ($base+'/SHA256SUMS.txt')).Content
+        # GitHub serves this file as application/octet-stream, so decode the response bytes explicitly.
+        $checksumResponse=Invoke-WebRequest -UseBasicParsing ($base+'/SHA256SUMS.txt')
+        $checksums=[Text.Encoding]::UTF8.GetString($checksumResponse.RawContentStream.ToArray())
         $line=@($checksums -split '\r?\n'|Where-Object{$_ -match ('^[a-fA-F0-9]{64}\s+\*?'+[regex]::Escape($archiveName)+'$')})
         if($line.Count -ne 1){throw 'Archive checksum is missing or ambiguous.'}
         $expected=($line[0] -split '\s+')[0]

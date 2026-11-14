@@ -410,7 +410,11 @@ export function defineWorkspace() {
         const f = node("iframe");
         f.className = "tool-frame";
         f.title = title;
-        f.setAttribute("sandbox", this.sandbox ?? "allow-scripts");
+        const sandbox = this.sandbox ?? "allow-scripts";
+        // The authenticated Aegis report pages export PDFs after a user click.
+        // Keep the original isolation; only these report views may download.
+        const reportPage = /^\/plugins\/aegis-admin\/(?:reports|audit)(?:\?|$)/.test(url);
+        f.setAttribute("sandbox", sandbox && reportPage ? sandbox + " allow-downloads" : sandbox);
         f.src = access.url;
         waiting.replaceWith(f);
         return f;

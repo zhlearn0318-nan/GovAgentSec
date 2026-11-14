@@ -3,8 +3,8 @@ import { LocalJudge, FixtureJudge } from './scoring.mjs';
 import {localEndpoint, localModelFetch, assertLocalWeights} from '../model-routing/local-only.mjs';
 import {loadRouting} from '../model-routing/routing.mjs';
 
-export const HEURISTIC_VERSION = 'heuristic-local-v2-not-production';
-export const OLLAMA_VERSION = 'ollama-local-v2-not-production';
+export const HEURISTIC_VERSION = 'heuristic-local-v3-not-production';
+export const OLLAMA_VERSION = 'ollama-local-v3-not-production';
 const levels = ['A', 'B', 'C', 'D'];
 const hash = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 const missing = (trace, reason) => ({ status: 'missing', reason, evidence_hash: trace?.summary?.evidence_hash,
@@ -32,13 +32,19 @@ export function observeTrace(trace) {
   }
   const sameRequest = (a,b) => a.start.payload.tool === b.start.payload.tool && a.start.payload.params.sha256 === b.start.payload.params.sha256;
   let U = 0;
-  for (let i=1; i<pairs.length; i++) {
-    const p = pairs[i], previous = pairs[i-1];
-    // Identical successful read with identical result and no intervening different tool.
-    // Different parameters and retries after failure are not redundant merely due to equal tool names.
-    if (/(?:^|__)(?:read|read_file|read_gov_document|list_notices|query)$/.test(p.start.payload.tool)
-      && !p.end.payload.failed && !previous.end.payload.failed && sameRequest(p,previous)
+  const recentReads = new Map();
+  for (const p of pairs) {
+    // Compare completed successful reads within a read-only sequence, including A → B → A.
+    // Any failed or non-read call resets the sequence: recovery and post-action refreshes
+    // are not redundant. Compare the latest result for each request, so changed content
+    // does not count even if it happens to match an older version.
+    if (!/(?:^|__)(?:read|read_file|read_gov_document|gov_read_document|list_notices|query)$/.test(p.start.payload.tool)
+      || p.end.payload.failed) {recentReads.clear(); continue;}
+    const key = p.start.payload.tool + ':' + p.start.payload.params.sha256;
+    const previous = recentReads.get(key);
+    if (previous && previous.end.sequence < p.start.sequence
       && p.end.payload.result.sha256 === previous.end.payload.result.sha256) U++;
+    recentReads.set(key,p);
   }
   const failures = pairs.filter(p => p.end.payload.failed);
   const opportunities = new Map();

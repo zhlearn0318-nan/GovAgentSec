@@ -80,6 +80,24 @@ class EnforcementGateway:
                 and subject.get('clearance') == 3
                 and {'security_admin', 'workspace_maintainer'}.issubset(subject.get('roles', [])))
 
+    def document_scope(self, request):
+        action = request.get('action', {})
+        checker = getattr(self, 'scoped_document_access', None)
+        if checker and action.get('tool') == 'file.read':
+            return checker(request.get('subject', {}), action.get('parameters', {}).get('document_id'))
+        return None
+
+    def decide(self, request):
+        decision = self.opa.decide(request)
+        scope = self.document_scope(request)
+        if scope is False:
+            return {**decision, 'effect':'deny', 'reason_codes':['DOCUMENT_ACCESS_REQUIRED']}
+        # Only the private worker installs this callback. A file grant never
+        # changes clearance or excuses any other OPA denial.
+        if scope is True and decision.get('effect') == 'deny' and set(decision.get('reason_codes', [])) == {'D004_CLEARANCE_INSUFFICIENT'}:
+            return {**decision, 'effect':'allow', 'reason_codes':['DOCUMENT_SCOPED_GRANT']}
+        return decision
+
     def governed(self, request):
         return (self.require_task_policy or request.get('context', {}).get('source') == 'mcp'
                 or request.get('action', {}).get('tool') == 'notification.submit'
@@ -112,13 +130,13 @@ class EnforcementGateway:
                 return self._block(safe_request, 'G017_NOTICE_UNAVAILABLE', '送审动作不可用', policy_effect='registry_rejected')
         if safe_request.get("action", {}).get("tool") == "file.read":
             try:
-                validate_document_action(safe_request["action"])
+                validate_document_action(safe_request["action"], self.business_adapters.documents.registry if self.business_adapters else None)
                 if self.business_adapters is None:
                     raise ValueError("adapter unavailable")
             except Exception:
                 return self._block(safe_request, "G016_DOCUMENT_UNAVAILABLE", "文档不可用", policy_effect="registry_rejected")
         try:
-            decision = self.opa.decide(safe_request)
+            decision = self.decide(safe_request)
         except Exception as exc:
             return self._block(
                 safe_request,
@@ -247,6 +265,8 @@ class EnforcementGateway:
 
     def dispatch(self, request: Mapping[str, Any], ticket: str | None) -> dict[str, Any]:
         safe_request = copy.deepcopy(dict(request))
+        if self.document_scope(safe_request) is False:
+            return self._block(safe_request, 'DOCUMENT_ACCESS_EXPIRED', '文件访问授权不存在或已过期', policy_effect='document_scope')
         action = safe_request.get("action", {})
         tool_key = (str(action.get("tool", "")), str(action.get("operation", "")))
         if tool_key not in self.registry:
@@ -430,6 +450,11 @@ class EnforcementGateway:
         context = request.get("context", {})
         document_id = action.get('parameters', {}).get('document_id')
         known_document = isinstance(document_id, str) and document_id in DOCUMENT_REGISTRY
+        if not known_document and isinstance(document_id, str) and self.business_adapters is not None:
+            try:
+                known_document = document_id in self.business_adapters.documents.registry
+            except Exception:
+                known_document = False  # Storage failure: audit only the ID hash, never a caller path.
         contract_digest = None
         if self.task_policies is not None:
             try:

@@ -58,14 +58,7 @@ class LocalTestBusinessAdapters:
                 )
                 """
             )
-            connection.executemany(
-                "INSERT OR IGNORE INTO notices(id, title, department, published_at) VALUES (?, ?, ?, ?)",
-                [
-                    (1, "政务服务系统维护通知", "信息中心", "2026-08-01"),
-                    (2, "第三季度材料归档安排", "综合办公室", "2026-08-03"),
-                    (3, "安全培训报名通知", "人力资源部", "2026-08-05"),
-                ],
-            )
+            # Runtime startup creates the schema only. Test cases insert their own fixtures.
             connection.commit()
         with closing(self._connect(self.ledger_db)) as connection:
             connection.execute(

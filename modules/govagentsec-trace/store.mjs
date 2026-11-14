@@ -37,6 +37,7 @@ export function verifyChain(events, anchor) {
 export function summarize(events, integrity, captureFailures = []) {
   const first = events.find(e => e.event_type === 'run.started'), end = events.findLast(e => e.event_type === 'run.ended');
   const outputs = events.filter(e => e.event_type === 'model.output');
+  const contentOutputs = outputs.filter(e=>e.payload.has_content!==false);
   const associations = events.filter(e => e.event_type === 'task.assigned');
   const assignment = associations.at(-1)?.payload;
   const calls = events.filter(e => e.event_type === 'tool.started');
@@ -45,7 +46,7 @@ export function summarize(events, integrity, captureFailures = []) {
   const missing = [];
   if (!first) missing.push('run_start');
   if (!end) missing.push('run_end');
-  if (!outputs.length && !denied) missing.push('llm_output');
+  if (!contentOutputs.length && !denied) missing.push('llm_output');
   if (!events.some(e => e.event_type === 'model.started') && !denied) missing.push('model_call_events');
   if (!events.some(e => e.event_type === 'skill.observed')) missing.push('skill_usage_unobserved');
   if (calls.some(e => !ends.some(x => x.tool_call_id && x.tool_call_id === e.tool_call_id) && !events.some(x => x.tool_call_id === e.tool_call_id && x.payload.enforced && x.payload.decision === 'BLOCK'))) missing.push('tool_result');
@@ -66,11 +67,15 @@ export function summarize(events, integrity, captureFailures = []) {
     tool_sequence: calls.map(e => e.payload.tool), success: end?.payload.success ?? null,
     risks: events.filter(e => e.payload.decision === 'BLOCK' || e.payload.decision === 'REVIEW').length };
   if (!usage && !denied) missing.push('token_usage');
-  const fatalMissing = missing.some(x => ['run_start', 'run_end', 'llm_output', 'tool_result', 'capture_failed', 'call_id_missing', 'duplicate_call_id', 'orphan_result', 'model_result_missing'].includes(x));
+  const fatalMissing = missing.some(x => ['run_start', 'run_end', 'llm_output', 'model_call_events', 'tool_result', 'capture_failed', 'call_id_missing', 'duplicate_call_id', 'orphan_result', 'model_result_missing'].includes(x));
+  const failed=end?.payload.success===false;
+  const preflightFailed=failed&&!events.some(e=>e.event_type==='model.started');
   return { trace_id: events[0]?.trace_id, session_key: first?.session_key ?? events[0]?.session_key,
     task_key: assignment?.task_key ?? first?.payload.task_key ?? null, task_confirmed: Boolean(assignment?.confirmed || first?.payload.task_confirmed),
     source: first?.payload.source ?? 'openclaw', title: assignment?.title ?? 'Agent 运行', timestamp: first?.timestamp ?? events[0]?.timestamp,
-    trace_status: !integrity.valid ? 'invalid' : fatalMissing ? (end ? 'partial' : 'interrupted') : denied ? 'blocked' : 'complete',
+    trace_status: !integrity.valid ? 'invalid' : denied && first && end && !captureFailures.length ? 'blocked' : preflightFailed ? 'failed' : fatalMissing ? (end ? 'partial' : 'interrupted') : 'complete',
+    execution_status: denied?'blocked':failed?'failed':end?.payload.success===true?'succeeded':end?'unknown':'running',
+    failure_code: failed&&!denied ? end.payload.error_code??'AGENT_RUN_FAILED' : null,
     missing_fields: missing, metrics, event_count: events.length, evidence_hash: events.findLast(e => e.event_type !== 'assessment.completed')?.event_hash ?? integrity.tail_hash,
     assessment: events.findLast(e => e.event_type === 'assessment.completed')?.payload ?? null };
 }

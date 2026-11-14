@@ -11,6 +11,7 @@ import {
 import { createGuardEventStore } from "./guard-events.mjs";
 import { registerProtectionUiRoutes } from "./ui-routes.mjs";
 import { registerProtectionRuntime, controlledDocumentDenial } from "./result-gate.mjs";
+import { gridInputPolicy } from "./grid-input-policy.mjs";
 
 
 const BLOCK_MESSAGE = "Protect Agent 已阻止此请求，因为安全检查未通过。";
@@ -78,7 +79,7 @@ function inputBlock(result) {
   return {
     outcome: "block",
     reason: `protect-agent:${result?.riskLevel ?? "UNAVAILABLE"}`,
-    message: BLOCK_MESSAGE,
+    message: result?.message ?? BLOCK_MESSAGE,
     category: "protect_agent_policy",
   };
 }
@@ -265,18 +266,23 @@ export function registerProtectAgent(api, dependencies = {}) {
       if (conversationId(ctx)) runSessions.set(key, conversationId(ctx));
       while (runSessions.size > 1_024) runSessions.delete(runSessions.keys().next().value);
       try {
-        const result = await client.screen(
+        const modelResult = await client.screen(
           {
             kind: "input",
             text: event.prompt,
             conversationId: conversationId(ctx),
           },
         );
+        const boundary = gridInputPolicy(event.prompt);
+        const result = boundary ?? modelResult;
+        // Keep the two decisions distinct: the model can allow an input that
+        // violates this business workflow's explicit no-exfiltration boundary.
+        if(boundary)runtime.record("input_model",modelResult,false,ctx);
         runtime.record("input", result, true, ctx);
         eventStore.completeInput(key, result);
         if (result.decision !== "ALLOW") {
           stoppedRuns.set(key, {kind:'security_block',reasonCode:result.reasonCode});
-          eventStore.incident(key, {kind:'security_block', phase:'input', reasonCode:result.reasonCode, message:'输入安全检查未通过，本次请求已阻断',stopConfirmed:false});
+          eventStore.incident(key, {kind:'security_block', phase:'input', reasonCode:result.reasonCode, message:result.message??'输入安全检查未通过，本次请求已阻断',spans:result.spans??[],stopConfirmed:false});
           return inputBlock(result);
         }
         rememberRunContext(runContexts, contextKey(ctx), event.prompt);

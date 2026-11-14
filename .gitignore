@@ -35,3 +35,25 @@ modules/aegis/demo_web/baseline/
 modules/protect-agent-group1/智能体安全/*REPORT.md
 modules/protect-agent-group1/智能体安全/PROJECT_HANDOFF.md
 modules/protect-agent-group1/智能体安全/PROJECT_HANDOVER_AND_MIGRATION_GUIDE.md
+
+# Local competition rehearsal, recording and one-time history cleanup.
+# Kept on disk; see docs/COMPETITION_DEMO.md for the archive boundary.
+/scripts/check_aegis_grid_live_ui.mjs
+/scripts/clean_aegis_grid_history.py
+/scripts/clean_identity_business_history.py
+/scripts/clean_native_grid_business_residuals.mjs
+/scripts/clean_native_grid_host_history.py
+/scripts/clean_native_grid_remaining.mjs
+/scripts/clean_native_grid_scoped.mjs
+/scripts/experiment_u7_ablation.py
+/scripts/grid_video_audit.mjs
+/scripts/native_grid_live.mjs
+/scripts/native_grid_ui_authorization.mjs
+/scripts/native_grid_ui_check.mjs
+/scripts/record_grid_video.mjs
+/scripts/render_grid_login_hold.py
+/scripts/render_grid_readable.py
+/scripts/render_grid_short.py
+/scripts/render_grid_video.py
+/scripts/test_aegis_cleanup_ui.mjs
+/scripts/test_native_grid_library_ui.mjs

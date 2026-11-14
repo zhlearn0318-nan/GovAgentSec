@@ -39,6 +39,7 @@ class ChatAcl:
         self.scope_generations = {}
         self.retired_permits = []
         self.document_calls = {}
+        self.grid_calls = {}
 
     def bind(self, session, bearer, subject):
         if not isinstance(session, str) or not re.fullmatch(r'agent:[a-zA-Z0-9_-]+:[^\s]{1,180}', session):
@@ -109,20 +110,18 @@ class ChatAcl:
     def materials(self, session, bearer, subject):
         if not isinstance(session,str) or self.sessions.get(session) != bearer or 'office_user' not in subject['roles']:
             return self.demo.blocked('P002_SUBJECT_MISMATCH')
-        labels = {'emergency_plan':'公开台风预案', 'material_inventory':'应急物资清单',
-                  'duty_contacts':'内部值班通信录', 'command_contacts':'指挥中心联络表',
-                  'protected_resource':'受保护物资材料'}
+        labels = {'grid_curves':'A园区脱敏用电曲线与采集事件.csv','grid_records':'A园区企业档案与生产检修记录','grid_other':'B园区受限资料'}
         rows = []
-        for document_id in REGISTRY:
-            action = document_action(document_id)
+        for document_id in self.demo.document_registry:
+            action = self.demo.document_action(document_id)
             request = self.demo.task_request('material-preview', action)
             request['subject'] = subject
             try:
-                decision = self.demo.service.gateway.opa.decide(request)
+                decision = self.demo.service.gateway.decide(request)
             except Exception:
                 self.demo.audit('chat.materials_unavailable',subject=subject['id'],reason_code='P012_TASK_POLICY_UNAVAILABLE')
                 return self.demo.blocked('P012_TASK_POLICY_UNAVAILABLE')
-            rows.append(dict(document_id=document_id, label=labels[document_id],
+            rows.append(dict(document_id=document_id, label=labels.get(document_id, self.demo.library.catalogue().get(document_id,{}).get('title',document_id)),
                 data_level=action['data_level'], selectable=decision.get('effect') in {'allow','require_approval'},
                 approval_required=decision.get('effect') == 'require_approval' and not self.demo.service.gateway.native_approval_only({'subject':subject})))
         return dict(status='ok', materials=rows, selected=self.material_selections.get(session, []),
@@ -132,7 +131,7 @@ class ChatAcl:
     def select_materials(self, session, ids, bearer, subject):
         if session in self.automatic_sessions:
             return self.demo.blocked('P028_AUTOMATIC_MATERIAL_POLICY')
-        if not isinstance(ids, list) or not ids or len(ids)>len(REGISTRY) or any(not isinstance(i,str) or i not in REGISTRY for i in ids) or len(set(ids))!=len(ids):
+        if not isinstance(ids, list) or not ids or len(ids)>len(self.demo.document_registry) or any(not isinstance(i,str) or i not in self.demo.document_registry for i in ids) or len(set(ids))!=len(ids):
             return self.demo.blocked('P003_INVALID_GRANT')
         catalogue = self.materials(session, bearer, subject)
         if catalogue.get('status') != 'ok':
@@ -218,7 +217,7 @@ class ChatAcl:
         if explicit is not None:
             material_tasks = {}
             for document_id in explicit:
-                action = document_action(document_id)
+                action = self.demo.document_action(document_id)
                 material_task = 'chat-material-'+uuid.uuid4().hex
                 if automatic:
                     # Subject and IDs came from the verified bearer and OPA registry preview.
@@ -247,7 +246,7 @@ class ChatAcl:
         if tool == 'agentguard-notices__read_gov_document':
             if set(params) != {'document_id'}:
                 raise ValueError('untrusted fields')
-            return document_action(params['document_id'])
+            return self.demo.document_action(params['document_id'])
         if tool == 'agentguard-notices__submit_emergency_notice':
             if set(params) != {'recipient','template_id'}:
                 raise ValueError('untrusted fields')
@@ -365,7 +364,7 @@ class ChatAcl:
             return self.demo.blocked('DOCUMENT_ACTION_CHANGED')
         result=self.demo.service.gateway.dispatch(request,pending['ticket'])
         business=(result.get('receipt') or {}).get('business_result') or {}
-        ok=(result.get('status')=='executed_isolated' and business.get('adapter')=='isolated_synthetic_document'
+        ok=(result.get('status')=='executed_isolated' and business.get('adapter') in {'isolated_synthetic_document','isolated_managed_document'}
             and business.get('document_id')==payload['params']['document_id'] and business.get('side_effect') is False)
         record=self.demo.requests[request['request_id']]
         record.update(execution_status='succeeded' if ok else 'failed',status=result['status'],authorization_consumed_at=datetime.now(timezone.utc).isoformat())
@@ -373,6 +372,46 @@ class ChatAcl:
         safe={'status':'executed_isolated' if ok else 'blocked','document_id':payload['params']['document_id'],'executed':ok,'reason_code':result.get('reason_code')}
         if ok: safe['content']=business['document_content']
         return safe
+
+    def grid_prepare(self, payload):
+        run = self.runs.get(payload.get('run_id'))
+        session, call = payload.get('session_key'), payload.get('tool_call_id')
+        if not run or run['session'] != session or not isinstance(call,str) or not call:
+            return self.demo.blocked('P001_CONTRACT_REQUIRED')
+        subject = self.demo.subject(self.sessions.get(session))
+        if subject['id'] != run['subject'] or self.demo.tool_catalog.check('gov_analyze_grid',subject):
+            return self.demo.blocked('P025_TOOL_PERMISSION_DENIED')
+        if payload.get('params',{}) != {'period':'2024-09'}:
+            return self.demo.blocked('DEMO_UNTRUSTED_FIELD')
+        for document_id in ['grid_curves','grid_records']:
+            if document_id not in run.get('material_tasks', {}):
+                return self.demo.blocked('DOCUMENT_ACCESS_REQUIRED')
+            if self.demo.document_access.allowed(subject,document_id) is False:
+                return self.demo.blocked('DOCUMENT_ACCESS_REQUIRED')
+        if (session,call) in self.grid_calls:
+            return self.demo.blocked('DOCUMENT_CALL_REPLAY')
+        self.grid_calls[(session,call)] = dict(run_id=payload['run_id'],subject=subject['id'],params=copy.deepcopy(payload.get('params',{})))
+        return {'status':'grid_prepared'}
+
+    def grid_execute(self, payload):
+        key=(payload.get('session_key'),payload.get('tool_call_id'))
+        pending=self.grid_calls.get(key)
+        if not pending or pending.get('used'):
+            return self.demo.blocked('DOCUMENT_CALL_REPLAY')
+        pending['used']=True
+        run=self.runs.get(pending['run_id'])
+        if not run or payload.get('params',{}) != pending['params']:
+            return self.demo.blocked('DOCUMENT_ACTION_CHANGED')
+        subject=self.demo.subject(self.sessions.get(key[0]))
+        if subject['id'] != pending['subject']:
+            return self.demo.blocked('P002_SUBJECT_MISMATCH')
+        documents=[]
+        for document_id in ['grid_curves','grid_records']:
+            result=self.demo.read_document(subject,document_id,task_id=run['material_tasks'][document_id],run_id=pending['run_id'])
+            if result.get('status') != 'ok':
+                return result
+            documents.append(result)
+        return {'status':'ok','documents':documents,'subject':self.demo.public_subject(subject),'run_id':pending['run_id']}
 
     def reapply(self, request_id, bearer, subject):
         if not isinstance(request_id,str):
@@ -525,6 +564,10 @@ class ChatAcl:
                 return self.tool({**payload,'tool_name':'agentguard-notices__read_gov_document','_document_adapter':True})
             if operation == 'chat_document_execute':
                 return self.document_execute(payload)
+            if operation == 'chat_grid_prepare':
+                return self.grid_prepare(payload)
+            if operation == 'chat_grid_execute':
+                return self.grid_execute(payload)
             if operation == 'chat_confirmation_status':
                 record=self.demo.requests.get(payload.get('request_id'),{})
                 run=self.runs.get(payload.get('run_id'))

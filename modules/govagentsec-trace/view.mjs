@@ -1,5 +1,6 @@
 import { traceGraph, graphLanes, compareTraces, nodePresentation } from './view-model.mjs';
-const status = { complete: '完整', partial: '采集不完整', interrupted: '运行中 / 采集中断', blocked: '已阻断', invalid: '哈希校验失败' };
+const status = { complete: '完整', failed: '执行失败', partial: '采集不完整', interrupted: '运行中 / 采集中断', blocked: '已阻断', invalid: '哈希校验失败' };
+const traceStatus=s=>s.trace_status==='complete'&&s.metrics?.success===false?'证据完整 · 任务失败':status[s.trace_status]??s.trace_status;
 const missing = { run_start: '运行开始', run_end: '运行结束', llm_output: '模型输出', model_call_events: '逐次模型事件', skill_usage_unobserved: 'Skill 使用未观测', tool_result: '工具结果', capture_failed: '采集失败', token_usage: 'token 用量' };
 const css = `:host{display:block;color:#233b37;font:14px 'Microsoft YaHei UI',system-ui,sans-serif}*{box-sizing:border-box}button,input,select{font:inherit}button{cursor:pointer}button,input,select{border:1px solid #d6e2de;border-radius:6px;padding:8px 11px;background:white;color:inherit}button:hover{border-color:#168676}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #72bdb2;outline-offset:2px}button[aria-pressed=true],.primary{background:#176f64;color:white;border-color:#176f64}button:disabled{opacity:.5;cursor:default}.bar,.tabs,.metrics{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.bar{margin-bottom:16px}.hint{font-size:12px;color:#637570;margin:8px 0}.layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:18px}.layout>section,.viewer>div{min-width:0}.list{max-height:72vh;overflow:auto;border-right:1px solid #dce6e2;padding-right:12px}.trace-row{display:flex;align-items:start;gap:8px;border-bottom:1px solid #e4ebe8;padding:12px 0}.trace-row button{border:0;text-align:left;width:100%;padding:4px;background:transparent}.trace-row button.active{background:#e3f0eb}.trace-row small{display:block;font-size:12px;color:#637570;margin-top:6px;overflow-wrap:anywhere}h3{font-size:18px;margin:0 0 10px;font-weight:600}.tabs{margin:14px 0}.badge{font-size:12px;border:1px solid #d7e2dd;border-radius:4px;padding:3px 6px}.warning{background:#fff2db;color:#825a16;padding:10px;border-left:3px solid #bd8b35;margin:10px 0}.error{background:#fff0ec;color:#a63f32;border-left-color:#bd4a3a}.metrics{font:13px system-ui;gap:18px;margin:14px 0}.viewer{min-width:0;display:grid;grid-template-columns:minmax(0,1fr);gap:12px}.viewer:has(.detail:not([hidden])){grid-template-columns:minmax(0,1fr)}[hidden]{display:none!important}.canvas-wrap{min-height:160px;overflow:auto;max-height:64vh;border:1px solid #dce6e2;border-radius:8px}.canvas{position:relative;min-width:1100px;background:repeating-linear-gradient(to right,#fbfdfc 0,#fbfdfc calc(var(--lane-width) - 1px),#e5eee9 calc(var(--lane-width) - 1px),#e5eee9 var(--lane-width))}.lanes{height:36px;display:grid;position:sticky;top:0;z-index:2;background:#edf4f0;font-size:13px;text-align:center;align-items:center;border-bottom:1px solid #dce6e2}.lanes span{border-right:1px solid #dce6e2}.canvas svg{position:absolute;left:0;top:0;pointer-events:none;width:100%}.event{height:112px;line-height:1.35;position:absolute;padding:7px 9px;text-align:left;background:#fff;font-size:13px;border-left:3px solid #4d8d81;overflow:hidden;overflow-wrap:anywhere}.event small{display:block;font:12px Consolas,monospace;color:#637570;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.event.blocked,.event.failed,.timeline-event.blocked,.timeline-event.failed{border-left-color:#b94736;background:#fff0ec}.event.pending,.event.risk,.timeline-event.pending,.timeline-event.risk{border-left-color:#b5802b;background:#fff5e2}.event.approved{border-left-color:#26845e}.event.selected{outline:2px solid #176f64}.detail{padding:12px;position:relative;border:1px solid #dce6e2;border-radius:8px;max-height:64vh;overflow:auto}.detail pre,.candidate pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px Consolas,monospace}.timeline{list-style:none;padding:0;margin:0;max-height:64vh;overflow:auto}.timeline button{border-left:3px solid #4d8d81;overflow-wrap:anywhere;display:flex;gap:16px;width:100%;text-align:left;margin-bottom:6px}.timeline time{font:12px Consolas,monospace;color:#637570;min-width:75px}.table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:12px}td,th{padding:10px;text-align:left;border-bottom:1px solid #dce6e2;vertical-align:top}th{background:#edf4f0}.diff{background:#fff0cb;border-radius:3px}.sequence{line-height:2}.empty{padding:36px 14px;color:#637570;text-align:center}.assign{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.candidate{border:1px solid #dce6e2;padding:12px;margin:10px 0;border-radius:8px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}@media(max-width:1100px){.viewer,.viewer:has(.detail:not([hidden])){grid-template-columns:1fr}.detail{max-height:250px}.layout{grid-template-columns:210px minmax(0,1fr)}}@media(max-width:700px){.layout{grid-template-columns:1fr}.list{max-height:180px;border-right:0}.bar input{max-width:100%}}`;
 const el = (tag, text, cls) => { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; if (cls) n.className = cls; return n; };
@@ -22,7 +23,7 @@ export function mountTraceAudit(root, rawRequest, { initialTab = 'graph', sessio
   const style = el('style', css + '.trace-meta{margin:8px 0}.trace-meta>summary{cursor:pointer;color:#637570;font-size:12px}.live-status{font-size:12px;color:#637570;margin:8px 0}.job-bar:empty{display:none}.job-bar{border:1px solid #d6e2de;padding:12px;margin-bottom:12px}.job-bar button{margin-left:10px}.event-group{float:right;color:#637570}.detail dl{display:grid;grid-template-columns:80px 1fr;gap:8px;margin:12px 0}.detail dd{margin:0;overflow-wrap:anywhere}.source-list{display:grid;gap:8px}.source-list button{text-align:left}.canvas svg path{vector-effect:non-scaling-stroke}.event small{white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.table-wrap{margin-bottom:14px}'), bar = el('div', undefined, 'bar'), layout = el('div', undefined, 'layout');
   const search = el('input'); search.type='search'; search.placeholder='搜索标题、任务或轨迹 ID'; search.setAttribute('aria-label','搜索轨迹');
   const filter = el('select'); filter.setAttribute('aria-label','轨迹状态');
-  for (const [v,t] of [['','全部状态'],['complete','完整'],['partial','证据不足'],['blocked','已阻断'],['invalid','校验异常']]) {const o=el('option',t);o.value=v;filter.append(o);}
+  for (const [v,t] of [['','全部状态'],['complete','完整'],['failed','执行失败'],['partial','证据不足'],['blocked','已阻断'],['invalid','校验异常']]) {const o=el('option',t);o.value=v;filter.append(o);}
   const group = el('select'); group.setAttribute('aria-label', '按任务筛选');
   const test = el('input'); test.type = 'checkbox'; const testLabel = el('label', '包含本地合成测试'); testLabel.prepend(test);
   const pack = el('select'); pack.setAttribute('aria-label','记录来源'); pack.append(new Option('当前工作区',''));
@@ -39,7 +40,10 @@ export function mountTraceAudit(root, rawRequest, { initialTab = 'graph', sessio
     filters.append(el('summary','筛选运行'));fields.append(search,filter,group,testLabel);filters.append(fields);
     bar.append(follow,btn('刷新',load),filters);
   }else bar.append(pack, follow, search, filter, group, testLabel, btn('刷新', load), btn('对比所选轨迹', () => switchTab('compare')), btn('候选 Skill', () => switchTab('candidates')));
-  root.replaceChildren(style, bar, notice, healthNotice, jobbar, liveStatus, layout);
+  const gridLibrary=el('div');
+  root.replaceChildren(style, gridLibrary, bar, notice, healthNotice, jobbar, liveStatus, layout);
+  let closeGridLibrary=()=>{};
+  import('/plugins/govagentsec/grid-native/view.mjs').then(({mountGridLibrary})=>{if(!closed)closeGridLibrary=mountGridLibrary(gridLibrary,rawRequest);}).catch(()=>{if(!closed)gridLibrary.textContent='电网技能与报告组件暂不可用。';});
   pack.onchange = () => { packId=pack.value; following=false;updateFollow();selected.clear(); selectedId=null; current=null; selectedEventId=null; group.value=''; tab='graph'; version++; showJob();load(); };
   rawRequest('historyPacks',{}).then(result=>{if(closed)return;for(const item of result.packs??[]){const option=el('option',item.label+' · 历史只读');option.value=item.id;pack.append(option);}pack.value=packId;}).catch(()=>{pack.title='历史记录暂不可用，仍可查看当前工作区';});
   const visibleTraces = () => summaries.filter(t => (!group.value || t.task_key === group.value) && (packId || sessionKey === undefined || t.session_key === sessionKey) && (!filter.value || t.trace_status===filter.value) && [t.title,t.trace_id,t.task_key].join(' ').toLowerCase().includes(search.value.toLowerCase()) && (test.checked || !['synthetic-fixture','controlled-validation','integration-test'].includes(t.source) && t.purpose!=='test'));
@@ -77,8 +81,8 @@ export function mountTraceAudit(root, rawRequest, { initialTab = 'graph', sessio
       check.onchange = () => check.checked ? selected.add(t.trace_id) : selected.delete(t.trace_id);
       const choose = btn(traceTitle(t), () => { following=false;updateFollow();tab = 'graph'; open(t.trace_id); }); choose.disabled = !t.trace_id; choose.dataset.traceId = t.trace_id ?? ''; choose.classList.toggle('active', t.trace_id === selectedId);
       choose.setAttribute('aria-current', String(t.trace_id === selectedId));
-      if(compact)choose.append(el('small',status[t.trace_status] ?? t.trace_status));
-      else choose.append(el('small', `${status[t.trace_status] ?? t.trace_status} · ${t.task_key ?? '任务未关联'}`), el('small', t.timestamp ? new Date(t.timestamp).toLocaleString('zh-CN') : '时间未采集'));
+      if(compact)choose.append(el('small',traceStatus(t)));
+      else choose.append(el('small', `${traceStatus(t)} · ${t.task_key ?? '任务未关联'}`), el('small', t.timestamp ? new Date(t.timestamp).toLocaleString('zh-CN') : '时间未采集'));
       if(!compact)row.append(check);row.append(choose);list.append(row);
     }
     if (!filtered.length) list.append(el('p', '没有此范围的轨迹。请确认 govagentsec-trace 插件已启用，运行一次受管工具后刷新；也可调整筛选或勾选本地合成测试。', 'empty'));
@@ -111,7 +115,8 @@ export function mountTraceAudit(root, rawRequest, { initialTab = 'graph', sessio
     const protections=current.events.filter(e=>e.event_type.startsWith('protection.'));
     const approvals=current.events.filter(e=>e.event_type.startsWith('approval.'));
     const duration=Number.isFinite(m.duration_ms)?`${fmt(m.duration_ms)} ms`:'耗时未采集';
-    content.append(el('h3',traceTitle(s)),el('p',`${status[s.trace_status]} · ${m.steps} 次工具调用 · ${duration} · 已阻断 ${protections.filter(e=>e.payload.decision==='BLOCK'&&e.payload.enforced).length} · 审批 ${approvals.length}`,'hint'));
+    content.append(el('h3',traceTitle(s)),el('p',`${traceStatus(s)} · ${m.steps} 次工具调用 · ${duration} · 已阻断 ${protections.filter(e=>e.payload.decision==='BLOCK'&&e.payload.enforced).length} · 审批 ${approvals.length}`,'hint'));
+    if(s.failure_code)content.append(el('p',s.failure_code==='TOOL_PREFLIGHT_EMPTY'?'模型调用前检查失败：当前身份没有可调用工具。':'本次任务执行失败；请展开运行结束事件核对错误证据。','warning'));
     if(!current.integrity.valid)content.append(el('p','哈希断链 / 文件不完整：'+current.integrity.errors.map(e=>e.code).join('、'),'warning error'));
     if(s.missing_fields.includes('orphan_result'))content.append(el('p','证据不足，当前轨迹不可入选：工具结果缺少对应的开始事件。评审时隔离。','warning error'));
     else if(['partial','invalid','interrupted'].includes(s.trace_status))content.append(el('p','本次记录尚不完整，暂不能用于候选生成。','warning'));
@@ -123,7 +128,7 @@ export function mountTraceAudit(root, rawRequest, { initialTab = 'graph', sessio
     if(s.missing_fields.length)meta.append(el('p','未观测字段：'+s.missing_fields.map(x=>missing[x]??x).join('、')));
     meta.append(el('p','记录编号：'+s.trace_id),el('p',approvals.some(e=>e.payload.source==='identity-audit')?'批准与实际执行分别记录。':'未采集到原生审批事件；存在审批时请结合回执核对。'));content.append(meta);
     const assign=el('details',undefined,'trace-meta');assign.dataset.stateKey='assign';assign.append(el('summary',s.task_key?'任务归属：'+s.task_key:'关联同一任务'));
-    const form=el('div',undefined,'assign'),key=el('input');key.placeholder='任务名称，例如台风应急简报';key.value=s.task_key??'';key.setAttribute('aria-label','任务标识');
+    const form=el('div',undefined,'assign'),key=el('input');key.placeholder='任务标识，例如 a-park-electricity-diagnosis';key.value=s.task_key??'a-park-electricity-diagnosis';key.setAttribute('aria-label','任务标识');
     const confirm=el('input');confirm.type='checkbox';const label=el('label','确认属于同一任务');label.prepend(confirm);
     const save=btn('保存关联',async()=>{try{await request('assign',{trace_id:s.trace_id,task_key:key.value,confirmed:confirm.checked});await load();}catch{warn('请输入任务名称并确认归属；保存需要工作区写权限。',true);}});save.disabled=Boolean(packId);
     form.append(key,label,save);assign.append(form);if(compact)meta.append(assign);else content.append(assign);
@@ -197,17 +202,17 @@ export function mountTraceAudit(root, rawRequest, { initialTab = 'graph', sessio
       box.append(el('h4','候选来源预览'),el('p',`所选 ${ids.length} · 安全集合 ${selection.denominator}（含缺少Q者） · 保留 ${selection.keep*100}% · 目标 ${selection.requested_count} · 实际入选 ${selection.selected.length}`));
       const decisions=el('details');decisions.append(el('summary','查看入选与隔离原因'));for(const row of selection.decisions)decisions.append(el('p',`${row.trace_id.slice(0,8)} · ${row.selected?'入选':row.reason}`));box.append(decisions);
       if(!preview.can_generate)box.append(el('p',selection.selected.length<2?'生成至少需要2条最终入选记录。请补充同任务的合格运行并重新评估。':'当前来源尚不能生成候选，请核对评估与完整性。','warning'));
-      const name=el('input');name.placeholder='候选 Skill 名称';name.value='task-workflow-candidate';name.setAttribute('aria-label','候选技能名称');
+      const name=el('input');name.placeholder='候选 Skill 名称';name.value=result.task_key==='a-park-electricity-diagnosis'?'grid-anomaly-diagnosis':'task-workflow-candidate';name.setAttribute('aria-label','候选技能名称');
       const generate=btn('归纳候选 Skill',async()=>{generate.disabled=true;try{const generated=await request('generate',{task_key:result.task_key,trace_ids:ids,snapshot_hash:preview.snapshot_hash,name:name.value});warn('已生成隔离候选：'+generated.candidate.name);switchTab('candidates');}catch{warn('来源或评分已变化，请重新查看筛选结果；未安装任何技能。',true);render();}},'primary');generate.disabled=!preview.can_generate;box.append(name,generate,el('p','只使用此处所选和已核验的来源。候选尚未安装。','hint'));content.append(box);
     }catch(e){if(!closed&&generation===renderVersion)content.append(el('p',e.message==='request failed'?'无法读取本地评估，请刷新后重试。':e.message,'empty'));}
   }
   async function renderCandidates(generation) {
     content.append(el('h3', '候选 Skill 与步骤来源'));
     try { const data = await request('candidates'); if (closed || tab !== 'candidates' || renderVersion !== generation) return;
-      for (const c of data.candidates) { const box = el('article', undefined, 'candidate'); box.append(el('strong', c.name ?? c.id), el('p', `${({draft:'待评审',admission_passed:'准入通过',rejected:'已拒绝',unverified:'待核验'})[c.status]??'待核对'} · ${c.created_at ?? ''}`, 'hint'));
+      for (const c of data.candidates) { const box = el('article', undefined, 'candidate'); box.append(el('strong', c.name ?? c.id), el('p', `${c.grid_release?'已发布到 OpenClaw 电网演示库':({draft:'待评审',admission_passed:'准入通过',rejected:'已拒绝',unverified:'待核验'})[c.status]??'待核对'}${c.generation?.release?.version?' · '+c.generation.release.version:''} · ${c.created_at ?? ''}`, 'hint'));
         const gatePanel=el('section',undefined,'release-gate');gatePanel.setAttribute('aria-label','候选发布闸');
         box.append(gatePanel);loadReleaseGate(c,gatePanel,generation);
-        if (c.generation?.test_only) box.append(el('p', '测试证据候选：禁止生产发布', 'warning'));
+        if (c.generation?.test_only) box.append(el('p', c.generation?.release?.scope==='openclaw-grid-demo'?'本地评审候选：限定 OpenClaw 电网演示技能库发布。':'测试证据候选：禁止生产发布', 'warning'));
         for (const step of c.generation?.steps ?? []) { const d=el('details'),sources=el('div',undefined,'source-list');d.append(el('summary',`${step.step}. ${step.tool} · ${step.evidence.length} 条来源`));for(const [i,e] of step.evidence.entries())sources.append(btn('查看来源 '+(i+1)+' · '+e.trace_id.slice(0,8),async()=>{tab='graph';await open(e.trace_id);selectedEventId=e.event_id;render();}));const raw=el('details');raw.append(el('summary','来源标识与哈希'),el('pre',JSON.stringify(step.evidence,null,2)));d.append(sources,raw);box.append(d); }
         if (c.status === 'draft' && !packId) box.append(btn('运行联合准入', async () => { try { await request('admit', { candidate_id: c.id }); renderCandidatesReload(); } catch { warn('联合准入未完成，候选保持隔离。', true); } }));
         const evidence = c.admission_passed ?? c.rejected ?? c.unverified; if (evidence) { const d = el('details'); d.append(el('summary', '准入证据'), el('pre', JSON.stringify(evidence, null, 2))); box.append(d); } content.append(box); }
@@ -215,10 +220,30 @@ export function mountTraceAudit(root, rawRequest, { initialTab = 'graph', sessio
     } catch { if (!closed && renderVersion === generation) content.append(el('p', '候选记录暂不可读', 'warning')); }
   }
   async function loadReleaseGate(candidate,panel,generation) {
-    panel.append(el('h4','发布审核'),el('p','准入通过后仍需人工复核，候选尚未安装。','warning'));
+    panel.append(el('h4','发布审核'));
     try {
       const gate=await request('releaseGate',{candidate_id:candidate.id});
       if(closed||generation!==renderVersion)return;
+      if(gate.grid){
+        const g=gate.grid;
+        panel.append(el('p',g.released?`已发布到 OpenClaw 电网演示技能库 · ${g.version}`:`电网技能版本 ${g.baseline_version} → ${g.version}`),
+          el('p','发布至当前 OpenClaw 工作区的 grid-anomaly-diagnosis。新建会话后可实际加载；生产发布限制保持不变。','hint'));
+        const before=(g.before??'').split('\n'),after=(g.after??'').split('\n');
+        const changed=el('details');changed.open=true;changed.append(el('summary','新旧版本差异'));
+        const diff=el('pre');diff.textContent=[...before.filter(x=>x&&!after.includes(x)).map(x=>'- '+x),...after.filter(x=>x&&!before.includes(x)).map(x=>'+ '+x)].join('\n')||'文本未变化';changed.append(diff);panel.append(changed);
+        const full=el('details');full.append(el('summary','完整候选 Skill'),el('pre',g.after??''));panel.append(full);
+        const evidence=el('details');evidence.append(el('summary',`发布来源核验 · ${g.sources.length} 条原生会话`),el('pre',JSON.stringify(g.sources,null,2)));panel.append(evidence);
+        panel.append(el('p',`联合准入：${gate.admission.decision==='allow'?'通过':gate.admission.decision==='block'?'拒绝':'待检查'}`));
+        if(g.released){panel.append(el('p',`审核人：${g.receipt.reviewer_label??g.receipt.reviewer} · ${g.receipt.at}`),el('p',`版本 ${g.receipt.version} · 内容摘要 ${g.receipt.artifact_hash}`,'hint'),el('p','返回聊天，新建会话，重新提交电网分析任务；报告回执将显示实际加载的版本。'));}
+        else{
+          const confirm=el('input');confirm.type='checkbox';const label=el('label','我已核对版本差异、资料范围和来源证据，批准发布至电网演示库。');label.prepend(confirm);panel.append(label);
+          const publish=btn('审核通过并发布到 OpenClaw',async()=>{publish.disabled=true;try{await request('gridPublish',{candidate_id:candidate.id,artifact_hash:g.artifact_hash});warn('已发布。请在 OpenClaw 新建会话验证新版本。');render();}catch{warn('发布未完成：请核对管理员身份、基线版本与来源证据。',true);publish.disabled=!confirm.checked||!g.enabled;}});
+          publish.disabled=true;confirm.disabled=!g.enabled;confirm.onchange=()=>{publish.disabled=!confirm.checked||!g.enabled;};panel.append(publish);
+          const reasons={GRID_REVIEWER_REQUIRED:'请切换具备技能审核权限的管理员身份。',GRID_ADMISSION_REQUIRED:'先运行联合准入，再审核发布。',GRID_BASELINE_CHANGED:'当前基线已经更新，请重新生成候选。',GRID_SOURCE_CHANGED:'来源轨迹发生变化，请重新评测。',GRID_ASSESSMENT_CHANGED:'来源评测已变化，请重新生成候选。',GRID_NATIVE_TOOLS_REQUIRED:'来源需要完成两次受管资料读取和电网分析。',GRID_SKILL_READ_REQUIRED:'来源缺少实际 Skill 加载证据。'};
+          if(g.reason)panel.append(el('p',reasons[g.reason]??`发布尚不可用：${g.reason}`,'hint'));
+        }
+        return;
+      }
       panel.append(el('p',`状态：${({draft:'待评审',scored:'已评审',admitted_allow:'准入通过',admitted_block:'准入阻断',ready_for_review:'待人工复核'})[gate.state]??'待核对'}`),
         el('p',`技能说明保存在候选工坊，尚未安装${gate.summary.test_only?'；仅供测试，禁止生产发布':''}`),
         el('p',`参与轨迹 ${gate.counts.participating} · 安全通过 ${gate.counts.safe} · 隔离 ${gate.counts.quarantine}`),
@@ -272,5 +297,5 @@ export function mountTraceAudit(root, rawRequest, { initialTab = 'graph', sessio
   if(compact){const extra=el('style','.layout{grid-template-columns:1fr;gap:10px}.list{max-height:68px;border-right:0;padding-right:0}.trace-row{padding:3px 0}.trace-row button{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px}.trace-row small{margin:0;flex-shrink:0}.bar{gap:6px;margin-bottom:8px}.bar input{max-width:100%}.compact-filters>summary{cursor:pointer;padding:8px 10px;border:1px solid #d6e2de;border-radius:6px;background:white}.compact-filters[open]{flex-basis:100%}.filter-fields{display:flex;gap:8px;flex-wrap:wrap;padding:10px 0}.trace-meta{font-size:12px}.live-status{margin:4px 0}.tabs{margin:10px 0;gap:5px}.tabs button{padding:7px 9px}h3{font-size:16px;margin-bottom:6px}');root.append(extra);}
   render(); load();
   try{const id=!compact&&sessionStorage.getItem(jobStorageKey);if(id)rawRequest('assessmentStatus',{job_id:id}).then(value=>{if(!closed&&!job){job=value;showJob();}}).catch(()=>{try{sessionStorage.removeItem(jobStorageKey);}catch{}});}catch{}
-  return () => { closed = true; clearInterval(timer);clearTimeout(resizeTimer);window.removeEventListener('resize',resize);document.removeEventListener('visibilitychange',visibility);version++; listVersion++; renderVersion++; root.replaceChildren(); };
+  return () => { closed = true; closeGridLibrary(); clearInterval(timer);clearTimeout(resizeTimer);window.removeEventListener('resize',resize);document.removeEventListener('visibilitychange',visibility);version++; listVersion++; renderVersion++; root.replaceChildren(); };
 }

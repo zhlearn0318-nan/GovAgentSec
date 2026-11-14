@@ -13,7 +13,7 @@ export function commonSequence(a, b) {
   }
   return out;
 }
-export function generateCandidate(store, records, { task_key, name, workshopRoot, loaderRoots, inputs = [], preconditions = [], output_format = '由操作者确认的任务输出', keep = 0.9 }) {
+export function generateCandidate(store, records, { task_key, name, workshopRoot, loaderRoots, inputs = [], preconditions = [], output_format = '由操作者确认的任务输出', keep = 0.9, release = null }) {
   const selection = selectTopK(records, task_key, { keep });
   if (selection.selected.length < 2) throw new Error('at least two safe selected traces from the confirmed task_key are required');
   const traces = selection.selected.map(row => {
@@ -41,8 +41,8 @@ export function generateCandidate(store, records, { task_key, name, workshopRoot
     return { trace_id: t.summary.trace_id, failed_event_id: e.event_id, recovery_event_id: retry?.event_id ?? null, tool: e.payload.tool, outcome: retry ? 'later_same_tool_succeeded' : 'unresolved' };
   }));
   const operator = redact({ inputs, preconditions, output_format });
-  const description = `Complete the ${task_key} workflow with ${[...new Set(sequence)].join(', ')}. Use operator-supplied input files and approved output paths, validate tool results, and retain required approvals.`;
-  const content = ['---', `name: ${name}`, 'description: ' + JSON.stringify(description), 'category: workflow', '---', '',
+  const description = release?.scope==='openclaw-grid-demo' ? '分析 A 园区2024年9月用电异常；受管读取 grid_curves 和 grid_records，调用 gov_analyze_grid，交付报告图表和来源证据。' : `Complete the ${task_key} workflow with ${[...new Set(sequence)].join(', ')}. Use operator-supplied input files and approved output paths, validate tool results, and retain required approvals.`;
+  const content = ['---', `name: ${name}`, ...(release?[`version: ${release.version}`, 'scope: openclaw-grid-demo']:[]), 'description: ' + JSON.stringify(description), 'category: workflow', '---', '',
     `# ${name}`, '', '## 适用任务', task_key, '', '## 必要输入',
     ...operator.inputs.map(x => '- ' + x), `- 历史工具参数字段：${fields.join('、') || '未观测；使用前确认'}`, '',
     '## 前置条件', '- 保持现有防护开启；仅使用已准入的能力。', '- 写入、外发及高影响操作必须先获得现有审批。',
@@ -57,7 +57,7 @@ export function generateCandidate(store, records, { task_key, name, workshopRoot
   const workshop = new Workshop(workshopRoot, loaderRoots);
   const candidate = workshop.create({ name, content,
     source_traces: selection.selected.map(r => ({ trace_id: r.trace_id, evidence_hash: r.evidence_hash, original_task_group: task_key })),
-    generation: { version: GENERATOR_VERSION, source: 'local-deterministic', test_only: selection.selected.some(r => r.test_only), task_key,
+    generation: { version: GENERATOR_VERSION, source: 'local-deterministic', test_only: selection.selected.some(r => r.test_only), task_key, ...(release?{release}:{}),
       generated_at: new Date().toISOString(), steps, recoveries, required_inputs: fields, operator_context: operator,
       selection, assessment_snapshot:records.filter(r=>r.task_key===task_key).map(r=>({trace_id:r.trace_id,task_key:r.task_key,
         evidence_hash:r.evidence_hash,quality:r.quality,safety:r.safety,test_only:r.test_only})),

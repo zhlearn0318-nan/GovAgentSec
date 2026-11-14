@@ -5,6 +5,7 @@
   "configSchema": {
     "type": "object", "additionalProperties": false,
     "properties": {"dataDir": {"type": "string", "minLength": 1}, "contentMode": {"type": "string", "enum": ["hash", "summary"], "default": "hash"},
+      "gridDemoRelease":{"type":"object","additionalProperties":false,"properties":{"enabled":{"type":"boolean","default":false},"skillDirectory":{"type":"string"}},"required":["enabled","skillDirectory"]},
       "usageWrapper": {"type":"object","additionalProperties":false,"properties":{
         "enabled":{"type":"boolean","default":false},"endpoint":{"type":"string"},
         "credentialFile":{"type":"string"},"providers":{"type":"array","items":{"type":"string"}}

@@ -4,8 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { TraceStore } from './store.mjs';
 
 // Published repository evidence only. Browser input is an ID, never a path or URL.
-const catalogue=[{id:'typhoon-real-20261107',label:'台风应急简报 · 6条历史真实运行',source:'real-openclaw-traces',read_only:true,
-  root:fileURLToPath(new URL('../../local-validation/real-evolution/2026-11-07-multi-trace-final/',import.meta.url))}];
+const catalogue=[];
 export function historyPacks() {
   return {packs:catalogue.filter(p=>existsSync(path.join(p.root,'evidence/traces'))).map(({root,...p})=>p)};
 }

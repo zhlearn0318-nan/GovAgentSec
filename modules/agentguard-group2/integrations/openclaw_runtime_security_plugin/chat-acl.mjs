@@ -66,7 +66,7 @@ export function registerChatAcl(api,bridge,{workspaceResolver=ctx=>hostWorkspace
   // Gateway and pre-warmed Agent registries share the authenticated bridge.
   const runs=bridge.chatRuns??=new Map();
   api.registerTool?.(ctx=>({name:'gov_read_document',label:'按登录身份读取受管资料',
-    description:'读取合成受管资料，以当前登录账号授权。document_id 可为 emergency_plan、material_inventory、duty_contacts、command_contacts、protected_resource。代替独立 MCP 的 read_gov_document，禁止传入路径或身份。',
+    description:'按当前登录账号读取电网内部资料库。grid_curves 为A园区脱敏用电曲线，grid_records 为需获批的生产检修记录，grid_other 为范围外资料；也支持已导入资料的 doc_ 编号。禁止传入路径或身份，权限不足时先申请访问。',
     parameters:{type:'object',additionalProperties:false,properties:{document_id:{type:'string'}},required:['document_id']},
     async execute(callId,params){
       const value=await bridge.request('chat_document_execute',{session_key:ctx.sessionKey,tool_call_id:callId,params});
@@ -99,7 +99,7 @@ export function registerChatAcl(api,bridge,{workspaceResolver=ctx=>hostWorkspace
     if(!run||run.session!==ctx.sessionKey)return block('P001_CONTRACT_REQUIRED',event,ctx);
     try{
       if(bridge.personalConfirmation && event.toolName==='agentguard-notices__read_gov_document')return {block:true,blockReason:'请改用 gov_read_document(document_id=原文档ID)，它按当前登录账号执行。旧 MCP 静态身份入口未读取资料。'};
-      const operation=event.toolName==='gov_read_document'?'chat_document_prepare':'chat_tool';
+      const operation=event.toolName==='gov_read_document'?'chat_document_prepare':event.toolName==='gov_analyze_grid'?'chat_grid_prepare':'chat_tool';
       const payload={run_id:id,session_key:ctx.sessionKey,
         tool_call_id:ctx.toolCallId,
         tool_name:event.toolName,params:event.params,action:nativeAction(event.toolName,event.params,run.root)};
@@ -113,7 +113,7 @@ export function registerChatAcl(api,bridge,{workspaceResolver=ctx=>hostWorkspace
           if(pending.status!=='pending_approval')return block('PERSONAL_CONFIRMATION_REJECTED_OR_EXPIRED',event,ctx);
         }
       }
-      if(!['host_authorized','document_prepared'].includes(result.status))return block(result.reason_code??'P012_TASK_POLICY_UNAVAILABLE',event,ctx);
+      if(!['host_authorized','document_prepared','grid_prepared'].includes(result.status))return block(result.reason_code??'P012_TASK_POLICY_UNAVAILABLE',event,ctx);
     }catch(e){return block(e.message==='P018_PATH_REJECTED'?e.message:'P012_TASK_POLICY_UNAVAILABLE',event,ctx);}
   },{priority:-10000});
   api.on?.('after_tool_call',async(event,ctx)=>{

@@ -25,11 +25,13 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from identity.oidc import OidcIdentityError, OidcVerifier
 from enforcement.notifications import notice_action
 from enforcement.documents import REGISTRY, document_action
+from enforcement.document_library import DocumentLibrary, ImportError as DocumentImportError
 from enforcement.task_policy import sensitive_values
 from service.app import AgentGuardService
 from service.config import ServiceConfig
 from identity.chat_acl import ChatAcl
 from identity.tool_catalog import ToolCatalog
+from identity.document_access import DocumentAccess
 from identity.personal_confirmation import confirm as confirm_personal
 
 LABEL = '演示身份源（非生产）'
@@ -50,15 +52,15 @@ def demo_users():
         for u in realm['users'] if u['username'] in USER_LABELS}
     # The three public demo accounts form a cumulative hierarchy. Existing
     # internal-only fixtures remain available to isolated security regressions.
-    users['office-test'].update(label='基础经办', tier=1, tier_label='基础经办',
+    users['office-test'].update(label='用电数据分析员', department='供电企业用电分析', tier=1, tier_label='业务分析员',
         clearance=0, roles=['office_user'])
-    users['approver-test'].update(label='中级主管', tier=2, tier_label='中级主管',
+    users['approver-test'].update(label='资料审批人', department='供电企业资料管理', tier=2, tier_label='资料审批人',
         clearance=1, roles=['office_user', 'business_approver'])
     users['maintenance-test'] = dict(id='maintenance-test', label='高级管理员', enabled=True,
         department='演示维护', clearance=3, tier=3, tier_label='高级管理员',
         roles=['office_user', 'business_approver', 'workspace_maintainer', 'security_admin', 'finance_operator'],
         mfa=True, amr=['mfa'], mfa_synthetic=True)
-    users['superadmin-test'] = {**users['maintenance-test'], 'id':'superadmin-test', 'label':'最高权限管理员'}
+    users['superadmin-test'] = {**users['maintenance-test'], 'id':'superadmin-test', 'label':'技能审核人 / 管理员', 'department':'供电企业智能体安全管理'}
     return users
 
 
@@ -119,10 +121,12 @@ class _DemoGuard(AgentGuardService):
 
 
 class DemoIdentity:
-    def __init__(self, directory, *, personal_confirmation=False):
+    def __init__(self, directory, *, personal_confirmation=False, library_directory=None):
         self.personal_confirmation = personal_confirmation
         self.directory = Path(directory)
         self.directory.mkdir(parents=True, exist_ok=True)
+        self.library = DocumentLibrary(library_directory or self.directory / 'materials')
+        self.document_access = DocumentAccess(self.directory)
         self.users = demo_users()
         self.accounts = json.loads((ROOT / 'identity/demo_accounts.json').read_text(encoding='utf-8'))['accounts']
         self.permission_policy = json.loads((ROOT / 'data/agent_guard.json').read_text(encoding='utf-8'))['agent_guard']
@@ -140,6 +144,36 @@ class DemoIdentity:
         self.trace_projection_failed = False
         self.chat = ChatAcl(self)
         self.delegations = {}
+
+    @property
+    def document_registry(self):
+        return {**REGISTRY, **self.library.registry()}
+
+    def document_action(self, document_id):
+        return document_action(document_id, self.document_registry)
+
+    def read_document(self, subject, document_id, *, task_id=None, run_id=None):
+        """Current verified subject, exact registry action, OPA and one-use dispatch."""
+        action = self.document_action(document_id)
+        if task_id is None:
+            task_id = 'document-preview-' + uuid.uuid4().hex
+            self.service.gateway.task_policies.create(task_id, subject['id'], tools=['file.read'],
+                prefixes=[action['resource'].rsplit('/',1)[0]+'/'], user_values={'file.read':{'document_id':document_id}},
+                grant_source='registry_policy')
+        request = self.task_request(task_id, action)
+        request['subject'] = subject
+        request['context'].update(host_document_adapter=True,run_id=run_id)
+        authorization = self.service.gateway.authorize(request)
+        if authorization.get('status') != 'authorized':
+            return self.blocked(authorization.get('policy_reason_codes', [authorization.get('reason_code')])[0])
+        result = self.service.gateway.dispatch(request, authorization['ticket'])
+        business = (result.get('receipt') or {}).get('business_result') or {}
+        if result.get('status') != 'executed_isolated' or business.get('document_id') != document_id:
+            return self.blocked(result.get('reason_code', 'DOCUMENT_UNAVAILABLE'))
+        self.audit('document.read', subject=subject['id'],document_id=document_id,run_id=run_id,request_id=request['request_id'])
+        content = business['document_content']
+        return dict(status='ok',document_id=document_id,content=content,sha256=hashlib.sha256(content.encode()).hexdigest(),
+                    request_id=request['request_id'],task_id=task_id)
 
     def audit(self, event, **fields):
         entry = dict(audit_id=uuid.uuid4().hex, at=datetime.now(timezone.utc).isoformat(), event=event,
@@ -215,7 +249,7 @@ class DemoIdentity:
             execution_enabled=subject is not None and bool({'office_user','finance_operator','business_approver'}.intersection(subject['roles'])),
             user=self.public_subject(subject), permission_summary=self.permission_summary(subject), expires_at=self.expires_at,
             users=[self.public_subject(self.users[a['subject']]) for a in self.accounts
-                   if a.get('enabled') and self.users[a['subject']].get('enabled')],
+                   if a.get('enabled') and a['account'] in {'jingban','shenpi','admin'} and self.users[a['subject']].get('enabled')],
             requests=self.request_summaries(subject),
             tasks=self.task_summaries(subject), audit=self.events[-40:] if subject else [],
             chat_session_bindings=(len(self.chat.sessions) if subject else 0),
@@ -237,7 +271,7 @@ class DemoIdentity:
             return None
         roles = set(subject['roles'])
         maintenance = 'workspace_maintainer' in roles
-        assess = maintenance or bool({'business_approver', 'audit_reader'}.intersection(roles))
+        assess = maintenance or bool({'office_user', 'business_approver', 'audit_reader'}.intersection(roles))
         capabilities = ['workspace.read', 'audit.read', 'admission.read']
         if assess:
             capabilities.append('audit.assess')
@@ -248,8 +282,10 @@ class DemoIdentity:
         tools = sorted({row['tool'] for row in catalog if row['available']})
         can_read = any(p['role'] in roles and p['tool']=='file.read' and 'read' in p['operations']
                        for p in policy['permissions']) and 'file.read' in tools
-        materials = [document_id for document_id, (_,resource,level,_) in REGISTRY.items()
-                     if can_read and policy['data_levels'][level] <= subject['clearance']
+        registry = self.document_registry
+        imported = self.library.catalogue()
+        materials = [document_id for document_id, (_,resource,level,_) in registry.items()
+                     if can_read and (policy['data_levels'][level] <= subject['clearance'] or self.document_access.allowed(subject,document_id) is True)
                      and ('security_admin' in roles or not any(resource.lower().startswith(p.lower())
                           for p in policy['protected_resource_prefixes']))]
         user = self.users[subject['id']]
@@ -257,8 +293,13 @@ class DemoIdentity:
             tier=user.get('tier'), tier_label=user.get('tier_label'),
             clearance=subject['clearance'], clearance_label=['公开','内部','机密','秘密'][subject['clearance']],
             material_ids=materials, tool_families=tools, can_approve='business_approver' in roles,
-            materials=[dict(document_id=key, data_level=value[2], readable=key in materials)
-                       for key,value in REGISTRY.items()],
+            materials=[dict(document_id=key, data_level=value[2], readable=key in materials,
+                            title={'grid_curves':'A园区脱敏用电曲线与采集事件.csv','grid_records':'A园区企业档案与生产检修记录','grid_other':'B园区受限资料'}.get(key,imported.get(key,{}).get('title',key)),
+                            requestable=key=='grid_records' and 'office_user' in roles,
+                            **{k:v for k,v in imported.get(key,{}).items() if k not in {'document_id','data_level','title'}})
+                       for key,value in registry.items()],
+            can_import_documents=maintenance,
+            document_requests=self.document_access.rows(subject),
             tool_catalog=catalog,
             can_edit_rules=maintenance, can_switch_sandbox=maintenance, can_assess=assess,
             approval_mode='openclaw_native_only' if self.service.gateway.native_approval_only({'subject':subject}) else 'business_approval')
@@ -318,8 +359,8 @@ class DemoIdentity:
             if owner != subject['id'] and not {'business_approver', 'audit_reader'}.intersection(subject['roles']):
                 continue
             contract = self.service.gateway.task_policies.summary(task_id)
-            visible = [doc_id for doc_id in REGISTRY if 'file.read' in contract['allowed_tools']
-                       and self.service.gateway.task_policies.resource_allowed(contract, document_action(doc_id))]
+            visible = [doc_id for doc_id in self.document_registry if 'file.read' in contract['allowed_tools']
+                       and self.service.gateway.task_policies.resource_allowed(contract, self.document_action(doc_id))]
             row = {**contract, 'available_documents': visible}
             # Only a unique live host run locates this contract; historical tasks
             # never inherit the currently selected conversation.
@@ -362,7 +403,7 @@ class DemoIdentity:
             if self.tasks.get(task_id) != subject['id']:
                 return self.blocked('P002_SUBJECT_MISMATCH')
             try:
-                action = document_action(payload.get('document_id'))
+                action = self.document_action(payload.get('document_id'))
             except Exception:
                 return self.blocked('G016_DOCUMENT_UNAVAILABLE')
             request = self.task_request(task_id, action)
@@ -441,7 +482,12 @@ class DemoIdentity:
                    'task_create': {'directory'}, 'task_read': {'task_id','document_id'},
                    'task_escalate': {'request_id'}, 'bind_session': {'session_key'}, 'revoke': set(),
                    'materials': {'session_key'}, 'select_materials': {'session_key','material_ids'},
-                   'task_reapply': {'request_id'}}
+                   'task_reapply': {'request_id'},
+                   'document_import': {'filename','content_base64','title','data_level'},
+                   'document_delete': {'document_id'},
+                   'document_preview': {'document_id'},
+                   'document_request': {'document_id','purpose','minutes'},
+                   'document_review': {'request_id','resolution'}}
         if operation not in allowed or not isinstance(payload, dict) or set(payload) - allowed[operation]:
             self.audit('demo_identity.rejected', reason_code='DEMO_UNTRUSTED_FIELD')
             return self.blocked('DEMO_UNTRUSTED_FIELD')
@@ -457,6 +503,8 @@ class DemoIdentity:
                 public = json.loads(jwt.algorithms.RSAAlgorithm.to_jwk(self.key.public_key()))
                 public.update(kid=self.kid, use='sig', alg='RS256')
                 self.service = _DemoGuard(DemoVerifier({'keys': [public]}, self.delegations), self.directory / self.kid)
+                self.service.gateway.business_adapters.documents.library = self.library
+                self.service.gateway.scoped_document_access = self.document_access.allowed
                 self.tool_catalog = ToolCatalog(self.permission_policy, self.directory / 'tool-admission.json')
                 self.expires_at = time.time() + LOGIN_TTL_SECONDS
                 self.audit('demo_identity.enabled', activation_id=self.kid, transport='in-process', mfa_synthetic=True)
@@ -493,6 +541,40 @@ class DemoIdentity:
                 return self.authorize(bearer,payload.get('permission'))
             if operation == 'revoke':
                 return self.revoke(bearer, subject)
+            if operation in {'document_request','document_review','document_preview'}:
+                try:
+                    if operation == 'document_preview':
+                        return self.read_document(subject,payload.get('document_id'))
+                    row = (self.document_access.request(subject,payload) if operation=='document_request'
+                           else self.document_access.review(subject,payload))
+                    self.audit(operation,subject=subject['id'],document_id=row['document_id'],request_id=row['id'],
+                               status=row['status'],expires_at=row.get('expires_at'),purpose=row['purpose'])
+                    return {'status':'ok','request':row}
+                except ValueError as exc:
+                    return self.blocked(str(exc))
+            if operation == 'document_import':
+                try:
+                    document = self.library.import_document(payload, subject)
+                except DocumentImportError as exc:
+                    self.audit('document.import_rejected', subject=subject['id'], reason_code=exc.code)
+                    return self.blocked(exc.code)
+                except Exception:
+                    self.audit('document.import_failed', subject=subject['id'], reason_code='DOCUMENT_STORAGE_UNAVAILABLE')
+                    return self.blocked('DOCUMENT_STORAGE_UNAVAILABLE', 503)
+                self.audit('document.imported', subject=subject['id'], document_id=document['document_id'],
+                           data_level=document['data_level'])
+                return {'status':'ok','document':document}
+            if operation == 'document_delete':
+                try:
+                    document = self.library.delete_document(payload.get('document_id'), subject)
+                except DocumentImportError as exc:
+                    self.audit('document.delete_rejected', subject=subject['id'], reason_code=exc.code)
+                    return self.blocked(exc.code)
+                except Exception:
+                    self.audit('document.delete_failed', subject=subject['id'], reason_code='DOCUMENT_STORAGE_UNAVAILABLE')
+                    return self.blocked('DOCUMENT_STORAGE_UNAVAILABLE', 503)
+                self.audit('document.deleted', subject=subject['id'], **document)
+                return {'status':'ok','document_id':document['document_id']}
             if 'audit_reader' in subject['roles']:
                 self.audit('demo_identity.read_only_denied', subject=subject['id'], reason_code='DEMO_AUDITOR_READ_ONLY')
                 return self.blocked('DEMO_AUDITOR_READ_ONLY')
@@ -564,8 +646,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--state-dir', required=True, type=Path)
     parser.add_argument('--personal-confirmation', action='store_true')
+    parser.add_argument('--library-dir', type=Path)
     args = parser.parse_args()
-    demo = DemoIdentity(args.state_dir, personal_confirmation=args.personal_confirmation)
+    demo = DemoIdentity(args.state_dir, personal_confirmation=args.personal_confirmation, library_directory=args.library_dir)
     try:
         for line in sys.stdin:
             envelope = {}

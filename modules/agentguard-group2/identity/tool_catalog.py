@@ -9,18 +9,14 @@ from integrations.openclaw_mcp import server
 
 ROOT = Path(__file__).resolve().parents[1]
 NATIVE = {
+    'gov_analyze_grid': ('园区用电异常分析与报告', 'file.read', 'read'),
     'read': ('读取工作区文件', 'native.read', 'read'),
     'write': ('写入工作区文件', 'file.write', 'write'),
     'edit': ('编辑工作区文件', 'file.write', 'write'),
     'exec': ('执行工作区命令', 'shell.execute', 'execute'),
 }
 MCP = [
-    (server.TOOL_DEFINITION, 'database.query', 'query'),
     (server.DOCUMENT_TOOL_DEFINITION, 'file.read', 'read'),
-    (server.STATUS_TOOL_DEFINITION, 'database.query', 'query'),
-    (server.NOTICE_TOOL_DEFINITION, 'notification.submit', 'submit'),
-    (server.PAYMENT_TOOL_DEFINITION, 'payment.transfer', 'transfer'),
-    (server.DANGEROUS_TOOL_DEFINITION, 'shell.execute', 'execute'),
 ]
 
 
@@ -75,5 +71,8 @@ class ToolCatalog:
         return None
 
     def summary(self, subject):
-        return [{**row, 'available': self.check(name, subject) is None,
-                 'reason_code': self.check(name, subject)} for name, row in self.rows.items()]
+        return [{**row, 'tool_name':'gov_read_document' if name=='agentguard-notices__read_gov_document' else name,
+                 'label':'按登录身份读取受管资料' if name=='agentguard-notices__read_gov_document' else row['label'],
+                 'available': self.check(name, subject) is None,
+                 'reason_code': self.check(name, subject)} for name, row in self.rows.items()
+                if name in {'gov_analyze_grid','agentguard-notices__read_gov_document'}]

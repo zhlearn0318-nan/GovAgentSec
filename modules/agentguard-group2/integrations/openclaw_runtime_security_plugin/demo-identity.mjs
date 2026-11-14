@@ -33,7 +33,7 @@ export class DemoIdentityBridge {
     if(!this.child){
       this.traceCapture={captured:0,failed:0};
       this.evidenceId=randomUUID();
-      const child=spawn(path.join(moduleRoot,'.venv/Scripts/python.exe'),['-u','-m','identity.demo_provider','--state-dir',path.join(this.root,this.evidenceId),...(this.personalConfirmation?['--personal-confirmation']:[])],
+      const child=spawn(path.join(moduleRoot,'.venv/Scripts/python.exe'),['-u','-m','identity.demo_provider','--state-dir',path.join(this.root,this.evidenceId),'--library-dir',path.join(this.root,'materials'),...(this.personalConfirmation?['--personal-confirmation']:[])],
         {cwd:moduleRoot,windowsHide:true,shell:false,env:{...process.env,PYTHONUTF8:'1',PYTHONIOENCODING:'utf-8'},stdio:['pipe','pipe','ignore']});
       this.child=child;
       createInterface({input:child.stdout}).on('line',line=>{
@@ -73,15 +73,16 @@ export function registerDemoIdentity(api){
   // The fixed host registers gateway RPC and pre-warmed Agent hooks separately.
   // Both must use the same process-local worker; never persist its bearer/key.
   const bridge=globalThis[Symbol.for('govagentsec.demoIdentity.bridge')]??=new DemoIdentityBridge({personalConfirmation:true});
-  for(const operation of ['status','enable','login','invoke','resolve','disable','task_create','task_read','task_escalate','bind_session','activate_chat','revoke','materials','select_materials','task_reapply']){
+  for(const operation of ['status','enable','login','invoke','resolve','disable','task_create','task_read','task_escalate','bind_session','activate_chat','revoke','materials','select_materials','task_reapply','document_import','document_delete','document_preview','document_request','document_review']){
     api.registerGatewayMethod?.('govagentsec.demoIdentity.'+operation,async({params,respond})=>{
       try{
         const value=params??{};
         const allowed={status:['bearer'],enable:['bearer'],disable:['bearer'],login:['account','password','bearer'],revoke:['bearer'],invoke:['scenario','bearer'],resolve:['request_id','resolution','bearer'],
           task_create:['directory','bearer'],task_read:['task_id','document_id','bearer'],task_escalate:['request_id','bearer'],bind_session:['session_key','bearer'],activate_chat:['session_key','bearer'],
-          materials:['session_key','bearer'],select_materials:['session_key','material_ids','bearer'],task_reapply:['request_id','bearer']}[operation];
+          materials:['session_key','bearer'],select_materials:['session_key','material_ids','bearer'],task_reapply:['request_id','bearer'],document_import:['filename','content_base64','title','data_level','bearer'],document_delete:['document_id','bearer'],document_preview:['document_id','bearer'],document_request:['document_id','purpose','minutes','bearer'],document_review:['request_id','resolution','bearer']}[operation];
         if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).some(k=>!allowed.includes(k)))return respond(true,{status:'blocked',http_status:403,reason_code:'DEMO_UNTRUSTED_FIELD',label:'演示身份源（非生产）',production_oidc:false});
         const {bearer,...payload}=value;
+        if(operation==='document_import'&&(typeof payload.content_base64!=='string'||payload.content_base64.length>349528))return respond(true,{status:'blocked',reason_code:'DOCUMENT_TOO_LARGE'});
         if(bearer!==undefined&&(typeof bearer!=='string'||bearer.length>8192))throw Error('演示 Bearer 格式无效');
         if(operation==='login'&&(typeof payload.account!=='string'||typeof payload.password!=='string'||payload.account.length>64||payload.password.length>256))return respond(true,{status:'blocked',http_status:401,reason_code:'DEMO_LOGIN_FAILED',label:'演示身份源（非生产）',production_oidc:false});
         // Gateway operator.admin may bootstrap a disabled source. Once running,

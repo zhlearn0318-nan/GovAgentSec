@@ -185,16 +185,26 @@ def record_install_policy_audit(
     return chain_hash
 
 
-def verify_install_policy_audit(database: Path | None = None) -> dict[str, Any]:
-    database = database or resolve_audit_db()
-    if not database.is_file():
-        return {"valid": False, "rows": 0, "error": "audit database does not exist"}
+def verify_audit_rows(rows, checkpoint: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Verify original event hashes, optionally after an explicit prefix cleanup."""
     previous_hash = "0" * 64
-    with closing(_connect(database)) as connection:
-        rows = connection.execute(
-            "SELECT * FROM install_policy_audit ORDER BY sequence"
-        ).fetchall()
-    for row in rows:
+    first_sequence = 1
+    if checkpoint is not None:
+        hashes = (checkpoint.get("original_database_sha256"), checkpoint.get("prefix_chain_sha256"))
+        valid = (set(checkpoint) == {"original_database_sha256", "prefix_chain_sha256", "removed_rows", "created_at", "reason"}
+                 and all(isinstance(h, str) and len(h) == 64 and all(c in "0123456789abcdef" for c in h) for h in hashes)
+                 and type(checkpoint.get("removed_rows")) is int and checkpoint["removed_rows"] > 0
+                 and isinstance(checkpoint.get("created_at"), str) and isinstance(checkpoint.get("reason"), str)
+                 and bool(checkpoint["reason"].strip()) and bool(rows))
+        if not valid:
+            return {"valid": False, "rows": len(rows), "error": "audit cleanup checkpoint invalid"}
+        try:
+            datetime.fromisoformat(checkpoint["created_at"])
+        except ValueError:
+            return {"valid": False, "rows": len(rows), "error": "audit cleanup checkpoint invalid"}
+        previous_hash = checkpoint["prefix_chain_sha256"]
+        first_sequence += checkpoint["removed_rows"]
+    for index, row in enumerate(rows):
         event = {
             "schema_version": row["schema_version"],
             "created_at": row["created_at"],
@@ -216,7 +226,7 @@ def verify_install_policy_audit(database: Path | None = None) -> dict[str, Any]:
         expected = hashlib.sha256(
             f"{previous_hash}\n{canonical}".encode("utf-8")
         ).hexdigest()
-        if row["previous_chain_sha256"] != previous_hash or row["chain_sha256"] != expected:
+        if row["sequence"] != first_sequence + index or row["previous_chain_sha256"] != previous_hash or row["chain_sha256"] != expected:
             return {
                 "valid": False,
                 "rows": len(rows),
@@ -224,11 +234,35 @@ def verify_install_policy_audit(database: Path | None = None) -> dict[str, Any]:
                 "error": "audit integrity chain mismatch",
             }
         previous_hash = expected
-    return {
+    result = {
         "valid": True,
         "rows": len(rows),
         "head_chain_sha256": previous_hash,
     }
+    if checkpoint is not None:
+        result.update(scope="retained_suffix", prefix_removed=True, checkpoint=checkpoint,
+                      note=f"历史前 {checkpoint['removed_rows']} 条已按授权清理；仅核验现存记录及前缀链承诺。")
+    return result
+
+
+def verify_install_policy_audit(database: Path | None = None) -> dict[str, Any]:
+    database = database or resolve_audit_db()
+    if not database.is_file():
+        return {"valid": False, "rows": 0, "error": "audit database does not exist"}
+    with closing(_connect(database)) as connection:
+        rows = connection.execute("SELECT * FROM install_policy_audit ORDER BY sequence").fetchall()
+        checkpoint = None
+        if connection.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='audit_cleanup_checkpoint'").fetchone():
+            records = connection.execute("SELECT payload_json FROM audit_cleanup_checkpoint").fetchall()
+            if len(records) != 1:
+                return {"valid": False, "rows": len(rows), "error": "audit cleanup checkpoint invalid"}
+            try:
+                checkpoint = json.loads(records[0][0])
+                if not isinstance(checkpoint, dict):
+                    raise ValueError("checkpoint must be an object")
+            except ValueError:
+                return {"valid": False, "rows": len(rows), "error": "audit cleanup checkpoint invalid"}
+    return verify_audit_rows(rows, checkpoint)
 
 
 def read_recent_install_policy_audits(

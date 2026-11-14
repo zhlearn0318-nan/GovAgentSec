@@ -9,6 +9,7 @@ import { TraceStore } from '../store.mjs';
 import { assess,FixtureJudge } from '../scoring.mjs';
 import { HeuristicLocalJudge,OllamaLocalJudge,observeTrace,makeLocalJudge,HEURISTIC_VERSION } from '../local-judges.mjs';
 import { createCalibrationFixtures,CALIBRATION_VERSION } from '../calibration-fixtures.mjs';
+import { RULE_VERSION } from '../privacy.mjs';
 
 const root=mkdtempSync(path.join(os.tmpdir(),'judge-calibration-test-'));
 const store=new TraceStore(path.join(root,'traces')),fixtures=createCalibrationFixtures(store);
@@ -30,6 +31,40 @@ test('N counts strict pairs; different inputs and necessary recovery are not dup
   const redundant=observeTrace(trace('redundant_reads'));assert.equal(redundant.N,5);assert.equal(redundant.U,4);
   const recovery=observeTrace(trace('normal_recovery'));assert.equal(recovery.R,1);assert.equal(recovery.A_r,1);
   const failure=observeTrace(trace('failure_unrecovered'));assert.equal(failure.R,1);assert.equal(failure.A_r,0);
+});
+let sequenceId=0;
+function readSequence(steps){
+  const traceId='native-read-sequence-'+(++sequenceId);
+  const emit=(event_type,payload,extra={})=>store.append({trace_id:traceId,event_type,payload,...extra});
+  emit('run.started',{source:'synthetic-fixture',rule_version:RULE_VERSION});
+  const model=index=>{
+    const model_call_id='model-'+index,start=emit('model.started',{model:'test'},{model_call_id});
+    emit('model.ended',{model:'test',outcome:'completed'},{model_call_id,parent_event_id:start.event_id});
+  };
+  model(0);
+  steps.forEach((step,index)=>{
+    const tool=step.tool??'gov_read_document',tool_call_id='read-'+index;
+    const start=emit('tool.started',{tool,params:{document_id:step.id}},{tool_call_id});
+    emit('tool.ended',{tool,failed:step.failed===true,
+      result:step.result??{content:[{type:'text',text:'document '+step.id}],details:{document_id:step.id,executed:true}}},
+    {tool_call_id,parent_event_id:start.event_id});
+    model(index+1);
+  });
+  emit('run.ended',{success:true});emit('model.output',{texts:['done']});
+  return store.read(traceId);
+}
+test('native managed reads detect unchanged A-B-A evidence before analysis',()=>{
+  const observed=observeTrace(readSequence([{id:'grid_curves'},{id:'grid_records'},{id:'grid_curves'},{id:'2024-09',tool:'gov_analyze_grid'}]));
+  assert.equal(observed.N,4);assert.equal(observed.U,1);
+});
+test('native reads exclude changed results, different inputs, failed retries and post-action refreshes',()=>{
+  const cases=[
+    [{id:'curves',result:'old'},{id:'records'},{id:'curves',result:'new'},{id:'curves',result:'old'}],
+    [{id:'curves',result:'same bytes'},{id:'records',result:'same bytes'}],
+    [{id:'curves'},{id:'curves',failed:true},{id:'curves'}],
+    [{id:'curves'},{id:'curves',tool:'write'},{id:'curves'}],
+  ];
+  for(const steps of cases)assert.equal(observeTrace(readSequence(steps)).U,0);
 });
 test('missing, duplicated and malformed tool evidence yields Q missing and quarantine',async()=>{
   const mutations=[
@@ -80,6 +115,20 @@ test('Ollama sends only structured metadata locally; valid response and source a
     assert.ok(!input.includes('admin_token'));assert.ok(!input.includes('Ignore all previous instructions'));
     assert.ok(!input.includes('expected'));assert.ok(!input.includes('poisoned_step'));
   });
+});
+test('Ollama receives actual duplicate count and cannot silently undercount it',async()=>{
+  const t=readSequence([{id:'grid_curves'},{id:'grid_records'},{id:'grid_curves'},{id:'2024-09',tool:'gov_analyze_grid'}]);
+  await mockOllama(async requests=>{
+    const judge=new OllamaLocalJudge({allowSynthetic:true}),r=await assess(t,judge,config);
+    assert.equal(JSON.parse(requests[1].body.messages[1].content).U,1);
+    assert.equal(judge.lastMode,'ollama');assert.equal(r.basis.quality.U,1);
+    assert.equal(r.quality.E,.75);assert.equal(r.quality.Q,.825);
+  });
+  await mockOllama(async()=>{
+    const judge=new OllamaLocalJudge({allowSynthetic:true});await assess(t,judge,config);
+    assert.equal(judge.lastMode,'heuristic-fallback');
+    assert.equal(judge.lastReview.fallback_reason,'judge_quality_invalid');
+  },{mutate:p=>({...p,U:0})});
 });
 for(const [name,mutate]of Object.entries({
   wrong_N:p=>({...p,N:p.N+1}), wrong_R:p=>({...p,R:42}), malformed_grade:p=>({...p,B:'Z'}),

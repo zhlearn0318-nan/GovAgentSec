@@ -1,6 +1,6 @@
 // Private document memory, shared across views but never across browser tabs.
 const sessions = new WeakMap();
-const businessOperations = new Set(['invoke', 'resolve', 'task_create', 'task_read', 'task_escalate', 'bind_session','materials','select_materials','task_reapply']);
+const businessOperations = new Set(['invoke', 'resolve', 'task_create', 'task_read', 'task_escalate', 'bind_session','materials','select_materials','task_reapply','document_import','document_delete','document_preview','document_request','document_review']);
 const copy = value => structuredClone(value);
 function publicValue(value) {
   if (Array.isArray(value)) return value.map(publicValue);

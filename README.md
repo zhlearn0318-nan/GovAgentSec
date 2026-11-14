@@ -1,6 +1,10 @@
 # 政安智枢 GovAgentSec
 
-**正式版 v1.0 · OpenClaw 固定 2026.7.1-2 · Windows x64**
+**比赛电网演示分支 · 基于 v1.0 · OpenClaw 固定 2026.7.1-2 · Windows x64**
+
+本分支 `demo/competition-grid-20261114` 保存比赛使用的 OpenClaw 原生电网演示：资料申请与限时授权、异常分析报告、轨迹评测、候选 Skill 联合准入及人工发布。已安装的演示机使用 `Start-GridDemo.cmd`；首次部署需要额外安装电网 Skill 并配置工具范围。
+
+**[比赛版说明与差异](docs/COMPETITION_DEMO.md) · [操作脚本](modules/grid-demo/README.md) · [验证记录](docs/COMPETITION_VALIDATION.md)**。下方 v1.0 下载链接是通用正式版安装包，不包含本分支的新演示功能；比赛版按说明从本分支源码部署。
 
 GovAgentSec 将风险识别、行为约束、组件准入和评测审计集成到 OpenClaw：使用前检查 Skill/MCP，使用中核验输入、身份与工具动作，使用后沿轨迹审计并生成隔离候选 Skill。
 
@@ -21,7 +25,7 @@ GovAgentSec 将风险识别、行为约束、组件准入和评测审计集成�
 | 安全总览 | 安全统计、实际防护状态、组件状态 |
 | 防护设置 | 配置与维护、Docker/srt、演示身份源 |
 
-演示登录有效期 **30 分钟**。admin 与 weihu 同属最高执行等级，可读取全部登记的合成资料；shenpi、jingban 为中级、基础账号；shenji 为只读审计岗位。账号说明可在登录页查看。最高账号不等于任意电脑文件访问权；详见[身份与权限](docs/OIDC_USAGE.md)。
+演示登录有效期 **30 分钟**。比赛流程使用 jingban 分析资料、shenpi 审批 `grid_records`、admin 审核技能发布。文件授权绑定申请人、文件和有效期，不整体提升账号密级；账号说明可在登录页查看。完整角色与资料范围见[当前系统](docs/CURRENT_SYSTEM.md)。管理员可在内部资料库[导入资料并设置密级](docs/DOCUMENT_IMPORT.md)。
 
 ## 四类安全能力
 
@@ -69,6 +73,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\Verify.ps1
 ## 启动、维护与验证
 
 安装后双击桌面 GovAgentSec v1.0 或 `Start-GovAgentSec.cmd`。默认地址为 `http://127.0.0.1:18789/plugins/govagentsec/welcome`。业务演示源默认关闭，由管理员在防护设置开启；网关连接凭据不是业务身份。
+
+启动入口自动检查 Docker、准备会话沙箱、检查隔离执行，并等待网关与防护服务真正就绪后打开页面；重复启动复用现有服务。使用 `Start-GovAgentSec.cmd -NoBrowser` 可只启动检查。每次结果保存在 `local-validation/startup/`，详见[一键启动说明](docs/ONE_CLICK_START.md)。
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\Verify.ps1

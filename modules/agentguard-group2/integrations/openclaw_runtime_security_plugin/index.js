@@ -2,6 +2,7 @@ import {allowPage, deny, authorizePageGrant} from '../../../govagentsec-ui/acces
 import {identityStatus, requireBusinessDelegation} from '../../../govagentsec-ui/identity-status.mjs';
 import {registerDemoIdentity, requireBusinessPermission} from './demo-identity.mjs';
 import {registerChatAcl} from './chat-acl.mjs';
+import {registerNativeGrid} from '../../../grid-native/register.mjs';
 import { brandPage } from "../../../govagentsec-ui/design.mjs";
 import { randomBytes, randomUUID } from "node:crypto";
 import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
@@ -586,7 +587,9 @@ const plugin = {
   id: PLUGIN_ID, name: "AgentGuard 运行时安全中心", description: "第二组工具调用和任务执行安全控制面",
   register(api) {
     const config = api.pluginConfig && typeof api.pluginConfig === "object" ? api.pluginConfig : {};
-    registerChatAcl(api, registerDemoIdentity(api));
+    const identityBridge = registerDemoIdentity(api);
+    registerChatAcl(api, identityBridge);
+    registerNativeGrid(api, identityBridge);
     api.registerGatewayMethod?.('govagentsec.runtime.overview', async ({params, respond}) => {
       try {
         if (!params || typeof params !== 'object' || Array.isArray(params) || Object.keys(params).some(key=>key!=='bearer')) throw Error('INVALID_REQUEST');

@@ -62,10 +62,10 @@ export function mountDemoIdentity(parent, gateway, onStatus = () => {}, options 
     };
     const help=el('details');help.append(el('summary','演示账号说明（非生产）'));
     const table=el('table');table.setAttribute('aria-label','演示账号');
-    for(const cells of [['权限级别','账号','演示口令'],['最高权限管理员（全部受管资料）','admin','Demo#Admin26'],['高级管理员（3级）','weihu','Demo#Weihu26'],['中级主管（2级）','shenpi','Demo#Shenpi26'],['基础经办（1级）','jingban','Demo#Jingban26'],['只读审计岗位','shenji','Demo#Shenji26']]){
+    for(const cells of [['电网演示身份','账号','演示口令'],['用电数据分析员','jingban','Demo#Jingban26'],['资料审批人','shenpi','Demo#Shenpi26'],['技能审核人 / 管理员','admin','Demo#Admin26']]){
       const row=el('tr');for(const value of cells)row.append(el('td',value));table.append(row);
     }
-    help.append(table,el('p','高级管理员无需另一人审批，聊天中的动作确认仍由 OpenClaw 处理。当前工作区的待确认操作可由本人允许一次或拒绝，超出身份密级仍会阻断。仅供本机合成业务演示。','identity-note'));
+    help.append(table,el('p','分析员申请指定文件，资料审批人核对用途与时限；候选技能由管理员审核发布。任务在当前 OpenClaw 会话中按登录身份执行。','identity-note'));
     const sso=el('button','组织 SSO · 未接入','secondary');sso.type='button';sso.disabled=true;
     box.append(form,help,sso,el('p','刷新页面后需要重新登录。','identity-note'));return box;
   }
@@ -180,6 +180,9 @@ export function mountDemoIdentity(parent, gateway, onStatus = () => {}, options 
   }
   function render() {
     if(disposed)return;
+    // Preserve the file selection during status polling; revoke it on identity change.
+    const importForm=body.querySelector('[data-library-import-open]');
+    if(importForm&&state.user?.id===importForm.dataset.owner)return;
     const focus=body.getRootNode().activeElement;
     if(!busy&&!state.busy&&!state.user&&state.enabled&&body.contains(focus)&&focus?.matches('input'))return;
     body.replaceChildren();
@@ -189,8 +192,19 @@ export function mountDemoIdentity(parent, gateway, onStatus = () => {}, options 
       if(mode==='permissions'||mode==='login'||mode==='chat')body.append(loginForm());
       else{const row=el('div',undefined,'identity-row');row.append(el('span','先到动态权限登录','identity-note'),action('去动态权限登录',async()=>navigate('permissions',focusedRequest())));body.append(row);}
     }else if(permissionsPage||mode==='chat'){
-      body.append(identitySummary(),librarySummary(state.permission_summary));
-      body.append(el('p','当前账号自动用于此工作区的所有对话，资料按身份权限检查，无需逐个绑定或选材。','identity-note'));
+      body.append(identitySummary(),librarySummary(state.permission_summary,{
+        owner:state.user.id,onImport:payload=>session.request('document_import',payload),
+        onPreview:payload=>session.request('document_preview',payload),
+        onRequest:payload=>session.request('document_request',payload),
+        onReview:payload=>session.request('document_review',payload),
+        onChanged:()=>render(),
+        onDelete:async payload=>{
+          try{const result=await session.request('document_delete',payload);message=result?.status==='ok'?'资料已删除。':result?.reason_code==='DOCUMENT_DELETE_FORBIDDEN'?'当前账号没有删除资料权限。':'删除未完成，请刷新资料库后核对。';}
+          catch{message='删除未确认，请检查连接并刷新资料库后核对。';}
+          render();
+        },
+        onImported:document=>{message=`已导入「${document.title}」。后续对话会按当前账号权限使用；正在执行的任务保持原授权范围。`;render();}
+      }));
       if(mode!=='chat')body.append(approvals());
     }else if(mode==='receipts'||mode==='confirmations')body.append(approvals());
     else body.append(el('p','当前身份：'+(state.user.label??state.user.account??'已登录')));

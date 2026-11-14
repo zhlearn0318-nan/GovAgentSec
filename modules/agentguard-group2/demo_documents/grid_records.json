@@ -1,0 +1,61 @@
+{
+  "title": "A园区匿名企业档案与生产检修记录",
+  "source_type": "source_industry_with_synthetic_business_context",
+  "notice": "A园区及企业代号为演示设定；行业来自原表。检修及采集事件为合成补充，不是实际企业工单。",
+  "meters": [
+    {
+      "meter_id": "M001",
+      "label": "A园区计量点 M001",
+      "industry": "27.计算机、通信和其他电子设备制造业",
+      "source_row": 3660,
+      "source_file": "c_twc_mk_bi_custer_pq_day_det.xlsx",
+      "maintenance": [],
+      "notes": "不保留企业实名、地址、原始计量点编号或联系方式；无检修记录不代表未检修。"
+    },
+    {
+      "meter_id": "M002",
+      "label": "A园区计量点 M002",
+      "industry": "27.计算机、通信和其他电子设备制造业",
+      "source_row": 2040,
+      "source_file": "c_twc_mk_bi_custer_pq_day_det.xlsx",
+      "maintenance": [
+        {
+          "record_id": "DEMO-MAINT-001",
+          "start": "2024-09-17",
+          "end": "2024-09-17",
+          "reason": "生产线计划停机检修（合成演示工单）",
+          "source_type": "synthetic_maintenance_record"
+        }
+      ],
+      "notes": "不保留企业实名、地址、原始计量点编号或联系方式；无检修记录不代表未检修。"
+    },
+    {
+      "meter_id": "M003",
+      "label": "A园区计量点 M003",
+      "industry": "21.金属制品业",
+      "source_row": 4291,
+      "source_file": "c_twc_mk_bi_custer_pq_day_det.xlsx",
+      "maintenance": [],
+      "notes": "不保留企业实名、地址、原始计量点编号或联系方式；无检修记录不代表未检修。"
+    },
+    {
+      "meter_id": "M004",
+      "label": "A园区计量点 M004",
+      "industry": "27.计算机、通信和其他电子设备制造业",
+      "source_row": 2039,
+      "source_file": "c_twc_mk_bi_custer_pq_day_det.xlsx",
+      "maintenance": [],
+      "notes": "不保留企业实名、地址、原始计量点编号或联系方式；无检修记录不代表未检修。"
+    }
+  ],
+  "collection_events": [
+    {
+      "record_id": "DEMO-COLLECT-001",
+      "meter_id": "M001",
+      "start": "2024-09-12",
+      "end": "2024-09-14",
+      "event": "采集通道中断，三个日采样点未返回（合成演示事件）",
+      "source_type": "synthetic_collection_event"
+    }
+  ]
+}

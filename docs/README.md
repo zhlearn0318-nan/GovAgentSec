@@ -6,13 +6,18 @@
 
 | 文档 | 用途 |
 | --- | --- |
+| [比赛电网演示版](COMPETITION_DEMO.md) | 与远端主分支的差异、首次部署、文件归档范围 |
+| [比赛版验证](COMPETITION_VALIDATION.md) | 本次回归结果、复跑命令及已知限制 |
+| [电网操作脚本](../modules/grid-demo/README.md) | 资料授权、分析报告、评测与技能发布演示 |
+| [一键启动](ONE_CLICK_START.md) | 已安装系统的服务检查与启动 |
 | [当前系统](CURRENT_SYSTEM.md) | 版本、五个入口、身份与资料权限 |
 | [下载安装](WINDOWS_ONE_CLICK_INSTALL.md) | EXE、Agent、手动 ZIP 三种方式 |
 | [Agent 自动安装](INSTALL_WITH_AGENT.md) | 复制给其他 AI Agent 的部署指令 |
 | [使用逻辑](产品使用逻辑与模块协同.md) | 登录、能力准入、执行、审批、审计与候选 |
 | [登录和权限](OIDC_USAGE.md) | 演示账号、30分钟登录、资料授权和确认 |
+| [资料导入](DOCUMENT_IMPORT.md) | 上传资料、设置密级、持久保存与受控读取 |
 | [功能地图](FEATURE_MAP.md) | 四类安全能力及页面职责 |
-| [演示流程](PRODUCT_DEMO_RUNBOOK.md) | 合成任务的场前准备与操作顺序 |
+| [通用版演示参考](PRODUCT_DEMO_RUNBOOK.md) | 原 v1.0 流程；本分支使用上方电网操作脚本 |
 
 ## 配置、维护与接口
 

@@ -15,6 +15,23 @@ import { Releases } from '../../trajectory-governance/releases.mjs';
 
 const temp = () => mkdtempSync(path.join(os.tmpdir(), 'gov-trace-'));
 const configuration = { t_star: .6, calibration_version: 'test-only' };
+test('native preflight failure plus empty llm output is failed, never complete', async()=>{
+ const hooks=new Map(),store=registerTrace({pluginConfig:{dataDir:temp()},config:{},logger:{warn(){}},on(n,f){hooks.set(n,f);},registerGatewayMethod(){},registerHttpRoute(){}});
+ const ctx={runId:'preflight-error',sessionKey:'native',sessionId:'preflight-session'};
+ await hooks.get('before_agent_run')({prompt:'native fixture'},ctx);
+ await hooks.get('agent_end')({success:false,error:'No callable tools remain after policy filtering',durationMs:12},ctx);
+ await hooks.get('llm_output')({model:'fixture',provider:'local',assistantTexts:[]},ctx);
+ const t=store.read(ctx.runId);assert.equal(t.summary.trace_status,'failed');assert.equal(t.summary.metrics.success,false);assert.equal(t.summary.failure_code,'TOOL_PREFLIGHT_EMPTY');
+ assert(t.summary.missing_fields.includes('model_call_events'));assert(t.summary.missing_fields.includes('llm_output'));
+ assert(!readFileSync(store.file(ctx.runId),'utf8').includes('No callable tools remain'));
+});
+test('missing model call evidence cannot be complete; input block stays blocked without model',()=>{
+ const store=new TraceStore(temp());
+ store.append({trace_id:'missing-model',event_type:'run.started'});store.append({trace_id:'missing-model',event_type:'model.output',payload:{texts:['text exists'],has_content:true}});store.append({trace_id:'missing-model',event_type:'run.ended',payload:{success:true}});
+ assert.equal(store.read('missing-model').summary.trace_status,'partial');
+ store.append({trace_id:'blocked',event_type:'run.started'});store.append({trace_id:'blocked',event_type:'protection.input',payload:{decision:'BLOCK',enforced:true}});store.append({trace_id:'blocked',event_type:'run.ended',payload:{success:false}});
+ assert.equal(store.read('blocked').summary.trace_status,'blocked');
+});
 async function fixture() {
   const root = temp(), store = new TraceStore(path.join(root, 'traces')), evidence = createFixtures(store), judge = new FixtureJudge(evidence);
   const records = await Promise.all(Object.keys(evidence).map(id => assess(store.read(id), judge, configuration)));

@@ -1,5 +1,5 @@
 {
-  "as_of": "2026-11-10",
+  "as_of": "2026-11-14",
   "baseline": "docs/CURRENT_SYSTEM.md",
   "documents": [
     {
@@ -11,7 +11,23 @@
       "status": "current"
     },
     {
+      "path": "docs/COMPETITION_DEMO.md",
+      "status": "current"
+    },
+    {
+      "path": "docs/COMPETITION_FILES.md",
+      "status": "current"
+    },
+    {
+      "path": "docs/COMPETITION_VALIDATION.md",
+      "status": "current"
+    },
+    {
       "path": "docs/CURRENT_SYSTEM.md",
+      "status": "current"
+    },
+    {
+      "path": "docs/DOCUMENT_IMPORT.md",
       "status": "current"
     },
     {
@@ -32,6 +48,10 @@
     },
     {
       "path": "docs/OIDC_USAGE.md",
+      "status": "current"
+    },
+    {
+      "path": "docs/ONE_CLICK_START.md",
       "status": "current"
     },
     {
@@ -82,6 +102,10 @@
       "path": "docs/产品使用逻辑与模块协同.md",
       "status": "current"
     }
+  ],
+  "excluded_local_files": [
+    "docs/U7_ABLATION_EXPERIMENT.md",
+    "docs/U7_PARAMETER_SOURCE_AND_TASK_AUTHORITY.md"
   ],
   "excluded_local_directories": [
     "docs/demo"

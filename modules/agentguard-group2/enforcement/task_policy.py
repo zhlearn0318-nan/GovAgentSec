@@ -45,7 +45,7 @@ def resource_prefixes(values):
         raise TaskPolicyError('P003_INVALID_GRANT', '目录范围必须是 URI 前缀列表')
     for value in values:
         uri = urlsplit(value)
-        if (not ((uri.scheme == 'govdoc' and uri.netloc in {'demo', 'protected'})
+        if (not ((uri.scheme == 'govdoc' and uri.netloc in {'demo', 'protected', 'library', 'grid'})
                  or (uri.scheme == 'nativefs' and uri.netloc == 'workspace'))
                 or not value.endswith('/') or uri.query or uri.fragment
                 or '%' in value or '\\' in value or '//' in uri.path

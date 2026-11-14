@@ -17,8 +17,10 @@ def main():
         errors.append('Public documentation must not include development specifications or historical process records')
     declared = {row['path'] for row in rows}
     local_only = index.get('excluded_local_directories', [])
+    local_files = set(index.get('excluded_local_files', []))
     actual = {p.relative_to(ROOT).as_posix() for p in (ROOT / 'docs').rglob('*.md')
-              if not any(p.relative_to(ROOT).as_posix().startswith(d+'/') for d in local_only)}
+              if p.relative_to(ROOT).as_posix() not in local_files
+              and not any(p.relative_to(ROOT).as_posix().startswith(d+'/') for d in local_only)}
     if declared != actual or len(declared) != len(rows):
         errors.append({'inventory_missing': sorted(actual-declared), 'stale': sorted(declared-actual)})
     else:
